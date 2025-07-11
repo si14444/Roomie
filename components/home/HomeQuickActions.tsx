@@ -102,7 +102,7 @@ const styles = StyleSheet.create({
   quickActionsGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    marginHorizontal: -6, // 음수 마진으로 외부 간격 조정
+    marginHorizontal: -6,
   },
   quickActionItem: {
     backgroundColor: Colors.light.surface,
@@ -110,7 +110,7 @@ const styles = StyleSheet.create({
     padding: 16,
     alignItems: "center",
     width: "50%",
-    paddingHorizontal: 6, // 내부 패딩으로 간격 생성
+    paddingHorizontal: 6,
   },
   topRow: {
     marginBottom: 12,
