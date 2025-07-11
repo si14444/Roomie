@@ -137,6 +137,7 @@ export function ActivePolls({ onVote, onCreatePoll }: ActivePollsProps) {
 const styles = StyleSheet.create({
   pollsSection: {
     paddingHorizontal: 20,
+    marginTop: 20,
     marginBottom: 20,
   },
   sectionTitle: {

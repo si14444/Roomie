@@ -31,7 +31,9 @@ export function StatusSummaryCard() {
 const styles = StyleSheet.create({
   summaryCard: {
     backgroundColor: Colors.light.cardBackground,
-    margin: 20,
+    marginHorizontal: 20,
+    marginTop: 30,
+    marginBottom: 20,
     padding: 20,
     borderRadius: 16,
     shadowColor: "#000",
