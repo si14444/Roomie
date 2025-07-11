@@ -102,10 +102,7 @@ export default function HomeScreen() {
   };
 
   return (
-    <SafeAreaView
-      style={[styles.container, { backgroundColor }]}
-      edges={["bottom"]}
-    >
+    <SafeAreaView style={[styles.container, { backgroundColor }]} edges={[]}>
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* 상태 요약 카드 */}
         <View style={[styles.summaryCard, { backgroundColor: cardBackground }]}>

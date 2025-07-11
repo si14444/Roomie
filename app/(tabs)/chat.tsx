@@ -110,7 +110,7 @@ export default function ChatScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={["bottom"]}>
+    <SafeAreaView style={styles.container} edges={[]}>
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.pollsSection}>
           <Text style={styles.sectionTitle}>진행 중인 투표</Text>

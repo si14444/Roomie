@@ -64,7 +64,7 @@ export default function RoutinesScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={["bottom"]}>
+    <SafeAreaView style={styles.container} edges={[]}>
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         <TouchableOpacity style={styles.addButton}>
           <LinearGradient
