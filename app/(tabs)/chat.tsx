@@ -111,27 +111,6 @@ export default function ChatScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={["bottom"]}>
-      <View
-        style={[
-          styles.welcomeSection,
-          { backgroundColor: Colors.light.accent },
-        ]}
-      >
-        <View style={styles.welcomeContent}>
-          <Text style={[styles.greeting, { color: Colors.light.primary }]}>
-            소통해요! 💬
-          </Text>
-        </View>
-        <TouchableOpacity style={styles.notificationButton}>
-          <Ionicons
-            name="notifications-outline"
-            size={24}
-            color={Colors.light.primary}
-          />
-          <View style={styles.notificationBadge} />
-        </TouchableOpacity>
-      </View>
-
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.pollsSection}>
           <Text style={styles.sectionTitle}>진행 중인 투표</Text>

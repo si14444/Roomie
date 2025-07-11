@@ -1,5 +1,7 @@
 import React from "react";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
+import { Ionicons } from "@expo/vector-icons";
+import { TouchableOpacity, View } from "react-native";
 import { Tabs } from "expo-router";
 
 import Colors from "@/constants/Colors";
@@ -10,6 +12,25 @@ function TabBarIcon(props: {
   color: string;
 }) {
   return <FontAwesome size={24} style={{ marginBottom: -3 }} {...props} />;
+}
+
+function NotificationButton() {
+  return (
+    <TouchableOpacity style={{ position: "relative", padding: 8 }}>
+      <Ionicons name="notifications-outline" size={24} color="#FFFFFF" />
+      <View
+        style={{
+          position: "absolute",
+          top: 6,
+          right: 6,
+          width: 8,
+          height: 8,
+          borderRadius: 4,
+          backgroundColor: "#EF4444",
+        }}
+      />
+    </TouchableOpacity>
+  );
 }
 
 export default function TabLayout() {
@@ -51,6 +72,7 @@ export default function TabLayout() {
         options={{
           title: "홈",
           headerTitle: "룸메이트 관리",
+          headerRight: () => <NotificationButton />,
           tabBarIcon: ({ color }) => <TabBarIcon name="home" color={color} />,
         }}
       />
@@ -59,6 +81,7 @@ export default function TabLayout() {
         options={{
           title: "루틴관리",
           headerTitle: "루틴 관리",
+          headerRight: () => <NotificationButton />,
           tabBarIcon: ({ color }) => (
             <TabBarIcon name="calendar" color={color} />
           ),
@@ -69,6 +92,7 @@ export default function TabLayout() {
         options={{
           title: "공과금",
           headerTitle: "공과금 관리",
+          headerRight: () => <NotificationButton />,
           tabBarIcon: ({ color }) => (
             <TabBarIcon name="calculator" color={color} />
           ),
@@ -79,6 +103,7 @@ export default function TabLayout() {
         options={{
           title: "공용물품",
           headerTitle: "공용물품 관리",
+          headerRight: () => <NotificationButton />,
           tabBarIcon: ({ color }) => (
             <TabBarIcon name="shopping-cart" color={color} />
           ),
@@ -89,6 +114,7 @@ export default function TabLayout() {
         options={{
           title: "소통",
           headerTitle: "룸메이트 소통",
+          headerRight: () => <NotificationButton />,
           tabBarIcon: ({ color }) => (
             <TabBarIcon name="comments" color={color} />
           ),

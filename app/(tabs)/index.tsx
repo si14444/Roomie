@@ -106,28 +106,6 @@ export default function HomeScreen() {
       style={[styles.container, { backgroundColor }]}
       edges={["bottom"]}
     >
-      {/* 간단한 환영 섹션 */}
-      <View
-        style={[
-          styles.welcomeSection,
-          { backgroundColor: Colors.light.accent },
-        ]}
-      >
-        <View style={styles.welcomeContent}>
-          <Text style={[styles.greeting, { color: Colors.light.primary }]}>
-            안녕하세요! 👋
-          </Text>
-        </View>
-        <TouchableOpacity style={styles.notificationButton}>
-          <Ionicons
-            name="notifications-outline"
-            size={24}
-            color={Colors.light.primary}
-          />
-          <View style={styles.notificationBadge} />
-        </TouchableOpacity>
-      </View>
-
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* 상태 요약 카드 */}
         <View style={[styles.summaryCard, { backgroundColor: cardBackground }]}>
@@ -380,7 +358,7 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    paddingTop: 20,
+    paddingTop: 10,
   },
   summaryCard: {
     marginHorizontal: 20,
