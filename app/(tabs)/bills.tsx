@@ -78,7 +78,6 @@ export default function BillsScreen() {
     },
   ]);
 
-  // 모달 상태 관리
   const [showAddModal, setShowAddModal] = useState(false);
   const [newBill, setNewBill] = useState({
     name: "",
@@ -91,26 +90,13 @@ export default function BillsScreen() {
 
   const roommates = ["김철수", "이영희", "박민수", "정지수"];
 
-  const billIcons = [
-    { name: "flash-outline", label: "전기" },
-    { name: "flame-outline", label: "가스" },
-    { name: "water-outline", label: "수도" },
-    { name: "wifi-outline", label: "인터넷" },
-    { name: "play-circle-outline", label: "구독" },
-    { name: "car-outline", label: "교통" },
-    { name: "home-outline", label: "관리비" },
-    { name: "phone-portrait-outline", label: "통신" },
-  ] as const;
-
-  // calculateSplit 함수를 statistics 계산 전에 정의
   const calculateSplit = (amount: number, splitType: "equal" | "custom") => {
     if (splitType === "equal") {
       return Math.round(amount / roommates.length);
     }
-    return Math.round(amount / 2); // 커스텀의 경우 임시로 절반으로 분할
+    return Math.round(amount / 2);
   };
 
-  // 동적 통계 계산
   const statistics = useMemo(() => {
     const totalAmount = bills.reduce((sum, bill) => sum + bill.amount, 0);
     const paidAmount = bills
@@ -123,7 +109,6 @@ export default function BillsScreen() {
 
     const perPersonAmount = Math.round(totalAmount / roommates.length);
 
-    // 개인별 상태 계산
     const roommateStats: Roommate[] = roommates.map((roommate) => {
       let totalDebt = 0;
       let paidAmount = 0;
@@ -178,7 +163,6 @@ export default function BillsScreen() {
     }
   };
 
-  // 새 공과금 추가 함수
   const addNewBill = () => {
     if (!newBill.name.trim() || !newBill.amount.trim()) {
       Alert.alert("오류", "공과금 이름과 금액을 입력해주세요.");
@@ -190,7 +174,6 @@ export default function BillsScreen() {
       return;
     }
 
-    // 카테고리별 기본 아이콘 설정
     const getIconForCategory = (category: string, name: string) => {
       const nameLower = name.toLowerCase();
 
@@ -204,14 +187,7 @@ export default function BillsScreen() {
         return "play-circle-outline";
       if (nameLower.includes("통신") || nameLower.includes("폰"))
         return "phone-portrait-outline";
-      if (
-        nameLower.includes("교통") ||
-        nameLower.includes("버스") ||
-        nameLower.includes("지하철")
-      )
-        return "car-outline";
 
-      // 카테고리별 기본값
       switch (category) {
         case "utility":
           return "flash-outline";
@@ -243,8 +219,6 @@ export default function BillsScreen() {
     };
 
     setBills((prev) => [...prev, bill]);
-
-    // 폼 초기화
     setNewBill({
       name: "",
       amount: "",
@@ -253,12 +227,10 @@ export default function BillsScreen() {
       category: "utility",
       icon: "flash-outline",
     });
-
     setShowAddModal(false);
     Alert.alert("성공", "새 공과금이 추가되었습니다!");
   };
 
-  // 개인별 지불 상태 토글
   const togglePayment = (billId: number, roommate: string) => {
     setBills((prev) =>
       prev.map((bill) => {
@@ -268,7 +240,6 @@ export default function BillsScreen() {
             [roommate]: !bill.payments[roommate],
           };
 
-          // 모든 사람이 지불했는지 확인
           const allPaid = Object.values(updatedPayments).every((paid) => paid);
 
           return {
@@ -282,7 +253,6 @@ export default function BillsScreen() {
     );
   };
 
-  // 공과금 옵션 메뉴
   const showBillOptions = (bill: Bill) => {
     Alert.alert(`${bill.name} 관리`, "어떤 작업을 하시겠습니까?", [
       { text: "취소", style: "cancel" },
@@ -302,7 +272,6 @@ export default function BillsScreen() {
     ]);
   };
 
-  // 공과금 전체 완료 처리
   const markBillAsPaid = (billId: number) => {
     setBills((prev) =>
       prev.map((bill) =>
@@ -321,7 +290,6 @@ export default function BillsScreen() {
     Alert.alert("완료", "모든 인원의 지불이 완료로 처리되었습니다.");
   };
 
-  // 마감일 연장
   const extendDueDate = (billId: number) => {
     const today = new Date();
     const nextWeek = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
@@ -337,7 +305,6 @@ export default function BillsScreen() {
     Alert.alert("연장 완료", `마감일이 ${newDueDate}로 연장되었습니다.`);
   };
 
-  // 공과금 삭제
   const deleteBill = (billId: number) => {
     const bill = bills.find((b) => b.id === billId);
     Alert.alert("공과금 삭제", `"${bill?.name}" 공과금을 삭제하시겠습니까?`, [
@@ -353,7 +320,6 @@ export default function BillsScreen() {
     ]);
   };
 
-  // 정산 기능
   const showSettlement = () => {
     const settlementDetails = statistics.roommateStats
       .map((roommate) => {
@@ -376,7 +342,6 @@ export default function BillsScreen() {
     );
   };
 
-  // 통계 기능
   const showStatistics = () => {
     const monthlyTotal = statistics.totalAmount;
     const completionRate = statistics.completionRate;
@@ -389,7 +354,6 @@ export default function BillsScreen() {
     );
   };
 
-  // MVP 룸메이트 찾기
   const getMVPRoommate = () => {
     const mvp = statistics.roommateStats.reduce((max, current) =>
       current.paidAmount > max.paidAmount ? current : max
@@ -397,7 +361,6 @@ export default function BillsScreen() {
     return mvp.name;
   };
 
-  // 송금 요청 알림
   const sendPaymentReminder = () => {
     Alert.alert(
       "송금 요청",
@@ -406,7 +369,6 @@ export default function BillsScreen() {
     );
   };
 
-  // 송금 링크 생성
   const generatePaymentLink = (bill: Bill) => {
     const unpaidRoommates = roommates.filter(
       (roommate) => !bill.payments[roommate]
@@ -527,9 +489,8 @@ export default function BillsScreen() {
                 </View>
               </View>
 
-              {/* 개인별 지불 상태 */}
-              <View style={styles.paymentStatus}>
-                <Text style={styles.paymentStatusTitle}>개인별 지불 현황</Text>
+              <View style={styles.paymentSection}>
+                <Text style={styles.paymentSectionTitle}>개인별 지불 현황</Text>
                 <View style={styles.roommatePayments}>
                   {roommates.map((roommate) => {
                     const isPaid = bill.payments[roommate];
@@ -669,7 +630,7 @@ export default function BillsScreen() {
                   </View>
                   <View
                     style={[
-                      styles.paymentStatus,
+                      styles.completionStatus,
                       {
                         backgroundColor: isCompleted
                           ? Colors.light.successColor
@@ -690,7 +651,6 @@ export default function BillsScreen() {
         </View>
       </ScrollView>
 
-      {/* 새 공과금 추가 모달 */}
       <Modal
         visible={showAddModal}
         animationType="slide"
@@ -711,7 +671,6 @@ export default function BillsScreen() {
             </View>
 
             <View style={styles.modalContent}>
-              {/* 공과금 이름 */}
               <View style={styles.inputGroup}>
                 <Text style={styles.inputLabel}>공과금 이름</Text>
                 <TextInput
@@ -726,7 +685,6 @@ export default function BillsScreen() {
                 />
               </View>
 
-              {/* 금액 */}
               <View style={styles.inputGroup}>
                 <Text style={styles.inputLabel}>금액</Text>
                 <TextInput
@@ -741,7 +699,6 @@ export default function BillsScreen() {
                 />
               </View>
 
-              {/* 마감일 */}
               <View style={styles.inputGroup}>
                 <Text style={styles.inputLabel}>마감일</Text>
                 <TextInput
@@ -755,7 +712,6 @@ export default function BillsScreen() {
                 />
               </View>
 
-              {/* 분할 방식 */}
               <View style={styles.inputGroup}>
                 <Text style={styles.inputLabel}>분할 방식</Text>
                 <View style={styles.splitOptions}>
@@ -800,7 +756,6 @@ export default function BillsScreen() {
                 </View>
               </View>
 
-              {/* 카테고리 */}
               <View style={styles.inputGroup}>
                 <Text style={styles.inputLabel}>카테고리</Text>
                 <View style={styles.categoryOptions}>
@@ -876,29 +831,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.light.background,
-  },
-  header: {
-    paddingHorizontal: 20,
-    paddingVertical: 24,
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
-  },
-  headerContent: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  notificationButton: {
-    position: "relative",
-  },
-  notificationBadge: {
-    position: "absolute",
-    top: 6,
-    right: 6,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: "#EF4444",
   },
   content: {
     flex: 1,
@@ -1031,6 +963,50 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "600",
   },
+  paymentSection: {
+    marginBottom: 16,
+  },
+  paymentSectionTitle: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: Colors.light.text,
+    marginBottom: 12,
+  },
+  roommatePayments: {
+    gap: 8,
+  },
+  roommatePayment: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: Colors.light.surface,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: Colors.light.borderColor,
+  },
+  roommatePaymentPaid: {
+    backgroundColor: Colors.light.accent,
+    borderColor: Colors.light.successColor,
+  },
+  roommatePaymentText: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: "500",
+    color: Colors.light.text,
+    marginLeft: 8,
+  },
+  roommatePaymentTextPaid: {
+    color: Colors.light.successColor,
+  },
+  roommatePaymentAmount: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: Colors.light.mutedText,
+  },
+  roommatePaymentAmountPaid: {
+    color: Colors.light.successColor,
+  },
   billActions: {
     flexDirection: "row",
     gap: 12,
@@ -1143,43 +1119,13 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: Colors.light.mutedText,
   },
-  paymentStatus: {
+  completionStatus: {
     width: 32,
     height: 32,
     borderRadius: 16,
     justifyContent: "center",
     alignItems: "center",
   },
-  greeting: {
-    fontSize: 18,
-    color: "white",
-    marginBottom: 4,
-  },
-  headerTitle: {
-    fontSize: 28,
-    fontWeight: "bold",
-    color: "white",
-  },
-  welcomeSection: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    marginHorizontal: 20,
-    marginTop: 10,
-    marginBottom: 20,
-    borderRadius: 16,
-  },
-  welcomeContent: {
-    flex: 1,
-  },
-  welcomeSubtitle: {
-    fontSize: 14,
-    marginTop: 4,
-    lineHeight: 20,
-  },
-  // 모달 스타일
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0, 0, 0, 0.5)",
@@ -1333,47 +1279,5 @@ const styles = StyleSheet.create({
   },
   confirmButtonTextDisabled: {
     color: Colors.light.mutedText,
-  },
-  // 개인별 지불 상태 스타일
-  paymentStatusTitle: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: Colors.light.text,
-    marginBottom: 12,
-  },
-  roommatePayments: {
-    gap: 8,
-  },
-  roommatePayment: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: Colors.light.surface,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: Colors.light.borderColor,
-  },
-  roommatePaymentPaid: {
-    backgroundColor: Colors.light.accent,
-    borderColor: Colors.light.successColor,
-  },
-  roommatePaymentText: {
-    flex: 1,
-    fontSize: 14,
-    fontWeight: "500",
-    color: Colors.light.text,
-    marginLeft: 8,
-  },
-  roommatePaymentTextPaid: {
-    color: Colors.light.successColor,
-  },
-  roommatePaymentAmount: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: Colors.light.mutedText,
-  },
-  roommatePaymentAmountPaid: {
-    color: Colors.light.successColor,
   },
 });
