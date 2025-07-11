@@ -1,7 +1,6 @@
 import { StyleSheet, ScrollView, TouchableOpacity } from "react-native";
 import { Text, View } from "@/components/Themed";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import Colors from "@/constants/Colors";
 
@@ -67,13 +66,10 @@ export default function RoutinesScreen() {
     <SafeAreaView style={styles.container} edges={[]}>
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         <TouchableOpacity style={styles.addButton}>
-          <LinearGradient
-            colors={Colors.light.gradientSecondary as any}
-            style={styles.addButtonGradient}
-          >
+          <View style={styles.addButtonContent}>
             <Ionicons name="add-circle-outline" size={24} color="white" />
             <Text style={styles.addButtonText}>새 루틴 추가</Text>
-          </LinearGradient>
+          </View>
         </TouchableOpacity>
 
         <View style={styles.quickStats}>
@@ -235,12 +231,13 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 4,
   },
-  addButtonGradient: {
+  addButtonContent: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     paddingVertical: 16,
     gap: 8,
+    backgroundColor: Colors.light.primary,
   },
   addButtonText: {
     color: "white",
