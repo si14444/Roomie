@@ -1,11 +1,23 @@
-import { StyleSheet, ScrollView, TouchableOpacity } from "react-native";
+import { StyleSheet, ScrollView, TouchableOpacity, Alert } from "react-native";
 import { Text, View } from "@/components/Themed";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
+import { useState, useMemo } from "react";
 import Colors from "@/constants/Colors";
 
+interface Routine {
+  id: number;
+  task: string;
+  assignee: string;
+  nextDate: string;
+  status: "pending" | "completed" | "overdue";
+  icon: keyof typeof Ionicons.glyphMap;
+  frequency: "daily" | "weekly" | "monthly";
+  completedAt?: string;
+}
+
 export default function RoutinesScreen() {
-  const routines = [
+  const [routines, setRoutines] = useState<Routine[]>([
     {
       id: 1,
       task: "설거지",
@@ -13,6 +25,7 @@ export default function RoutinesScreen() {
       nextDate: "2024-12-28",
       status: "pending",
       icon: "restaurant-outline" as keyof typeof Ionicons.glyphMap,
+      frequency: "daily",
     },
     {
       id: 2,
@@ -21,6 +34,8 @@ export default function RoutinesScreen() {
       nextDate: "2024-12-29",
       status: "completed",
       icon: "home-outline" as keyof typeof Ionicons.glyphMap,
+      frequency: "weekly",
+      completedAt: "2024-12-28",
     },
     {
       id: 3,
@@ -29,6 +44,7 @@ export default function RoutinesScreen() {
       nextDate: "2024-12-30",
       status: "pending",
       icon: "water-outline" as keyof typeof Ionicons.glyphMap,
+      frequency: "weekly",
     },
     {
       id: 4,
@@ -37,8 +53,81 @@ export default function RoutinesScreen() {
       nextDate: "2024-12-31",
       status: "overdue",
       icon: "trash-outline" as keyof typeof Ionicons.glyphMap,
+      frequency: "daily",
     },
-  ];
+  ]);
+
+  // 동적 통계 계산
+  const statistics = useMemo(() => {
+    const completed = routines.filter((r) => r.status === "completed").length;
+    const pending = routines.filter((r) => r.status === "pending").length;
+    const overdue = routines.filter((r) => r.status === "overdue").length;
+    const total = routines.length;
+
+    return {
+      completed,
+      pending,
+      overdue,
+      completionRate: total > 0 ? Math.round((completed / total) * 100) : 0,
+      participationRate: 95, // 예시값, 실제로는 복잡한 로직으로 계산
+    };
+  }, [routines]);
+
+  // 루틴 완료 처리
+  const completeRoutine = (routineId: number) => {
+    Alert.alert("루틴 완료", "이 루틴을 완료로 표시하시겠습니까?", [
+      { text: "취소", style: "cancel" },
+      {
+        text: "완료",
+        onPress: () => {
+          setRoutines((prev) =>
+            prev.map((routine) =>
+              routine.id === routineId
+                ? {
+                    ...routine,
+                    status: "completed" as const,
+                    completedAt: new Date().toISOString().split("T")[0],
+                  }
+                : routine
+            )
+          );
+        },
+      },
+    ]);
+  };
+
+  // 루틴 미루기 처리
+  const postponeRoutine = (routineId: number) => {
+    Alert.alert("루틴 미루기", "이 루틴을 내일로 미루시겠습니까?", [
+      { text: "취소", style: "cancel" },
+      {
+        text: "미루기",
+        onPress: () => {
+          setRoutines((prev) =>
+            prev.map((routine) => {
+              if (routine.id === routineId) {
+                const nextDate = new Date();
+                nextDate.setDate(nextDate.getDate() + 1);
+                return {
+                  ...routine,
+                  nextDate: nextDate.toISOString().split("T")[0],
+                  status: "pending" as const,
+                };
+              }
+              return routine;
+            })
+          );
+        },
+      },
+    ]);
+  };
+
+  // 새 루틴 추가 (모달/페이지는 나중에 구현)
+  const addNewRoutine = () => {
+    Alert.alert("새 루틴 추가", "새 루틴 추가 기능을 구현 예정입니다.", [
+      { text: "확인" },
+    ]);
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -65,7 +154,7 @@ export default function RoutinesScreen() {
   return (
     <SafeAreaView style={styles.container} edges={[]}>
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        <TouchableOpacity style={styles.addButton}>
+        <TouchableOpacity style={styles.addButton} onPress={addNewRoutine}>
           <View style={styles.addButtonContent}>
             <Ionicons name="add-circle-outline" size={24} color="white" />
             <Text style={styles.addButtonText}>새 루틴 추가</Text>
@@ -79,7 +168,7 @@ export default function RoutinesScreen() {
               size={24}
               color={Colors.light.successColor}
             />
-            <Text style={styles.statNumber}>12</Text>
+            <Text style={styles.statNumber}>{statistics.completed}</Text>
             <Text style={styles.statLabel}>완료</Text>
           </View>
           <View style={styles.statCard}>
@@ -88,7 +177,7 @@ export default function RoutinesScreen() {
               size={24}
               color={Colors.light.warningColor}
             />
-            <Text style={styles.statNumber}>5</Text>
+            <Text style={styles.statNumber}>{statistics.pending}</Text>
             <Text style={styles.statLabel}>대기</Text>
           </View>
           <View style={styles.statCard}>
@@ -97,7 +186,7 @@ export default function RoutinesScreen() {
               size={24}
               color={Colors.light.errorColor}
             />
-            <Text style={styles.statNumber}>3</Text>
+            <Text style={styles.statNumber}>{statistics.overdue}</Text>
             <Text style={styles.statLabel}>지연</Text>
           </View>
         </View>
@@ -136,20 +225,34 @@ export default function RoutinesScreen() {
               </View>
 
               <View style={styles.routineActions}>
-                <TouchableOpacity style={styles.actionButton}>
-                  <Ionicons name="checkmark" size={18} color="white" />
-                  <Text style={styles.actionButtonText}>완료</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.actionButton, styles.skipButton]}
-                >
-                  <Ionicons
-                    name="calendar-outline"
-                    size={18}
-                    color={Colors.light.mutedText}
-                  />
-                  <Text style={styles.skipButtonText}>미루기</Text>
-                </TouchableOpacity>
+                {routine.status !== "completed" && (
+                  <TouchableOpacity
+                    style={styles.actionButton}
+                    onPress={() => completeRoutine(routine.id)}
+                  >
+                    <Ionicons name="checkmark" size={18} color="white" />
+                    <Text style={styles.actionButtonText}>완료</Text>
+                  </TouchableOpacity>
+                )}
+                {routine.status === "completed" && (
+                  <View style={[styles.actionButton, styles.completedButton]}>
+                    <Ionicons name="checkmark-circle" size={18} color="white" />
+                    <Text style={styles.actionButtonText}>완료됨</Text>
+                  </View>
+                )}
+                {routine.status !== "completed" && (
+                  <TouchableOpacity
+                    style={[styles.actionButton, styles.skipButton]}
+                    onPress={() => postponeRoutine(routine.id)}
+                  >
+                    <Ionicons
+                      name="calendar-outline"
+                      size={18}
+                      color={Colors.light.mutedText}
+                    />
+                    <Text style={styles.skipButtonText}>미루기</Text>
+                  </TouchableOpacity>
+                )}
               </View>
             </View>
           ))}
@@ -172,16 +275,30 @@ export default function RoutinesScreen() {
               <View style={styles.statProgressContainer}>
                 <View style={styles.progressItem}>
                   <Text style={styles.progressLabel}>완료율</Text>
-                  <Text style={styles.progressValue}>80%</Text>
+                  <Text style={styles.progressValue}>
+                    {statistics.completionRate}%
+                  </Text>
                   <View style={styles.progressBar}>
-                    <View style={[styles.progressFill, { width: "80%" }]} />
+                    <View
+                      style={[
+                        styles.progressFill,
+                        { width: `${statistics.completionRate}%` },
+                      ]}
+                    />
                   </View>
                 </View>
                 <View style={styles.progressItem}>
                   <Text style={styles.progressLabel}>참여도</Text>
-                  <Text style={styles.progressValue}>95%</Text>
+                  <Text style={styles.progressValue}>
+                    {statistics.participationRate}%
+                  </Text>
                   <View style={styles.progressBar}>
-                    <View style={[styles.progressFill, { width: "95%" }]} />
+                    <View
+                      style={[
+                        styles.progressFill,
+                        { width: `${statistics.participationRate}%` },
+                      ]}
+                    />
                   </View>
                 </View>
               </View>
@@ -363,6 +480,9 @@ const styles = StyleSheet.create({
     color: Colors.light.mutedText,
     fontSize: 14,
     fontWeight: "600",
+  },
+  completedButton: {
+    backgroundColor: Colors.light.successColor,
   },
   weeklyStats: {
     margin: 20,
