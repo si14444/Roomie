@@ -1,10 +1,12 @@
-import React from "react";
+import React, { useState } from "react";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { Ionicons } from "@expo/vector-icons";
 import { TouchableOpacity, View } from "react-native";
 import { Tabs } from "expo-router";
 
 import Colors from "@/constants/Colors";
+import { useNotificationContext } from "@/contexts/NotificationContext";
+import { NotificationsModal } from "@/components/notifications/NotificationsModal";
 
 // You can explore the built-in icon families and icons on the web at https://icons.expo.fyi/
 function TabBarIcon(props: {
@@ -15,21 +17,64 @@ function TabBarIcon(props: {
 }
 
 function NotificationButton() {
+  const [showNotifications, setShowNotifications] = useState(false);
+  const {
+    notifications,
+    unreadCount,
+    markAllAsRead,
+    clearReadNotifications,
+    deleteNotification,
+    handleNotificationClick,
+    getNotificationIcon,
+    getRelativeTime,
+  } = useNotificationContext();
+
+  const handleNotificationPress = () => {
+    setShowNotifications(true);
+  };
+
+  const handleCloseNotifications = () => {
+    setShowNotifications(false);
+  };
+
   return (
-    <TouchableOpacity style={{ position: "relative", padding: 8 }}>
-      <Ionicons name="notifications-outline" size={24} color="#FFFFFF" />
-      <View
-        style={{
-          position: "absolute",
-          top: 6,
-          right: 6,
-          width: 8,
-          height: 8,
-          borderRadius: 4,
-          backgroundColor: "#EF4444",
+    <>
+      <TouchableOpacity
+        style={{ position: "relative", padding: 8 }}
+        onPress={handleNotificationPress}
+      >
+        <Ionicons name="notifications-outline" size={24} color="#FFFFFF" />
+        {unreadCount > 0 && (
+          <View
+            style={{
+              position: "absolute",
+              top: 6,
+              right: 6,
+              width: 8,
+              height: 8,
+              borderRadius: 4,
+              backgroundColor: "#EF4444",
+            }}
+          />
+        )}
+      </TouchableOpacity>
+
+      <NotificationsModal
+        visible={showNotifications}
+        onClose={handleCloseNotifications}
+        notifications={notifications}
+        unreadCount={unreadCount}
+        onNotificationPress={(notification) => {
+          handleNotificationClick(notification);
+          handleCloseNotifications();
         }}
+        onMarkAllAsRead={markAllAsRead}
+        onClearReadNotifications={clearReadNotifications}
+        onDeleteNotification={deleteNotification}
+        getNotificationIcon={getNotificationIcon}
+        getRelativeTime={getRelativeTime}
       />
-    </TouchableOpacity>
+    </>
   );
 }
 

@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { Alert } from "react-native";
+import { useNotificationContext } from "@/contexts/NotificationContext";
 
 interface Routine {
   id: number;
@@ -19,6 +20,7 @@ interface NewRoutine {
 }
 
 export function useRoutines() {
+  const { createNotification } = useNotificationContext();
   const [routines, setRoutines] = useState<Routine[]>([
     {
       id: 1,
@@ -80,15 +82,24 @@ export function useRoutines() {
   // 루틴 완료 처리
   const completeRoutine = (routineId: number) => {
     setRoutines((prev) =>
-      prev.map((routine) =>
-        routine.id === routineId
-          ? {
-              ...routine,
-              status: "completed" as const,
-              completedAt: new Date().toISOString().split("T")[0],
-            }
-          : routine
-      )
+      prev.map((routine) => {
+        if (routine.id === routineId) {
+          // 알림 생성
+          createNotification({
+            title: "루틴 완료",
+            message: `${routine.assignee}가 "${routine.task}"를 완료했습니다`,
+            type: "routine_completed",
+            relatedId: routineId.toString(),
+          });
+
+          return {
+            ...routine,
+            status: "completed" as const,
+            completedAt: new Date().toISOString().split("T")[0],
+          };
+        }
+        return routine;
+      })
     );
   };
 

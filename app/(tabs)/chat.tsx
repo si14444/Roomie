@@ -1,8 +1,9 @@
 import React from "react";
-import { StyleSheet, ScrollView } from "react-native";
+import { StyleSheet, ScrollView, Alert } from "react-native";
 import { View } from "@/components/Themed";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Colors from "@/constants/Colors";
+import { useNotificationContext } from "@/contexts/NotificationContext";
 
 // Import chat components
 import { ActivePolls } from "@/components/chat/ActivePolls";
@@ -10,12 +11,35 @@ import { MessagesList } from "@/components/chat/MessagesList";
 import { MessageInput } from "@/components/chat/MessageInput";
 
 export default function ChatScreen() {
+  const { createNotification } = useNotificationContext();
+
   const handleVote = (pollId: number, optionIndex: number) => {
     console.log(`Vote for poll ${pollId}, option ${optionIndex}`);
   };
 
   const handleCreatePoll = () => {
-    console.log("Create new poll");
+    Alert.prompt(
+      "새 투표 만들기",
+      "투표 주제를 입력해주세요:",
+      [
+        { text: "취소", style: "cancel" },
+        {
+          text: "생성",
+          onPress: (pollTitle) => {
+            if (pollTitle && pollTitle.trim()) {
+              createNotification({
+                title: "투표 생성",
+                message: `새로운 투표가 생성되었습니다: ${pollTitle.trim()}`,
+                type: "poll_created",
+                relatedId: Date.now().toString(),
+              });
+              Alert.alert("완료", "투표가 생성되었습니다!");
+            }
+          },
+        },
+      ],
+      "plain-text"
+    );
   };
 
   const handleSendMessage = (message: string) => {

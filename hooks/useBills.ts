@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { Alert } from "react-native";
+import { useNotificationContext } from "@/contexts/NotificationContext";
 import { Ionicons } from "@expo/vector-icons";
 
 interface Bill {
@@ -21,6 +22,7 @@ interface Roommate {
 }
 
 export function useBills() {
+  const { createNotification } = useNotificationContext();
   const [bills, setBills] = useState<Bill[]>([
     {
       id: 1,
@@ -183,6 +185,17 @@ export function useBills() {
     };
 
     setBills((prev) => [...prev, bill]);
+
+    // 알림 생성
+    createNotification({
+      title: "공과금 추가",
+      message: `${
+        bill.name
+      } 청구서가 등록되었습니다 (₩${bill.amount.toLocaleString()})`,
+      type: "bill_added",
+      relatedId: bill.id.toString(),
+    });
+
     Alert.alert("성공", "새 공과금이 추가되었습니다!");
     return true;
   };
@@ -197,6 +210,17 @@ export function useBills() {
           };
 
           const allPaid = Object.values(updatedPayments).every((paid) => paid);
+          const wasJustCompleted = allPaid && bill.status !== "paid";
+
+          // 지불이 방금 완료되었을 때 알림 생성
+          if (wasJustCompleted) {
+            createNotification({
+              title: "지불 완료",
+              message: `${bill.name} 공과금 정산이 완료되었습니다`,
+              type: "payment_received",
+              relatedId: bill.id.toString(),
+            });
+          }
 
           return {
             ...bill,
