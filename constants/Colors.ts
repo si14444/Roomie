@@ -9,65 +9,65 @@ const gradientEnd = "#7C3AED"; // 그라데이션 끝 (보라)
 
 export default {
   light: {
-    text: "#2D1B69", // 진한 보라빛 텍스트
+    text: "#1F2937", // 깔끔한 다크 그레이 텍스트
     background: "#FDFCFF", // 매우 연한 보라 배경
-    tint: "#8B5A8C", // 한국적 자주색
-    tabIconDefault: "#B794B7", // 연한 자주색
-    tabIconSelected: "#8B5A8C",
-    primary: "#8B5A8C", // 메인 자주색 (한국 전통 자주)
-    secondary: "#A855F7", // 보조 보라색
-    accent: "#F8F5FF", // 매우 연한 보라 악센트
-    accentBlue: "#EDE7FF", // 연보라 악센트
-    gradientStart: "#8B5A8C",
-    gradientEnd: "#B794B7",
-    gradientPrimary: ["#8B5A8C", "#B794B7"], // 자주색 그라디언트
-    gradientSecondary: ["#A855F7", "#C084FC"], // 밝은 보라 그라디언트
+    tint: "#8B5CF6", // 예쁜 바이올렛
+    tabIconDefault: "#C084FC", // 연한 라벤더
+    tabIconSelected: "#8B5CF6",
+    primary: "#8B5CF6", // 메인 바이올렛 (밝고 생동감 있는 보라색)
+    secondary: "#C084FC", // 부드러운 라벤더
+    accent: "#F8FAFC", // 매우 연한 그레이 악센트
+    accentBlue: "#EDE9FE", // 연보라 악센트
+    gradientStart: "#8B5CF6",
+    gradientEnd: "#C084FC",
+    gradientPrimary: ["#8B5CF6", "#C084FC"], // 예쁜 보라 그라디언트
+    gradientSecondary: ["#A78BFA", "#DDD6FE"], // 밝은 라벤더 그라디언트
     cardBackground: "#FFFFFF",
-    surface: "#F8F5FF", // 연보라 서피스
-    surfaceVariant: "#F0EAFF", // 중간 연보라
-    borderColor: "#E5D9FF", // 연보라 테두리
-    mutedText: "#8B7BA8", // 음소거된 보라 텍스트
-    placeholderText: "#B794B7",
-    divider: "#E5D9FF",
+    surface: "#F8FAFC", // 연한 그레이 서피스
+    surfaceVariant: "#F1F5F9", // 중간 그레이
+    borderColor: "#E2E8F0", // 연한 그레이 테두리
+    mutedText: "#64748B", // 음소거된 그레이 텍스트
+    placeholderText: "#94A3B8",
+    divider: "#E2E8F0",
     shadow: "#000000",
-    overlay: "rgba(139, 90, 140, 0.5)", // 자주색 오버레이
-    successColor: "#7C3AED", // 성공 색상도 보라 계열
+    overlay: "rgba(139, 92, 246, 0.5)", // 바이올렛 오버레이
+    successColor: "#10B981", // 성공 색상은 그린으로
     warningColor: "#F59E0B", // 경고는 노란색 유지
-    errorColor: "#DC2626", // 에러는 빨간색 유지
-    infoColor: "#8B5A8C", // 정보 색상도 자주색
-    completedColor: "#7C3AED",
+    errorColor: "#EF4444", // 에러는 빨간색 유지
+    infoColor: "#8B5CF6", // 정보 색상은 바이올렛
+    completedColor: "#10B981",
     pendingColor: "#F59E0B",
-    inProgressColor: "#8B5A8C",
+    inProgressColor: "#8B5CF6",
   },
   dark: {
-    text: "#F0EAFF",
-    background: "#1A0B2E", // 진한 보라 배경
-    tint: "#B794B7",
-    tabIconDefault: "#8B7BA8",
-    tabIconSelected: "#B794B7",
-    primary: "#B794B7", // 다크모드용 밝은 자주색
-    secondary: "#C084FC",
-    accent: "#2D1B69",
-    accentBlue: "#3730A3",
-    gradientStart: "#B794B7",
-    gradientEnd: "#C084FC",
-    gradientPrimary: ["#B794B7", "#C084FC"],
-    gradientSecondary: ["#C084FC", "#DDD6FE"],
-    cardBackground: "#2D1B69",
-    surface: "#3730A3",
-    surfaceVariant: "#4C1D95",
-    borderColor: "#5B21B6",
-    mutedText: "#B794B7",
-    placeholderText: "#8B7BA8",
-    divider: "#5B21B6",
+    text: "#F1F5F9",
+    background: "#0F172A", // 진한 다크 배경
+    tint: "#C084FC",
+    tabIconDefault: "#94A3B8",
+    tabIconSelected: "#C084FC",
+    primary: "#C084FC", // 다크모드용 밝은 라벤더
+    secondary: "#DDD6FE",
+    accent: "#1E293B",
+    accentBlue: "#312E81",
+    gradientStart: "#C084FC",
+    gradientEnd: "#DDD6FE",
+    gradientPrimary: ["#C084FC", "#DDD6FE"],
+    gradientSecondary: ["#A78BFA", "#F3F4F6"],
+    cardBackground: "#1E293B",
+    surface: "#334155",
+    surfaceVariant: "#475569",
+    borderColor: "#64748B",
+    mutedText: "#94A3B8",
+    placeholderText: "#64748B",
+    divider: "#475569",
     shadow: "#000000",
     overlay: "rgba(0, 0, 0, 0.7)",
-    successColor: "#8B5CF6",
+    successColor: "#10B981",
     warningColor: "#F59E0B",
     errorColor: "#EF4444",
-    infoColor: "#B794B7",
-    completedColor: "#8B5CF6",
+    infoColor: "#C084FC",
+    completedColor: "#10B981",
     pendingColor: "#F59E0B",
-    inProgressColor: "#B794B7",
+    inProgressColor: "#C084FC",
   },
 };
