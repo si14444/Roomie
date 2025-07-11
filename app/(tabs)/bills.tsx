@@ -77,24 +77,32 @@ export default function BillsScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <LinearGradient
-        colors={Colors.light.gradientPrimary as any}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.header}
+    <SafeAreaView style={styles.container} edges={["bottom"]}>
+      <View
+        style={[
+          styles.welcomeSection,
+          { backgroundColor: Colors.light.accent },
+        ]}
       >
-        <View style={styles.headerContent}>
-          <View>
-            <Text style={styles.greeting}>가계부 정리! 💰</Text>
-            <Text style={styles.headerTitle}>공과금 관리</Text>
-          </View>
-          <TouchableOpacity style={styles.notificationButton}>
-            <Ionicons name="notifications-outline" size={24} color="#FFFFFF" />
-            <View style={styles.notificationBadge} />
-          </TouchableOpacity>
+        <View style={styles.welcomeContent}>
+          <Text style={[styles.greeting, { color: Colors.light.primary }]}>
+            가계부 정리! 💰
+          </Text>
+          <Text
+            style={[styles.welcomeSubtitle, { color: Colors.light.mutedText }]}
+          >
+            이번 달 공과금을 한눈에 확인하세요
+          </Text>
         </View>
-      </LinearGradient>
+        <TouchableOpacity style={styles.notificationButton}>
+          <Ionicons
+            name="notifications-outline"
+            size={24}
+            color={Colors.light.primary}
+          />
+          <View style={styles.notificationBadge} />
+        </TouchableOpacity>
+      </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.summaryCard}>
@@ -546,5 +554,24 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: "bold",
     color: "white",
+  },
+  welcomeSection: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    marginHorizontal: 20,
+    marginTop: 10,
+    marginBottom: 20,
+    borderRadius: 16,
+  },
+  welcomeContent: {
+    flex: 1,
+  },
+  welcomeSubtitle: {
+    fontSize: 14,
+    marginTop: 4,
+    lineHeight: 20,
   },
 });
