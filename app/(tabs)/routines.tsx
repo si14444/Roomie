@@ -213,6 +213,56 @@ export default function RoutinesScreen() {
     });
   };
 
+  // 루틴 삭제
+  const deleteRoutine = (routineId: number) => {
+    const routine = routines.find((r) => r.id === routineId);
+    Alert.alert("루틴 삭제", `"${routine?.task}" 루틴을 삭제하시겠습니까?`, [
+      { text: "취소", style: "cancel" },
+      {
+        text: "삭제",
+        style: "destructive",
+        onPress: () => {
+          setRoutines((prev) => prev.filter((r) => r.id !== routineId));
+          Alert.alert("삭제 완료", "루틴이 삭제되었습니다.");
+        },
+      },
+    ]);
+  };
+
+  // 루틴 옵션 메뉴 (길게 누르기)
+  const showRoutineOptions = (routine: Routine) => {
+    Alert.alert(`${routine.task} 관리`, "어떤 작업을 하시겠습니까?", [
+      { text: "취소", style: "cancel" },
+      {
+        text: "담당자 변경",
+        onPress: () => showAssigneeOptions(routine),
+      },
+      {
+        text: "삭제",
+        style: "destructive",
+        onPress: () => deleteRoutine(routine.id),
+      },
+    ]);
+  };
+
+  // 담당자 변경
+  const showAssigneeOptions = (routine: Routine) => {
+    Alert.alert("담당자 변경", `"${routine.task}"의 담당자를 변경하세요`, [
+      { text: "취소", style: "cancel" },
+      ...roommates.map((roommate) => ({
+        text: roommate,
+        onPress: () => {
+          setRoutines((prev) =>
+            prev.map((r) =>
+              r.id === routine.id ? { ...r, assignee: roommate } : r
+            )
+          );
+          Alert.alert("변경 완료", `담당자가 ${roommate}로 변경되었습니다.`);
+        },
+      })),
+    ]);
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case "completed":
@@ -278,7 +328,12 @@ export default function RoutinesScreen() {
         <View style={styles.routinesList}>
           <Text style={styles.sectionTitle}>오늘의 루틴</Text>
           {routines.map((routine) => (
-            <View key={routine.id} style={styles.routineCard}>
+            <TouchableOpacity
+              key={routine.id}
+              style={styles.routineCard}
+              activeOpacity={0.7}
+              onLongPress={() => showRoutineOptions(routine)}
+            >
               <View style={styles.routineCardHeader}>
                 <View style={styles.iconContainer}>
                   <Ionicons
@@ -338,7 +393,7 @@ export default function RoutinesScreen() {
                   </TouchableOpacity>
                 )}
               </View>
-            </View>
+            </TouchableOpacity>
           ))}
         </View>
 
