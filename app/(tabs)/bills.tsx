@@ -1,7 +1,6 @@
 import { StyleSheet, ScrollView, TouchableOpacity } from "react-native";
 import { Text, View } from "@/components/Themed";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import Colors from "@/constants/Colors";
 
@@ -80,15 +79,12 @@ export default function BillsScreen() {
     <SafeAreaView style={styles.container} edges={[]}>
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.summaryCard}>
-          <LinearGradient
-            colors={Colors.light.gradientPrimary as any}
-            style={styles.summaryGradient}
-          >
+          <View style={styles.summaryContent}>
             <Ionicons name="card-outline" size={32} color="white" />
             <Text style={styles.summaryTitle}>이번 달 총 공과금</Text>
             <Text style={styles.summaryAmount}>₩257,000</Text>
             <Text style={styles.summaryPerPerson}>1인당 ₩85,667</Text>
-          </LinearGradient>
+          </View>
         </View>
 
         <View style={styles.quickActions}>
@@ -283,9 +279,10 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 6,
   },
-  summaryGradient: {
+  summaryContent: {
     padding: 24,
     alignItems: "center",
+    backgroundColor: Colors.light.primary,
   },
   summaryTitle: {
     fontSize: 16,

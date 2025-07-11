@@ -7,7 +7,6 @@ import {
 import { Text, View } from "@/components/Themed";
 import { useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import Colors from "@/constants/Colors";
 
@@ -189,13 +188,10 @@ export default function ChatScreen() {
             ))}
 
           <TouchableOpacity style={styles.createPollButton}>
-            <LinearGradient
-              colors={Colors.light.gradientSecondary as any}
-              style={styles.createPollGradient}
-            >
+            <View style={styles.createPollContent}>
               <Ionicons name="add-circle-outline" size={20} color="white" />
               <Text style={styles.createPollButtonText}>새 투표 만들기</Text>
-            </LinearGradient>
+            </View>
           </TouchableOpacity>
         </View>
 
@@ -460,12 +456,13 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 4,
   },
-  createPollGradient: {
+  createPollContent: {
     paddingVertical: 16,
     alignItems: "center",
     flexDirection: "row",
     justifyContent: "center",
     gap: 8,
+    backgroundColor: Colors.light.primary,
   },
   createPollButtonText: {
     color: "white",
