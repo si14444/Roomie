@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { Alert } from "react-native";
 import { useNotificationContext } from "@/contexts/NotificationContext";
 import { Ionicons } from "@expo/vector-icons";
@@ -72,12 +72,15 @@ export function useBills() {
 
   const roommates = ["김철수", "이영희", "박민수", "정지수"];
 
-  const calculateSplit = (amount: number, splitType: "equal" | "custom") => {
-    if (splitType === "equal") {
-      return Math.round(amount / roommates.length);
-    }
-    return Math.round(amount / 2);
-  };
+  const calculateSplit = useCallback(
+    (amount: number, splitType: "equal" | "custom") => {
+      if (splitType === "equal") {
+        return Math.round(amount / roommates.length);
+      }
+      return Math.round(amount / 2);
+    },
+    [roommates.length]
+  );
 
   const statistics = useMemo(() => {
     const totalAmount = bills.reduce((sum, bill) => sum + bill.amount, 0);
@@ -123,115 +126,123 @@ export function useBills() {
     };
   }, [bills]);
 
-  const addNewBill = (newBill: {
-    name: string;
-    amount: string;
-    splitType: "equal" | "custom";
-    dueDate: string;
-    category: "utility" | "subscription" | "maintenance";
-  }) => {
-    if (!newBill.name.trim() || !newBill.amount.trim()) {
-      Alert.alert("오류", "공과금 이름과 금액을 입력해주세요.");
-      return false;
-    }
-
-    if (!newBill.dueDate.trim()) {
-      Alert.alert("오류", "마감일을 입력해주세요.");
-      return false;
-    }
-
-    const getIconForCategory = (category: string, name: string) => {
-      const nameLower = name.toLowerCase();
-
-      if (nameLower.includes("전기")) return "flash-outline";
-      if (nameLower.includes("가스")) return "flame-outline";
-      if (nameLower.includes("수도") || nameLower.includes("물"))
-        return "water-outline";
-      if (nameLower.includes("인터넷") || nameLower.includes("wifi"))
-        return "wifi-outline";
-      if (nameLower.includes("넷플릭스") || nameLower.includes("구독"))
-        return "play-circle-outline";
-      if (nameLower.includes("통신") || nameLower.includes("폰"))
-        return "phone-portrait-outline";
-
-      switch (category) {
-        case "utility":
-          return "flash-outline";
-        case "subscription":
-          return "play-circle-outline";
-        case "maintenance":
-          return "home-outline";
-        default:
-          return "home-outline";
+  const addNewBill = useCallback(
+    (newBill: {
+      name: string;
+      amount: string;
+      splitType: "equal" | "custom";
+      dueDate: string;
+      category: "utility" | "subscription" | "maintenance";
+    }) => {
+      if (!newBill.name.trim() || !newBill.amount.trim()) {
+        Alert.alert("오류", "공과금 이름과 금액을 입력해주세요.");
+        return false;
       }
-    };
 
-    const bill: Bill = {
-      id: Date.now(),
-      name: newBill.name.trim(),
-      amount: parseInt(newBill.amount.trim()),
-      splitType: newBill.splitType,
-      status: "pending",
-      dueDate: newBill.dueDate.trim(),
-      icon: getIconForCategory(
-        newBill.category,
-        newBill.name
-      ) as keyof typeof Ionicons.glyphMap,
-      category: newBill.category,
-      payments: roommates.reduce((acc, roommate) => {
-        acc[roommate] = false;
-        return acc;
-      }, {} as { [roommate: string]: boolean }),
-    };
+      if (!newBill.dueDate.trim()) {
+        Alert.alert("오류", "마감일을 입력해주세요.");
+        return false;
+      }
 
-    setBills((prev) => [...prev, bill]);
+      const getIconForCategory = (category: string, name: string) => {
+        const nameLower = name.toLowerCase();
 
-    // 알림 생성
-    createNotification({
-      title: "공과금 추가",
-      message: `${
-        bill.name
-      } 청구서가 등록되었습니다 (₩${bill.amount.toLocaleString()})`,
-      type: "bill_added",
-      relatedId: bill.id.toString(),
-    });
+        if (nameLower.includes("전기")) return "flash-outline";
+        if (nameLower.includes("가스")) return "flame-outline";
+        if (nameLower.includes("수도") || nameLower.includes("물"))
+          return "water-outline";
+        if (nameLower.includes("인터넷") || nameLower.includes("wifi"))
+          return "wifi-outline";
+        if (nameLower.includes("넷플릭스") || nameLower.includes("구독"))
+          return "play-circle-outline";
+        if (nameLower.includes("통신") || nameLower.includes("폰"))
+          return "phone-portrait-outline";
 
-    Alert.alert("성공", "새 공과금이 추가되었습니다!");
-    return true;
-  };
-
-  const togglePayment = (billId: number, roommate: string) => {
-    setBills((prev) =>
-      prev.map((bill) => {
-        if (bill.id === billId) {
-          const updatedPayments = {
-            ...bill.payments,
-            [roommate]: !bill.payments[roommate],
-          };
-
-          const allPaid = Object.values(updatedPayments).every((paid) => paid);
-          const wasJustCompleted = allPaid && bill.status !== "paid";
-
-          // 지불이 방금 완료되었을 때 알림 생성
-          if (wasJustCompleted) {
-            createNotification({
-              title: "지불 완료",
-              message: `${bill.name} 공과금 정산이 완료되었습니다`,
-              type: "payment_received",
-              relatedId: bill.id.toString(),
-            });
-          }
-
-          return {
-            ...bill,
-            payments: updatedPayments,
-            status: allPaid ? "paid" : "pending",
-          };
+        switch (category) {
+          case "utility":
+            return "flash-outline";
+          case "subscription":
+            return "play-circle-outline";
+          case "maintenance":
+            return "home-outline";
+          default:
+            return "home-outline";
         }
-        return bill;
-      })
-    );
-  };
+      };
+
+      const bill: Bill = {
+        id: Date.now(),
+        name: newBill.name.trim(),
+        amount: parseInt(newBill.amount.trim()),
+        splitType: newBill.splitType,
+        status: "pending",
+        dueDate: newBill.dueDate.trim(),
+        icon: getIconForCategory(
+          newBill.category,
+          newBill.name
+        ) as keyof typeof Ionicons.glyphMap,
+        category: newBill.category,
+        payments: roommates.reduce((acc, roommate) => {
+          acc[roommate] = false;
+          return acc;
+        }, {} as { [roommate: string]: boolean }),
+      };
+
+      setBills((prev) => [...prev, bill]);
+
+      // 알림 생성
+      createNotification({
+        title: "공과금 추가",
+        message: `${
+          bill.name
+        } 청구서가 등록되었습니다 (₩${bill.amount.toLocaleString()})`,
+        type: "bill_added",
+        relatedId: bill.id.toString(),
+      });
+
+      Alert.alert("성공", "새 공과금이 추가되었습니다!");
+      return true;
+    },
+    [roommates, createNotification]
+  );
+
+  const togglePayment = useCallback(
+    (billId: number, roommate: string) => {
+      setBills((prev) =>
+        prev.map((bill) => {
+          if (bill.id === billId) {
+            const updatedPayments = {
+              ...bill.payments,
+              [roommate]: !bill.payments[roommate],
+            };
+
+            const allPaid = Object.values(updatedPayments).every(
+              (paid) => paid
+            );
+            const wasJustCompleted = allPaid && bill.status !== "paid";
+
+            // 지불이 방금 완료되었을 때 알림 생성
+            if (wasJustCompleted) {
+              createNotification({
+                title: "지불 완료",
+                message: `${bill.name} 공과금 정산이 완료되었습니다`,
+                type: "payment_received",
+                relatedId: bill.id.toString(),
+              });
+            }
+
+            return {
+              ...bill,
+              payments: updatedPayments,
+              status: allPaid ? "paid" : "pending",
+            };
+          }
+          return bill;
+        })
+      );
+    },
+    [createNotification]
+  );
 
   const markBillAsPaid = (billId: number) => {
     setBills((prev) =>
