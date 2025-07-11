@@ -1,4 +1,11 @@
-import { StyleSheet, ScrollView, TouchableOpacity, Alert } from "react-native";
+import {
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  Alert,
+  Modal,
+  TextInput,
+} from "react-native";
 import { Text, View } from "@/components/Themed";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -56,6 +63,27 @@ export default function RoutinesScreen() {
       frequency: "daily",
     },
   ]);
+
+  // 모달 상태 관리
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [newRoutine, setNewRoutine] = useState({
+    task: "",
+    assignee: "",
+    frequency: "daily" as "daily" | "weekly" | "monthly",
+    icon: "home-outline" as keyof typeof Ionicons.glyphMap,
+  });
+
+  const roommates = ["김철수", "이영희", "박민수", "정지수"];
+  const routineIcons = [
+    "home-outline",
+    "restaurant-outline",
+    "water-outline",
+    "trash-outline",
+    "car-outline",
+    "shirt-outline",
+    "bed-outline",
+    "library-outline",
+  ] as const;
 
   // 동적 통계 계산
   const statistics = useMemo(() => {
@@ -122,11 +150,67 @@ export default function RoutinesScreen() {
     ]);
   };
 
-  // 새 루틴 추가 (모달/페이지는 나중에 구현)
+  // 새 루틴 추가 모달 열기
+  const openAddModal = () => {
+    setShowAddModal(true);
+  };
+
+  // 새 루틴 추가 실행
   const addNewRoutine = () => {
-    Alert.alert("새 루틴 추가", "새 루틴 추가 기능을 구현 예정입니다.", [
-      { text: "확인" },
-    ]);
+    if (!newRoutine.task.trim() || !newRoutine.assignee) {
+      Alert.alert("오류", "작업명과 담당자를 입력해주세요.");
+      return;
+    }
+
+    const today = new Date();
+    const nextDate = new Date(today);
+
+    // 빈도에 따라 다음 날짜 계산
+    switch (newRoutine.frequency) {
+      case "daily":
+        nextDate.setDate(today.getDate() + 1);
+        break;
+      case "weekly":
+        nextDate.setDate(today.getDate() + 7);
+        break;
+      case "monthly":
+        nextDate.setMonth(today.getMonth() + 1);
+        break;
+    }
+
+    const routine: Routine = {
+      id: Date.now(), // 임시 ID 생성
+      task: newRoutine.task.trim(),
+      assignee: newRoutine.assignee,
+      nextDate: nextDate.toISOString().split("T")[0],
+      status: "pending",
+      icon: newRoutine.icon,
+      frequency: newRoutine.frequency,
+    };
+
+    setRoutines((prev) => [...prev, routine]);
+
+    // 폼 초기화
+    setNewRoutine({
+      task: "",
+      assignee: "",
+      frequency: "daily",
+      icon: "home-outline",
+    });
+
+    setShowAddModal(false);
+    Alert.alert("성공", "새 루틴이 추가되었습니다!");
+  };
+
+  // 모달 닫기
+  const closeAddModal = () => {
+    setShowAddModal(false);
+    setNewRoutine({
+      task: "",
+      assignee: "",
+      frequency: "daily",
+      icon: "home-outline",
+    });
   };
 
   const getStatusColor = (status: string) => {
@@ -154,7 +238,7 @@ export default function RoutinesScreen() {
   return (
     <SafeAreaView style={styles.container} edges={[]}>
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        <TouchableOpacity style={styles.addButton} onPress={addNewRoutine}>
+        <TouchableOpacity style={styles.addButton} onPress={openAddModal}>
           <View style={styles.addButtonContent}>
             <Ionicons name="add-circle-outline" size={24} color="white" />
             <Text style={styles.addButtonText}>새 루틴 추가</Text>
@@ -306,6 +390,160 @@ export default function RoutinesScreen() {
           </View>
         </View>
       </ScrollView>
+
+      {/* 새 루틴 추가 모달 */}
+      <Modal
+        visible={showAddModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={closeAddModal}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>새 루틴 추가</Text>
+              <TouchableOpacity onPress={closeAddModal}>
+                <Ionicons
+                  name="close"
+                  size={24}
+                  color={Colors.light.mutedText}
+                />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.modalContent}>
+              {/* 작업명 입력 */}
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>작업명</Text>
+                <TextInput
+                  style={styles.textInput}
+                  value={newRoutine.task}
+                  onChangeText={(text) =>
+                    setNewRoutine((prev) => ({ ...prev, task: text }))
+                  }
+                  placeholder="예: 설거지, 청소기 돌리기"
+                  placeholderTextColor={Colors.light.placeholderText}
+                />
+              </View>
+
+              {/* 담당자 선택 */}
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>담당자</Text>
+                <View style={styles.optionsGrid}>
+                  {roommates.map((roommate) => (
+                    <TouchableOpacity
+                      key={roommate}
+                      style={[
+                        styles.optionButton,
+                        newRoutine.assignee === roommate &&
+                          styles.optionButtonSelected,
+                      ]}
+                      onPress={() =>
+                        setNewRoutine((prev) => ({
+                          ...prev,
+                          assignee: roommate,
+                        }))
+                      }
+                    >
+                      <Text
+                        style={[
+                          styles.optionText,
+                          newRoutine.assignee === roommate &&
+                            styles.optionTextSelected,
+                        ]}
+                      >
+                        {roommate}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+
+              {/* 빈도 선택 */}
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>빈도</Text>
+                <View style={styles.optionsGrid}>
+                  {[
+                    { key: "daily", label: "매일" },
+                    { key: "weekly", label: "매주" },
+                    { key: "monthly", label: "매월" },
+                  ].map((freq) => (
+                    <TouchableOpacity
+                      key={freq.key}
+                      style={[
+                        styles.optionButton,
+                        newRoutine.frequency === freq.key &&
+                          styles.optionButtonSelected,
+                      ]}
+                      onPress={() =>
+                        setNewRoutine((prev) => ({
+                          ...prev,
+                          frequency: freq.key as any,
+                        }))
+                      }
+                    >
+                      <Text
+                        style={[
+                          styles.optionText,
+                          newRoutine.frequency === freq.key &&
+                            styles.optionTextSelected,
+                        ]}
+                      >
+                        {freq.label}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+
+              {/* 아이콘 선택 */}
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>아이콘</Text>
+                <View style={styles.iconsGrid}>
+                  {routineIcons.map((iconName) => (
+                    <TouchableOpacity
+                      key={iconName}
+                      style={[
+                        styles.iconButton,
+                        newRoutine.icon === iconName &&
+                          styles.iconButtonSelected,
+                      ]}
+                      onPress={() =>
+                        setNewRoutine((prev) => ({ ...prev, icon: iconName }))
+                      }
+                    >
+                      <Ionicons
+                        name={iconName}
+                        size={24}
+                        color={
+                          newRoutine.icon === iconName
+                            ? "white"
+                            : Colors.light.primary
+                        }
+                      />
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+            </ScrollView>
+
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={styles.cancelButton}
+                onPress={closeAddModal}
+              >
+                <Text style={styles.cancelButtonText}>취소</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.confirmButton}
+                onPress={addNewRoutine}
+              >
+                <Text style={styles.confirmButtonText}>추가하기</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -582,5 +820,130 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginTop: 4,
     lineHeight: 20,
+  },
+  // 모달 스타일
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "flex-end",
+  },
+  modalContainer: {
+    backgroundColor: Colors.light.cardBackground,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    maxHeight: "90%",
+    paddingBottom: 20,
+  },
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.light.borderColor,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    color: Colors.light.text,
+  },
+  modalContent: {
+    flex: 1,
+    padding: 20,
+  },
+  inputGroup: {
+    marginBottom: 20,
+  },
+  inputLabel: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: Colors.light.text,
+    marginBottom: 8,
+  },
+  textInput: {
+    backgroundColor: Colors.light.surface,
+    borderWidth: 1,
+    borderColor: Colors.light.borderColor,
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    fontSize: 16,
+    color: Colors.light.text,
+  },
+  optionsGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  optionButton: {
+    backgroundColor: Colors.light.surface,
+    borderWidth: 1,
+    borderColor: Colors.light.borderColor,
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
+  optionButtonSelected: {
+    backgroundColor: Colors.light.primary,
+    borderColor: Colors.light.primary,
+  },
+  optionText: {
+    fontSize: 14,
+    fontWeight: "500",
+    color: Colors.light.text,
+  },
+  optionTextSelected: {
+    color: "white",
+  },
+  iconsGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 12,
+  },
+  iconButton: {
+    width: 48,
+    height: 48,
+    backgroundColor: Colors.light.surface,
+    borderWidth: 1,
+    borderColor: Colors.light.borderColor,
+    borderRadius: 12,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  iconButtonSelected: {
+    backgroundColor: Colors.light.primary,
+    borderColor: Colors.light.primary,
+  },
+  modalActions: {
+    flexDirection: "row",
+    gap: 12,
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: Colors.light.borderColor,
+  },
+  cancelButton: {
+    flex: 1,
+    backgroundColor: Colors.light.surfaceVariant,
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: "center",
+  },
+  cancelButtonText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: Colors.light.mutedText,
+  },
+  confirmButton: {
+    flex: 1,
+    backgroundColor: Colors.light.primary,
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: "center",
+  },
+  confirmButtonText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "white",
   },
 });
