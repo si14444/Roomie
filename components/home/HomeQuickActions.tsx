@@ -47,14 +47,29 @@ export function HomeQuickActions({ onActionPress }: HomeQuickActionsProps) {
     <View style={styles.card}>
       <Text style={styles.cardTitle}>빠른 작업</Text>
       <View style={styles.quickActionsGrid}>
-        {quickActions.map((action) => (
+        {quickActions.map((action, index) => (
           <TouchableOpacity
             key={action.id}
-            style={styles.quickActionItem}
+            style={[
+              styles.quickActionItem,
+              // 첫 번째 줄 (인덱스 0, 1)
+              index < 2 && styles.topRow,
+              // 두 번째 줄 (인덱스 2, 3)
+              index >= 2 && styles.bottomRow,
+              // 왼쪽 열 (인덱스 0, 2)
+              index % 2 === 0 && styles.leftColumn,
+              // 오른쪽 열 (인덱스 1, 3)
+              index % 2 === 1 && styles.rightColumn,
+            ]}
             activeOpacity={0.7}
             onPress={() => onActionPress?.(action.id)}
           >
-            <View style={styles.quickActionIcon}>
+            <View
+              style={[
+                styles.quickActionIcon,
+                { backgroundColor: `${action.color}20` },
+              ]}
+            >
               <Ionicons name={action.icon} size={24} color={action.color} />
             </View>
             <Text style={styles.quickActionText}>{action.title}</Text>
@@ -87,28 +102,41 @@ const styles = StyleSheet.create({
   quickActionsGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 12,
+    marginHorizontal: -6, // 음수 마진으로 외부 간격 조정
   },
   quickActionItem: {
     backgroundColor: Colors.light.surface,
     borderRadius: 12,
     padding: 16,
     alignItems: "center",
-    width: "48%",
-    gap: 8,
+    width: "50%",
+    paddingHorizontal: 6, // 내부 패딩으로 간격 생성
+  },
+  topRow: {
+    marginBottom: 12,
+  },
+  bottomRow: {
+    // 하단 행은 추가 마진 없음
+  },
+  leftColumn: {
+    paddingRight: 6,
+  },
+  rightColumn: {
+    paddingLeft: 6,
   },
   quickActionIcon: {
-    width: 48,
-    height: 48,
-    backgroundColor: Colors.light.accent,
-    borderRadius: 24,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     justifyContent: "center",
     alignItems: "center",
+    marginBottom: 12,
   },
   quickActionText: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: "600",
     color: Colors.light.text,
     textAlign: "center",
+    lineHeight: 16,
   },
 });

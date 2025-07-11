@@ -41,8 +41,14 @@ export function RecentActivity() {
     <View style={styles.card}>
       <Text style={styles.cardTitle}>최근 활동</Text>
       <View style={styles.activityList}>
-        {activities.map((activity) => (
-          <View key={activity.id} style={styles.activityItem}>
+        {activities.map((activity, index) => (
+          <View
+            key={activity.id}
+            style={[
+              styles.activityItem,
+              index === activities.length - 1 && styles.lastActivityItem,
+            ]}
+          >
             <View
               style={[
                 styles.activityIcon,
@@ -86,12 +92,15 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   activityList: {
-    gap: 16,
+    // gap을 marginBottom으로 대체
   },
   activityItem: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
+    marginBottom: 16,
+  },
+  lastActivityItem: {
+    marginBottom: 0,
   },
   activityIcon: {
     width: 32,
@@ -99,6 +108,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     justifyContent: "center",
     alignItems: "center",
+    marginRight: 12,
   },
   activityContent: {
     flex: 1,

@@ -77,10 +77,13 @@ export function TodayTasks({ onAddTask, onTaskPress }: TodayTasksProps) {
         </TouchableOpacity>
       </View>
       <View style={styles.tasksList}>
-        {todayTasks.map((task) => (
+        {todayTasks.map((task, index) => (
           <TouchableOpacity
             key={task.id}
-            style={styles.taskItem}
+            style={[
+              styles.taskItem,
+              index === todayTasks.length - 1 && styles.lastTaskItem,
+            ]}
             onPress={() => onTaskPress?.(task.id)}
           >
             <View style={styles.taskInfo}>
@@ -131,7 +134,7 @@ const styles = StyleSheet.create({
     color: Colors.light.text,
   },
   tasksList: {
-    gap: 12,
+    // gap을 marginBottom으로 대체
   },
   taskItem: {
     flexDirection: "row",
@@ -140,6 +143,10 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.light.surface,
     padding: 16,
     borderRadius: 12,
+    marginBottom: 12,
+  },
+  lastTaskItem: {
+    marginBottom: 0,
   },
   taskInfo: {
     flex: 1,
