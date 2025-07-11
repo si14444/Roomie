@@ -121,11 +121,6 @@ export default function ChatScreen() {
           <Text style={[styles.greeting, { color: Colors.light.primary }]}>
             소통해요! 💬
           </Text>
-          <Text
-            style={[styles.welcomeSubtitle, { color: Colors.light.mutedText }]}
-          >
-            투표와 메시지로 원활한 소통을 시작하세요
-          </Text>
         </View>
         <TouchableOpacity style={styles.notificationButton}>
           <Ionicons

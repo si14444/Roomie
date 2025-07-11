@@ -117,11 +117,6 @@ export default function HomeScreen() {
           <Text style={[styles.greeting, { color: Colors.light.primary }]}>
             안녕하세요! 👋
           </Text>
-          <Text
-            style={[styles.welcomeSubtitle, { color: Colors.light.mutedText }]}
-          >
-            오늘도 깔끔한 룸메이트 생활을 시작해보세요
-          </Text>
         </View>
         <TouchableOpacity style={styles.notificationButton}>
           <Ionicons

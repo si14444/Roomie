@@ -75,11 +75,6 @@ export default function RoutinesScreen() {
           <Text style={[styles.greeting, { color: Colors.light.primary }]}>
             오늘도 화이팅! 💪
           </Text>
-          <Text
-            style={[styles.welcomeSubtitle, { color: Colors.light.mutedText }]}
-          >
-            규칙적인 생활로 더욱 깔끔하게
-          </Text>
         </View>
         <TouchableOpacity style={styles.notificationButton}>
           <Ionicons

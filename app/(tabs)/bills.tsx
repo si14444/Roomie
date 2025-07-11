@@ -88,11 +88,6 @@ export default function BillsScreen() {
           <Text style={[styles.greeting, { color: Colors.light.primary }]}>
             가계부 정리! 💰
           </Text>
-          <Text
-            style={[styles.welcomeSubtitle, { color: Colors.light.mutedText }]}
-          >
-            이번 달 공과금을 한눈에 확인하세요
-          </Text>
         </View>
         <TouchableOpacity style={styles.notificationButton}>
           <Ionicons

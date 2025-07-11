@@ -119,11 +119,6 @@ export default function ItemsScreen() {
           <Text style={[styles.greeting, { color: Colors.light.primary }]}>
             쇼핑 준비! 🛍️
           </Text>
-          <Text
-            style={[styles.welcomeSubtitle, { color: Colors.light.mutedText }]}
-          >
-            함께 사용하는 물품을 효율적으로 관리해요
-          </Text>
         </View>
         <TouchableOpacity style={styles.notificationButton}>
           <Ionicons
