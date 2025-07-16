@@ -1,9 +1,22 @@
 import Colors from "@/constants/Colors";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNotificationContext } from "@/contexts/NotificationContext";
+import * as Clipboard from "expo-clipboard";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
-import { Alert, ScrollView, StyleSheet } from "react-native";
+import {
+  Alert,
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  Share,
+  StyleSheet,
+  Text,
+  ToastAndroid,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 // Import hooks for actual data integration
@@ -18,6 +31,7 @@ import { TodayTasks } from "@/components/home/TodayTasks";
 
 // Import modals for direct functionality
 import { AddBillModal } from "@/components/bills/AddBillModal";
+import { FontAwesome } from "@expo/vector-icons";
 
 export default function HomeScreen() {
   const { createNotification } = useNotificationContext();
@@ -45,6 +59,7 @@ export default function HomeScreen() {
     category: "utility" as "utility" | "subscription" | "maintenance",
     icon: "flash-outline" as any,
   });
+  const [inviteModalVisible, setInviteModalVisible] = useState(false);
 
   const handleQuickAction = (actionId: number) => {
     switch (actionId) {
@@ -221,6 +236,30 @@ export default function HomeScreen() {
     ]);
   };
 
+  // 초대 링크 (임시)
+  const inviteLink = "https://roomie.app/invite?code=ABC123";
+
+  const handleInvite = () => {
+    setInviteModalVisible(true);
+  };
+
+  const handleCopy = async () => {
+    await Clipboard.setStringAsync(inviteLink);
+    if (Platform.OS === "android") {
+      ToastAndroid.show("초대 링크가 복사되었습니다!", ToastAndroid.SHORT);
+    } else {
+      Alert.alert("복사 완료", "초대 링크가 복사되었습니다!");
+    }
+  };
+
+  const handleShare = async () => {
+    try {
+      await Share.share({ message: inviteLink });
+    } catch (error) {
+      Alert.alert("공유 실패", "초대 링크를 공유하는 데 실패했습니다.");
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container} edges={[]}>
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
@@ -229,7 +268,10 @@ export default function HomeScreen() {
         <TodayTasks onAddTask={handleAddTask} onTaskPress={handleTaskPress} />
         <RecentActivity />
       </ScrollView>
-
+      {/* 초대 버튼 UI */}
+      <TouchableOpacity style={styles.inviteButton} onPress={handleInvite}>
+        <Text style={styles.inviteButtonText}>룸메이트 초대</Text>
+      </TouchableOpacity>
       {/* 공과금 추가 모달 */}
       <AddBillModal
         visible={showAddBillModal}
@@ -238,6 +280,42 @@ export default function HomeScreen() {
         onClose={() => setShowAddBillModal(false)}
         onAddBill={handleBillModalSubmit}
       />
+      {/* 초대 모달 */}
+      <Modal
+        visible={inviteModalVisible}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setInviteModalVisible(false)}
+      >
+        <Pressable
+          style={styles.modalOverlay}
+          onPress={() => setInviteModalVisible(false)}
+        />
+        <View style={styles.inviteModal}>
+          <View style={styles.dragBar} />
+          <Text style={styles.modalTitle}>룸메이트 초대</Text>
+          <Text style={styles.modalDesc}>
+            아래 버튼을 눌러 카카오톡으로 초대 링크를 공유하세요!
+          </Text>
+          <View style={styles.modalButtonRow}>
+            <TouchableOpacity style={styles.kakaoButton} onPress={handleShare}>
+              <FontAwesome
+                name="comment"
+                size={20}
+                color="#3C1E1E"
+                style={{ marginRight: 8 }}
+              />
+              <Text style={styles.kakaoButtonText}>카카오톡으로 공유</Text>
+            </TouchableOpacity>
+          </View>
+          <TouchableOpacity
+            style={styles.closeButton}
+            onPress={() => setInviteModalVisible(false)}
+          >
+            <Text style={styles.closeButtonText}>닫기</Text>
+          </TouchableOpacity>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -249,5 +327,126 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+  },
+  inviteButton: {
+    position: "absolute",
+    bottom: 32,
+    right: 24,
+    backgroundColor: Colors.light.primary,
+    borderRadius: 24,
+    paddingVertical: 14,
+    paddingHorizontal: 28,
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  inviteButtonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "bold",
+  },
+  inviteModal: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "#fff",
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: 24,
+    paddingTop: 16,
+    paddingBottom: 32,
+    alignItems: "center",
+    // marginBottom 제거
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.3)",
+  },
+  modalTitle: {
+    fontSize: 22,
+    fontWeight: "bold",
+    color: Colors.light.primary,
+    marginBottom: 8,
+  },
+  modalDesc: {
+    fontSize: 15,
+    color: Colors.light.mutedText,
+    marginBottom: 18,
+    textAlign: "center",
+  },
+  modalButtonRow: {
+    flexDirection: "row",
+    gap: 14,
+    marginBottom: 12,
+    width: "100%",
+    marginTop: 2,
+  },
+  modalButton: {
+    flex: 1,
+    borderRadius: 8,
+    paddingVertical: 13,
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "center",
+    gap: 4,
+    backgroundColor: "transparent",
+  },
+  shareButton: {
+    backgroundColor: Colors.light.accentBlue,
+    borderWidth: 1,
+    borderColor: Colors.light.primary,
+  },
+  modalButtonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "bold",
+    letterSpacing: 0.2,
+  },
+  closeButton: {
+    marginTop: 8,
+    alignItems: "center",
+    width: "100%",
+    borderRadius: 8,
+    paddingVertical: 10,
+    backgroundColor: "#F5F5F5",
+    minHeight: 36,
+    alignSelf: "center",
+  },
+  closeButtonText: {
+    color: Colors.light.mutedText,
+    fontSize: 14,
+    padding: 4,
+    fontWeight: "500",
+    textAlign: "center",
+    width: "100%",
+  },
+  dragBar: {
+    width: 40,
+    height: 5,
+    borderRadius: 2.5,
+    backgroundColor: "#D1C4E9",
+    alignSelf: "center",
+    marginBottom: 12,
+    marginTop: 4,
+    opacity: 0.5,
+  },
+  kakaoButton: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#FEE500",
+    borderRadius: 8,
+    paddingVertical: 14,
+    marginBottom: 8,
+    marginTop: 8,
+    minHeight: 48,
+  },
+  kakaoButtonText: {
+    color: "#3C1E1E",
+    fontSize: 16,
+    fontWeight: "bold",
   },
 });

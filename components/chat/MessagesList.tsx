@@ -1,8 +1,7 @@
-import React from "react";
-import { StyleSheet } from "react-native";
 import { Text, View } from "@/components/Themed";
-import { Ionicons } from "@expo/vector-icons";
 import Colors from "@/constants/Colors";
+import { Ionicons } from "@expo/vector-icons";
+import { StyleSheet } from "react-native";
 
 interface Message {
   id: number;
@@ -131,6 +130,7 @@ const styles = StyleSheet.create({
   messagesSection: {
     paddingHorizontal: 20,
     marginBottom: 20,
+    marginTop: 24, // 위쪽 여백 추가
   },
   sectionTitle: {
     fontSize: 20,
