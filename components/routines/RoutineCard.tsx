@@ -1,8 +1,9 @@
-import React from "react";
-import { StyleSheet, TouchableOpacity, Alert } from "react-native";
+import { ConfirmModal } from "@/components/ConfirmModal";
 import { Text, View } from "@/components/Themed";
-import { Ionicons } from "@expo/vector-icons";
 import Colors from "@/constants/Colors";
+import { Ionicons } from "@expo/vector-icons";
+import { useState } from "react";
+import { StyleSheet, TouchableOpacity } from "react-native";
 
 interface Routine {
   id: number;
@@ -69,24 +70,15 @@ export function RoutineCard({
     }
   };
 
+  const [showCompleteModal, setShowCompleteModal] = useState(false);
+  const [showPostponeModal, setShowPostponeModal] = useState(false);
+
   const handleComplete = () => {
-    Alert.alert("루틴 완료", "이 루틴을 완료로 표시하시겠습니까?", [
-      { text: "취소", style: "cancel" },
-      {
-        text: "완료",
-        onPress: () => onComplete?.(routine.id),
-      },
-    ]);
+    setShowCompleteModal(true);
   };
 
   const handlePostpone = () => {
-    Alert.alert("루틴 미루기", "이 루틴을 내일로 미루시겠습니까?", [
-      { text: "취소", style: "cancel" },
-      {
-        text: "미루기",
-        onPress: () => onPostpone?.(routine.id),
-      },
-    ]);
+    setShowPostponeModal(true);
   };
 
   return (
@@ -157,6 +149,32 @@ export function RoutineCard({
           </TouchableOpacity>
         </View>
       )}
+      {/* 완료 모달 */}
+      <ConfirmModal
+        visible={showCompleteModal}
+        title="루틴 완료"
+        message="이 루틴을 완료로 표시하시겠습니까?"
+        confirmText="완료"
+        cancelText="취소"
+        onConfirm={() => {
+          setShowCompleteModal(false);
+          onComplete?.(routine.id);
+        }}
+        onCancel={() => setShowCompleteModal(false)}
+      />
+      {/* 미루기 모달 */}
+      <ConfirmModal
+        visible={showPostponeModal}
+        title="루틴 미루기"
+        message="이 루틴을 내일로 미루시겠습니까?"
+        confirmText="미루기"
+        cancelText="취소"
+        onConfirm={() => {
+          setShowPostponeModal(false);
+          onPostpone?.(routine.id);
+        }}
+        onCancel={() => setShowPostponeModal(false)}
+      />
     </View>
   );
 }
