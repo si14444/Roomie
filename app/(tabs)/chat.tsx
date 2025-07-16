@@ -1,14 +1,13 @@
-import React from "react";
-import { StyleSheet, ScrollView, Alert } from "react-native";
 import { View } from "@/components/Themed";
-import { SafeAreaView } from "react-native-safe-area-context";
 import Colors from "@/constants/Colors";
 import { useNotificationContext } from "@/contexts/NotificationContext";
+import { Alert, ScrollView, StyleSheet } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 // Import chat components
 import { ActivePolls } from "@/components/chat/ActivePolls";
-import { MessagesList } from "@/components/chat/MessagesList";
 import { MessageInput } from "@/components/chat/MessageInput";
+import { MessagesList } from "@/components/chat/MessagesList";
 
 export default function ChatScreen() {
   const { createNotification } = useNotificationContext();

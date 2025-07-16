@@ -1,8 +1,7 @@
-import React from "react";
-import { StyleSheet, TouchableOpacity } from "react-native";
 import { Text, View } from "@/components/Themed";
-import { Ionicons } from "@expo/vector-icons";
 import Colors from "@/constants/Colors";
+import { Ionicons } from "@expo/vector-icons";
+import { StyleSheet, TouchableOpacity } from "react-native";
 
 interface Poll {
   id: number;
@@ -128,6 +127,7 @@ export function ActivePolls({ onVote, onCreatePoll }: ActivePollsProps) {
         <View style={styles.createPollContent}>
           <Ionicons name="add-circle-outline" size={20} color="white" />
           <Text style={styles.createPollButtonText}>새 투표 만들기</Text>
+          <View style={{ width: 4 }} />
         </View>
       </TouchableOpacity>
     </View>
@@ -238,6 +238,7 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   createPollContent: {
+    backgroundColor: Colors.light.secondary,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
