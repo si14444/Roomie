@@ -1,24 +1,34 @@
-import React, { useState } from "react";
-import { ScrollView, StyleSheet, Alert } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import Colors from "@/constants/Colors";
+import { useAuth } from "@/contexts/AuthContext";
 import { useNotificationContext } from "@/contexts/NotificationContext";
+import { useRouter } from "expo-router";
+import { useEffect, useState } from "react";
+import { Alert, ScrollView, StyleSheet } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 // Import hooks for actual data integration
-import { useRoutines } from "@/hooks/useRoutines";
 import { useBills } from "@/hooks/useBills";
+import { useRoutines } from "@/hooks/useRoutines";
 
 // Import home components
-import { StatusSummaryCard } from "@/components/home/StatusSummaryCard";
 import { HomeQuickActions } from "@/components/home/HomeQuickActions";
-import { TodayTasks } from "@/components/home/TodayTasks";
 import { RecentActivity } from "@/components/home/RecentActivity";
+import { StatusSummaryCard } from "@/components/home/StatusSummaryCard";
+import { TodayTasks } from "@/components/home/TodayTasks";
 
 // Import modals for direct functionality
 import { AddBillModal } from "@/components/bills/AddBillModal";
 
 export default function HomeScreen() {
   const { createNotification } = useNotificationContext();
+  const { isAuthenticated } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      router.replace("/login");
+    }
+  }, [isAuthenticated]);
 
   // Connect to actual data hooks
   const { completeRoutine, routines, addNewRoutine } = useRoutines();

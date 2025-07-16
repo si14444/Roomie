@@ -1,3 +1,5 @@
+import { AuthProvider } from "@/contexts/AuthContext";
+import { NotificationProvider } from "@/contexts/NotificationContext";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { DefaultTheme, ThemeProvider } from "@react-navigation/native";
 import { useFonts } from "expo-font";
@@ -5,7 +7,6 @@ import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
 import { SafeAreaProvider } from "react-native-safe-area-context";
-import { NotificationProvider } from "@/contexts/NotificationContext";
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -48,14 +49,17 @@ function RootLayoutNav() {
   // 항상 라이트 테마를 사용하도록 고정
   return (
     <SafeAreaProvider>
-      <NotificationProvider>
-        <ThemeProvider value={DefaultTheme}>
-          <Stack>
-            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-            <Stack.Screen name="modal" options={{ presentation: "modal" }} />
-          </Stack>
-        </ThemeProvider>
-      </NotificationProvider>
+      <AuthProvider>
+        <NotificationProvider>
+          <ThemeProvider value={DefaultTheme}>
+            <Stack>
+              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+              <Stack.Screen name="login" options={{ headerShown: false }} />
+              <Stack.Screen name="modal" options={{ presentation: "modal" }} />
+            </Stack>
+          </ThemeProvider>
+        </NotificationProvider>
+      </AuthProvider>
     </SafeAreaProvider>
   );
 }
