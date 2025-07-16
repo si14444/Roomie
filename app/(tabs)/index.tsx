@@ -267,11 +267,13 @@ export default function HomeScreen() {
         <HomeQuickActions onActionPress={handleQuickAction} />
         <TodayTasks onAddTask={handleAddTask} onTaskPress={handleTaskPress} />
         <RecentActivity />
+        {/* 초대 버튼을 스크롤 내 마지막에 자연스럽게 배치 */}
+        <View style={{ alignItems: "center", marginTop: 24, marginBottom: 40 }}>
+          <TouchableOpacity style={styles.inviteButton} onPress={handleInvite}>
+            <Text style={styles.inviteButtonText}>룸메이트 초대</Text>
+          </TouchableOpacity>
+        </View>
       </ScrollView>
-      {/* 초대 버튼 UI */}
-      <TouchableOpacity style={styles.inviteButton} onPress={handleInvite}>
-        <Text style={styles.inviteButtonText}>룸메이트 초대</Text>
-      </TouchableOpacity>
       {/* 공과금 추가 모달 */}
       <AddBillModal
         visible={showAddBillModal}
@@ -329,9 +331,6 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   inviteButton: {
-    position: "absolute",
-    bottom: 32,
-    right: 24,
     backgroundColor: Colors.light.primary,
     borderRadius: 24,
     paddingVertical: 14,
