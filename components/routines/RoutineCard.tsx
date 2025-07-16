@@ -71,14 +71,9 @@ export function RoutineCard({
   };
 
   const [showCompleteModal, setShowCompleteModal] = useState(false);
-  const [showPostponeModal, setShowPostponeModal] = useState(false);
 
   const handleComplete = () => {
     setShowCompleteModal(true);
-  };
-
-  const handlePostpone = () => {
-    setShowPostponeModal(true);
   };
 
   return (
@@ -136,17 +131,6 @@ export function RoutineCard({
             <Ionicons name="checkmark" size={16} color="white" />
             <Text style={styles.completeButtonText}>완료</Text>
           </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.postponeButton}
-            onPress={handlePostpone}
-          >
-            <Ionicons
-              name="time-outline"
-              size={16}
-              color={Colors.light.mutedText}
-            />
-            <Text style={styles.postponeButtonText}>미루기</Text>
-          </TouchableOpacity>
         </View>
       )}
       {/* 완료 모달 */}
@@ -161,19 +145,6 @@ export function RoutineCard({
           onComplete?.(routine.id);
         }}
         onCancel={() => setShowCompleteModal(false)}
-      />
-      {/* 미루기 모달 */}
-      <ConfirmModal
-        visible={showPostponeModal}
-        title="루틴 미루기"
-        message="이 루틴을 내일로 미루시겠습니까?"
-        confirmText="미루기"
-        cancelText="취소"
-        onConfirm={() => {
-          setShowPostponeModal(false);
-          onPostpone?.(routine.id);
-        }}
-        onCancel={() => setShowPostponeModal(false)}
       />
     </View>
   );
