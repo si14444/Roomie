@@ -44,8 +44,8 @@ const styles = StyleSheet.create({
     padding: 12, // 기존 24에서 12로 변경
   },
   logo: {
-    width: 100,
-    height: 100,
+    width: 150,
+    height: 150,
     marginBottom: 24,
   },
   title: {
