@@ -1,8 +1,7 @@
-import React from "react";
-import { StyleSheet, TouchableOpacity } from "react-native";
 import { Text, View } from "@/components/Themed";
-import { Ionicons } from "@expo/vector-icons";
 import Colors from "@/constants/Colors";
+import { Ionicons } from "@expo/vector-icons";
+import { StyleSheet, TouchableOpacity } from "react-native";
 import { RoommatePaymentItem } from "./RoommatePaymentItem";
 
 interface Bill {
@@ -22,7 +21,7 @@ interface BillCardProps {
   roommates: string[];
   calculateSplit: (amount: number, splitType: "equal" | "custom") => number;
   onTogglePayment: (billId: number, roommate: string) => void;
-  onGeneratePaymentLink: (bill: Bill) => void;
+  onPressPaymentLink: (bill: Bill) => void;
   onShowBillOptions: (bill: Bill) => void;
 }
 
@@ -31,7 +30,7 @@ export function BillCard({
   roommates,
   calculateSplit,
   onTogglePayment,
-  onGeneratePaymentLink,
+  onPressPaymentLink,
   onShowBillOptions,
 }: BillCardProps) {
   const getStatusColor = (status: string) => {
@@ -106,7 +105,7 @@ export function BillCard({
       <View style={styles.billActions}>
         <TouchableOpacity
           style={styles.paymentButton}
-          onPress={() => onGeneratePaymentLink(bill)}
+          onPress={() => onPressPaymentLink(bill)}
         >
           <Ionicons name="send" size={16} color="white" />
           <Text style={styles.paymentButtonText}>송금링크</Text>

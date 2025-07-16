@@ -1,19 +1,21 @@
-import React, { useState } from "react";
-import { StyleSheet, ScrollView } from "react-native";
 import { Text, View } from "@/components/Themed";
-import { SafeAreaView } from "react-native-safe-area-context";
 import Colors from "@/constants/Colors";
+import { useState } from "react";
+import { ScrollView, StyleSheet } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 // Import new components
-import { SummaryCard } from "@/components/bills/SummaryCard";
-import { QuickActions } from "@/components/bills/QuickActions";
-import { BillCard } from "@/components/bills/BillCard";
-import { PaymentMethods } from "@/components/bills/PaymentMethods";
-import { RoommateStats } from "@/components/bills/RoommateStats";
 import { AddBillModal } from "@/components/bills/AddBillModal";
+import { BillCard } from "@/components/bills/BillCard";
+import { PaymentLinkModal } from "@/components/bills/PaymentLinkModal";
+import { PaymentMethods } from "@/components/bills/PaymentMethods";
+import { QuickActions } from "@/components/bills/QuickActions";
+import { RoommateStats } from "@/components/bills/RoommateStats";
+import { SummaryCard } from "@/components/bills/SummaryCard";
 
 // Import custom hook
-import { useBills } from "@/hooks/useBills";
+import type { Bill } from "@/hooks/useBills";
+import { PaymentLinkModalData, useBills } from "@/hooks/useBills";
 
 export default function BillsScreen() {
   const {
@@ -24,7 +26,7 @@ export default function BillsScreen() {
     addNewBill,
     togglePayment,
     showBillOptions,
-    generatePaymentLink,
+    getPaymentLinkModalData,
     showSettlement,
     showStatistics,
   } = useBills();
@@ -54,6 +56,23 @@ export default function BillsScreen() {
     }
   };
 
+  // 송금 모달 상태
+  const [paymentModalData, setPaymentModalData] =
+    useState<PaymentLinkModalData | null>(null);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+
+  const handlePressPaymentLink = (bill: Bill) => {
+    const modalData = getPaymentLinkModalData(bill);
+    if (modalData) {
+      setPaymentModalData(modalData);
+      setShowPaymentModal(true);
+    } else {
+      // 이미 모두 지불한 경우 등 Alert 대체
+      // TODO: 커스텀 Alert로 대체 가능
+      alert("모든 인원이 이미 지불했습니다.");
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container} edges={[]}>
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
@@ -77,7 +96,7 @@ export default function BillsScreen() {
               roommates={roommates}
               calculateSplit={calculateSplit}
               onTogglePayment={togglePayment}
-              onGeneratePaymentLink={generatePaymentLink}
+              onPressPaymentLink={handlePressPaymentLink}
               onShowBillOptions={showBillOptions}
             />
           ))}
@@ -95,6 +114,13 @@ export default function BillsScreen() {
         onClose={() => setShowAddModal(false)}
         onAddBill={handleAddBill}
       />
+      {showPaymentModal && paymentModalData && (
+        <PaymentLinkModal
+          visible={showPaymentModal}
+          data={paymentModalData}
+          onClose={() => setShowPaymentModal(false)}
+        />
+      )}
     </SafeAreaView>
   );
 }

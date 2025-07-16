@@ -1,9 +1,9 @@
-import { useState, useMemo, useCallback } from "react";
-import { Alert } from "react-native";
 import { useNotificationContext } from "@/contexts/NotificationContext";
 import { Ionicons } from "@expo/vector-icons";
+import { useCallback, useMemo, useState } from "react";
+import { Alert } from "react-native";
 
-interface Bill {
+export interface Bill {
   id: number;
   name: string;
   amount: number;
@@ -19,6 +19,14 @@ interface Roommate {
   name: string;
   totalDebt: number;
   paidAmount: number;
+}
+
+// 송금 모달에 필요한 데이터 타입 정의
+export interface PaymentLinkModalData {
+  bill: Bill;
+  unpaidRoommates: string[];
+  amount: number;
+  paymentMethods: { name: string; icon: string }[];
 }
 
 export function useBills() {
@@ -311,40 +319,17 @@ export function useBills() {
     ]);
   };
 
-  const generatePaymentLink = (bill: Bill) => {
+  // generatePaymentLink는 Alert를 띄우지 않고, 모달에 필요한 데이터만 반환
+  const getPaymentLinkModalData = (bill: Bill): PaymentLinkModalData | null => {
     const unpaidRoommates = roommates.filter(
       (roommate) => !bill.payments[roommate]
     );
-
     if (unpaidRoommates.length === 0) {
-      Alert.alert("알림", "모든 인원이 이미 지불했습니다.");
-      return;
+      return null;
     }
-
     const amount = calculateSplit(bill.amount, bill.splitType);
-    const paymentMethods = [
-      { name: "카카오페이", icon: "chatbubble" },
-      { name: "토스", icon: "card" },
-      { name: "계좌복사", icon: "copy" },
-    ];
-
-    Alert.alert(
-      "송금 링크 생성",
-      `${
-        bill.name
-      }\n금액: ₩${amount.toLocaleString()}\n\n송금 방법을 선택하세요:`,
-      [
-        { text: "취소", style: "cancel" },
-        ...paymentMethods.map((method) => ({
-          text: method.name,
-          onPress: () =>
-            Alert.alert(
-              "송금 링크",
-              `${method.name} 링크가 생성되어 미납자들에게 전송되었습니다!`
-            ),
-        })),
-      ]
-    );
+    const paymentMethods = [{ name: "계좌복사", icon: "copy" }];
+    return { bill, unpaidRoommates, amount, paymentMethods };
   };
 
   const showSettlement = () => {
@@ -404,7 +389,7 @@ export function useBills() {
     addNewBill,
     togglePayment,
     showBillOptions,
-    generatePaymentLink,
+    getPaymentLinkModalData, // 변경된 함수 반환
     showSettlement,
     showStatistics,
   };
