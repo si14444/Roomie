@@ -4,6 +4,8 @@ const lightCoral = "#FF8A7A"; // 라이트 코랄
 const extraLightCoral = "#FFF4F3"; // 매우 연한 코랄
 const darkCoral = "#E8554A"; // 다크 코랄
 const accentCoral = "#FFB3A8"; // 소프트 코랄
+const subTeal = "#4FD1C7"; // 서브 컬러 (틸/터키석 - 코랄의 보색)
+const completionCoral = "#FF9F7D"; // 완료용 코랄 (더 밝은 코랄)
 const gradientStart = "#FF6F61"; // 그라데이션 시작
 const gradientEnd = "#FF8A7A"; // 그라데이션 끝
 
@@ -31,11 +33,12 @@ export default {
     divider: "#E2E8F0",
     shadow: "#000000",
     overlay: "rgba(255, 111, 97, 0.5)", // 코랄 오버레이
-    successColor: "#10B981", // 성공 색상은 그린으로
+    successColor: "#FF9F7D", // 성공 색상 - 완료용 코랄
     warningColor: "#F59E0B", // 경고는 노란색 유지
     errorColor: "#EF4444", // 에러는 빨간색 유지
     infoColor: "#FF6F61", // 정보 색상은 코랄
-    completedColor: "#10B981",
+    completedColor: "#FF9F7D", // 완료 색상 - 완료용 코랄
+    subColor: "#4FD1C7", // 서브 컬러 (틸) - 버튼 등에 사용
     pendingColor: "#F59E0B",
     inProgressColor: "#FF6F61",
   },
@@ -62,11 +65,12 @@ export default {
     divider: "#475569",
     shadow: "#000000",
     overlay: "rgba(0, 0, 0, 0.7)",
-    successColor: "#10B981",
+    successColor: "#FFB399", // 다크모드 성공 색상 - 밝은 완료용 코랄
     warningColor: "#F59E0B",
     errorColor: "#EF4444",
     infoColor: "#FF8A7A",
-    completedColor: "#10B981",
+    completedColor: "#FFB399", // 다크모드 완료 색상 - 밝은 완료용 코랄
+    subColor: "#38B2AC", // 다크모드 서브 컬러 (다크 틸)
     pendingColor: "#F59E0B",
     inProgressColor: "#FF8A7A",
   },

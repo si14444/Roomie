@@ -299,7 +299,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#FEE500",
+    backgroundColor: Colors.light.subColor, // 서브 틸 색상 사용
     borderRadius: 8,
     paddingVertical: 14,
     marginBottom: 8,
@@ -307,7 +307,7 @@ const styles = StyleSheet.create({
     minHeight: 48,
   },
   kakaoButtonText: {
-    color: "#3C1E1E",
+    color: "#FFFFFF", // 흰색 텍스트로 변경하여 대비 개선
     fontSize: 16,
     fontWeight: "bold",
   },

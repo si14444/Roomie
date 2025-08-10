@@ -28,8 +28,8 @@ export function PaymentMethods() {
           style={[styles.methodButton, styles.kakaoButton]}
           onPress={handleKakaoPay}
         >
-          <Ionicons name="chatbubble" size={20} color="#000" />
-          <Text style={[styles.methodButtonText, { color: "#000" }]}>
+          <Ionicons name="chatbubble" size={20} color="#FFFFFF" />
+          <Text style={[styles.methodButtonText, { color: "#FFFFFF" }]}>
             카카오페이
           </Text>
         </TouchableOpacity>
@@ -77,7 +77,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   kakaoButton: {
-    backgroundColor: "#FEE500",
+    backgroundColor: Colors.light.subColor,
   },
   tossButton: {
     backgroundColor: Colors.light.primary,
