@@ -7,6 +7,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 // Import new components
 import { AddBillModal } from "@/components/bills/AddBillModal";
 import { BillCard } from "@/components/bills/BillCard";
+import { BillOptionsModal } from "@/components/bills/BillOptionsModal";
 import { PaymentLinkModal } from "@/components/bills/PaymentLinkModal";
 import { QuickActions } from "@/components/bills/QuickActions";
 import { SummaryCard } from "@/components/bills/SummaryCard";
@@ -23,11 +24,13 @@ export default function BillsScreen() {
     calculateSplit,
     addNewBill,
     togglePayment,
-    showBillOptions,
     getPaymentLinkModalData,
     showSettlement,
     showStatistics,
     canEditPayment,
+    markBillAsPaid,
+    extendDueDate,
+    deleteBill,
   } = useBills();
 
   const [showAddModal, setShowAddModal] = useState(false);
@@ -60,6 +63,10 @@ export default function BillsScreen() {
     useState<PaymentLinkModalData | null>(null);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
 
+  // 공과금 옵션 모달 상태
+  const [selectedBill, setSelectedBill] = useState<Bill | null>(null);
+  const [showBillOptionsModal, setShowBillOptionsModal] = useState(false);
+
   const handlePressPaymentLink = (bill: Bill) => {
     const modalData = getPaymentLinkModalData(bill);
     if (modalData) {
@@ -70,6 +77,11 @@ export default function BillsScreen() {
       // TODO: 커스텀 Alert로 대체 가능
       alert("모든 인원이 이미 지불했습니다.");
     }
+  };
+
+  const handleShowBillOptions = (bill: Bill) => {
+    setSelectedBill(bill);
+    setShowBillOptionsModal(true);
   };
 
   return (
@@ -95,7 +107,7 @@ export default function BillsScreen() {
               calculateSplit={calculateSplit}
               onTogglePayment={togglePayment}
               onPressPaymentLink={handlePressPaymentLink}
-              onShowBillOptions={showBillOptions}
+              onShowBillOptions={handleShowBillOptions}
               canEditPayment={canEditPayment}
             />
           ))}
@@ -120,6 +132,15 @@ export default function BillsScreen() {
           onClose={() => setShowPaymentModal(false)}
         />
       )}
+      
+      <BillOptionsModal
+        visible={showBillOptionsModal}
+        bill={selectedBill}
+        onClose={() => setShowBillOptionsModal(false)}
+        onMarkAsPaid={markBillAsPaid}
+        onExtendDueDate={extendDueDate}
+        onDelete={deleteBill}
+      />
     </SafeAreaView>
   );
 }

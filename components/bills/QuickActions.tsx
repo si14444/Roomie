@@ -1,8 +1,7 @@
-import React from "react";
-import { StyleSheet, TouchableOpacity } from "react-native";
 import { Text, View } from "@/components/Themed";
-import { Ionicons } from "@expo/vector-icons";
 import Colors from "@/constants/Colors";
+import { Ionicons } from "@expo/vector-icons";
+import { StyleSheet, TouchableOpacity } from "react-native";
 
 interface QuickActionsProps {
   onAddBill: () => void;
@@ -19,10 +18,10 @@ export function QuickActions({
         <Ionicons name="add-circle" size={24} color={Colors.light.primary} />
         <Text style={styles.actionText}>새 공과금</Text>
       </TouchableOpacity>
-      <TouchableOpacity style={styles.actionCard} onPress={onShowSettlement}>
+      {/* <TouchableOpacity style={styles.actionCard} onPress={onShowSettlement}>
         <Ionicons name="calculator" size={24} color={Colors.light.secondary} />
         <Text style={styles.actionText}>정산하기</Text>
-      </TouchableOpacity>
+      </TouchableOpacity> */}
     </View>
   );
 }

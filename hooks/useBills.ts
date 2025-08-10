@@ -279,40 +279,53 @@ export function useBills() {
     [createNotification]
   );
 
-  const markBillAsPaid = (billId: number) => {
+  const markBillAsPaid = useCallback(
+    (billId: number) => {
+      setBills((prev) =>
+        prev.map((bill) =>
+          bill.id === billId
+            ? {
+                ...bill,
+                status: "paid",
+                payments: roommates.reduce((acc, roommate) => {
+                  acc[roommate] = true;
+                  return acc;
+                }, {} as { [roommate: string]: boolean }),
+              }
+            : bill
+        )
+      );
+      Alert.alert("완료", "모든 인원의 지불이 완료로 처리되었습니다.");
+    },
+    [roommates]
+  );
+
+  const extendDueDate = useCallback((billId: number) => {
     setBills((prev) =>
-      prev.map((bill) =>
-        bill.id === billId
-          ? {
-              ...bill,
-              status: "paid",
-              payments: roommates.reduce((acc, roommate) => {
-                acc[roommate] = true;
-                return acc;
-              }, {} as { [roommate: string]: boolean }),
-            }
-          : bill
-      )
+      prev.map((bill) => {
+        if (bill.id === billId) {
+          // 원래 마감일을 기준으로 1주일 연장
+          const currentDueDate = new Date(bill.dueDate);
+          const extendedDate = new Date(currentDueDate.getTime() + 7 * 24 * 60 * 60 * 1000);
+          const newDueDate = extendedDate.toISOString().split("T")[0];
+          
+          // 연장된 경우 상태를 pending으로 변경 (overdue -> pending)
+          const newStatus = bill.status === "overdue" ? "pending" : bill.status;
+          
+          Alert.alert("연장 완료", `마감일이 ${newDueDate}로 연장되었습니다.`);
+          
+          return { 
+            ...bill, 
+            dueDate: newDueDate, 
+            status: newStatus as "pending" | "paid" | "overdue"
+          };
+        }
+        return bill;
+      })
     );
-    Alert.alert("완료", "모든 인원의 지불이 완료로 처리되었습니다.");
-  };
+  }, []);
 
-  const extendDueDate = (billId: number) => {
-    const today = new Date();
-    const nextWeek = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
-    const newDueDate = nextWeek.toISOString().split("T")[0];
-
-    setBills((prev) =>
-      prev.map((bill) =>
-        bill.id === billId
-          ? { ...bill, dueDate: newDueDate, status: "pending" }
-          : bill
-      )
-    );
-    Alert.alert("연장 완료", `마감일이 ${newDueDate}로 연장되었습니다.`);
-  };
-
-  const deleteBill = (billId: number) => {
+  const deleteBill = useCallback((billId: number) => {
     const bill = bills.find((b) => b.id === billId);
     Alert.alert("공과금 삭제", `"${bill?.name}" 공과금을 삭제하시겠습니까?`, [
       { text: "취소", style: "cancel" },
@@ -325,26 +338,8 @@ export function useBills() {
         },
       },
     ]);
-  };
+  }, [bills]);
 
-  const showBillOptions = (bill: Bill) => {
-    Alert.alert(`${bill.name} 관리`, "어떤 작업을 하시겠습니까?", [
-      { text: "취소", style: "cancel" },
-      {
-        text: "지불 완료 처리",
-        onPress: () => markBillAsPaid(bill.id),
-      },
-      {
-        text: "마감일 연장",
-        onPress: () => extendDueDate(bill.id),
-      },
-      {
-        text: "삭제",
-        style: "destructive",
-        onPress: () => deleteBill(bill.id),
-      },
-    ]);
-  };
 
   // generatePaymentLink는 Alert를 띄우지 않고, 모달에 필요한 데이터만 반환
   const getPaymentLinkModalData = (bill: Bill): PaymentLinkModalData | null => {
@@ -415,11 +410,13 @@ export function useBills() {
     calculateSplit,
     addNewBill,
     togglePayment,
-    showBillOptions,
     getPaymentLinkModalData, // 변경된 함수 반환
     showSettlement,
     showStatistics,
     canEditPayment,
     currentUser,
+    markBillAsPaid,
+    extendDueDate,
+    deleteBill,
   };
 }
