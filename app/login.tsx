@@ -57,7 +57,7 @@ const styles = StyleSheet.create({
   kakaoButton: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: Colors.light.subColor,
+    backgroundColor: "#FEE500", // 카카오 공식 색상
     width: "90%",
     justifyContent: "center",
     borderRadius: 8,
@@ -76,6 +76,6 @@ const styles = StyleSheet.create({
   kakaoText: {
     fontSize: 18,
     fontWeight: "bold",
-    color: "#FFFFFF", // 흰색 텍스트로 변경하여 틸 배경과 대비 개선
+    color: "#3C1E1E", // 카카오 공식 텍스트 색상
   },
 });
