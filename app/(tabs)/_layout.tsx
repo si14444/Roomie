@@ -154,17 +154,6 @@ export default function TabLayout() {
           ),
         }}
       />
-      <Tabs.Screen
-        name="chat"
-        options={{
-          title: "소통",
-          headerTitle: "룸메이트 소통",
-          headerRight: () => <NotificationButton />,
-          tabBarIcon: ({ color }) => (
-            <TabBarIcon name="comments" color={color} />
-          ),
-        }}
-      />
     </Tabs>
   );
 }
