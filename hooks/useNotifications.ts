@@ -106,7 +106,7 @@ export function useNotifications() {
         return {
           name: "bar-chart",
           color: Colors.light.secondary,
-          backgroundColor: "#F5F3FF",
+          backgroundColor: "#FFF4F3",
         };
       case "poll_ended":
         return {
