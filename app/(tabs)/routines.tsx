@@ -9,10 +9,31 @@ import Colors from "@/constants/Colors";
 import { RoutinesSummary } from "@/components/routines/RoutinesSummary";
 import { RoutineCard } from "@/components/routines/RoutineCard";
 import { AddRoutineModal } from "@/components/routines/AddRoutineModal";
+import { RoutineOptionsModal } from "@/components/routines/RoutineOptionsModal";
+import { AssigneeSelectModal } from "@/components/routines/AssigneeSelectModal";
+import { FrequencySelectModal } from "@/components/routines/FrequencySelectModal";
+import { RoutineDeleteModal } from "@/components/routines/RoutineDeleteModal";
 import { useRoutines } from "@/hooks/useRoutines";
+
+interface Routine {
+  id: number;
+  task: string;
+  assignee: string;
+  nextDate: string;
+  status: "pending" | "completed" | "overdue";
+  icon: string;
+  frequency: "daily" | "weekly" | "monthly";
+  completedAt?: string;
+}
 
 export default function RoutinesScreen() {
   const [showAddModal, setShowAddModal] = useState(false);
+  const [selectedRoutine, setSelectedRoutine] = useState<Routine | null>(null);
+  const [showRoutineOptionsModal, setShowRoutineOptionsModal] = useState(false);
+  const [showAssigneeSelectModal, setShowAssigneeSelectModal] = useState(false);
+  const [showFrequencySelectModal, setShowFrequencySelectModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  
   const {
     routines,
     statistics,
@@ -20,7 +41,9 @@ export default function RoutinesScreen() {
     completeRoutine,
     postponeRoutine,
     addNewRoutine,
-    showRoutineOptions,
+    changeAssignee,
+    changeFrequency,
+    deleteRoutine,
     showAssigneeOptions,
   } = useRoutines();
 
@@ -38,6 +61,26 @@ export default function RoutinesScreen() {
     frequency: "daily" | "weekly" | "monthly";
   }) => {
     addNewRoutine(routine);
+  };
+
+  const handleShowRoutineOptions = (routine: Routine) => {
+    setSelectedRoutine(routine);
+    setShowRoutineOptionsModal(true);
+  };
+
+  const handleChangeAssignee = (routine: Routine) => {
+    setSelectedRoutine(routine);
+    setShowAssigneeSelectModal(true);
+  };
+
+  const handleChangeFrequency = (routine: Routine) => {
+    setSelectedRoutine(routine);
+    setShowFrequencySelectModal(true);
+  };
+
+  const handleDeleteRoutine = (routine: Routine) => {
+    setSelectedRoutine(routine);
+    setShowDeleteModal(true);
   };
 
   return (
@@ -67,7 +110,7 @@ export default function RoutinesScreen() {
                 routine={routine}
                 onComplete={completeRoutine}
                 onPostpone={postponeRoutine}
-                onOptions={showRoutineOptions}
+                onOptions={handleShowRoutineOptions}
                 onChangeAssignee={showAssigneeOptions}
               />
             ))}
@@ -80,6 +123,43 @@ export default function RoutinesScreen() {
         onClose={closeAddModal}
         onAdd={handleAddRoutine}
         roommates={roommates}
+      />
+      
+      <RoutineOptionsModal
+        visible={showRoutineOptionsModal}
+        routine={selectedRoutine}
+        onClose={() => setShowRoutineOptionsModal(false)}
+        onChangeAssignee={handleChangeAssignee}
+        onChangeFrequency={handleChangeFrequency}
+        onDeleteRoutine={handleDeleteRoutine}
+      />
+      
+      <AssigneeSelectModal
+        visible={showAssigneeSelectModal}
+        routine={selectedRoutine}
+        roommates={roommates}
+        onClose={() => setShowAssigneeSelectModal(false)}
+        onSelectAssignee={(routineId, assignee) => {
+          changeAssignee(routineId, assignee);
+        }}
+      />
+      
+      <FrequencySelectModal
+        visible={showFrequencySelectModal}
+        routine={selectedRoutine}
+        onClose={() => setShowFrequencySelectModal(false)}
+        onSelectFrequency={(routineId, frequency) => {
+          changeFrequency(routineId, frequency);
+        }}
+      />
+      
+      <RoutineDeleteModal
+        visible={showDeleteModal}
+        routine={selectedRoutine}
+        onClose={() => setShowDeleteModal(false)}
+        onConfirmDelete={(routineId) => {
+          deleteRoutine(routineId);
+        }}
       />
     </SafeAreaView>
   );

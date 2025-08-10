@@ -132,19 +132,38 @@ export function useRoutines() {
     );
   };
 
-  // 루틴 삭제
-  const deleteRoutine = (routineId: number) => {
-    Alert.alert("루틴 삭제", "이 루틴을 삭제하시겠습니까?", [
-      { text: "취소", style: "cancel" },
-      {
-        text: "삭제",
-        style: "destructive",
-        onPress: () => {
-          setRoutines((prev) => prev.filter((r) => r.id !== routineId));
-        },
-      },
-    ]);
+  // 주기 변경
+  const changeFrequency = (routineId: number, newFrequency: "daily" | "weekly" | "monthly") => {
+    setRoutines((prev) =>
+      prev.map((routine) => {
+        if (routine.id === routineId) {
+          // 새로운 주기에 따라 다음 날짜 계산
+          const today = new Date();
+          const nextDate = new Date(today);
+          
+          switch (newFrequency) {
+            case "daily":
+              nextDate.setDate(today.getDate() + 1);
+              break;
+            case "weekly":
+              nextDate.setDate(today.getDate() + 7);
+              break;
+            case "monthly":
+              nextDate.setMonth(today.getMonth() + 1);
+              break;
+          }
+
+          return {
+            ...routine,
+            frequency: newFrequency,
+            nextDate: nextDate.toISOString().split("T")[0],
+          };
+        }
+        return routine;
+      })
+    );
   };
+
 
   // 새 루틴 추가
   const addNewRoutine = (newRoutine: NewRoutine) => {
@@ -204,20 +223,9 @@ export function useRoutines() {
     setRoutines((prev) => [...prev, routine]);
   };
 
-  // 루틴 옵션 표시
-  const showRoutineOptions = (routine: Routine) => {
-    Alert.alert("루틴 옵션", `"${routine.task}" 루틴을 어떻게 하시겠습니까?`, [
-      { text: "취소", style: "cancel" },
-      {
-        text: "담당자 변경",
-        onPress: () => showAssigneeOptions(routine),
-      },
-      {
-        text: "삭제",
-        style: "destructive",
-        onPress: () => deleteRoutine(routine.id),
-      },
-    ]);
+  // 루틴 삭제 (모달에서 확인 후 호출됨)
+  const deleteRoutine = (routineId: number) => {
+    setRoutines((prev) => prev.filter((r) => r.id !== routineId));
   };
 
   // 담당자 옵션 표시
@@ -240,7 +248,9 @@ export function useRoutines() {
     completeRoutine,
     postponeRoutine,
     addNewRoutine,
-    showRoutineOptions,
+    changeAssignee,
+    changeFrequency,
+    deleteRoutine,
     showAssigneeOptions: (routine: Routine) => showAssigneeOptions(routine),
   };
 }
