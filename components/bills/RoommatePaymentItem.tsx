@@ -9,6 +9,7 @@ interface RoommatePaymentItemProps {
   isPaid: boolean;
   amount: number;
   onToggle: () => void;
+  canEdit: boolean;
 }
 
 export function RoommatePaymentItem({
@@ -16,21 +17,28 @@ export function RoommatePaymentItem({
   isPaid,
   amount,
   onToggle,
+  canEdit,
 }: RoommatePaymentItemProps) {
   return (
     <TouchableOpacity
-      style={[styles.roommatePayment, isPaid && styles.roommatePaymentPaid]}
-      onPress={onToggle}
+      style={[
+        styles.roommatePayment, 
+        isPaid && styles.roommatePaymentPaid,
+        !canEdit && styles.roommatePaymentDisabled
+      ]}
+      onPress={canEdit ? onToggle : undefined}
+      disabled={!canEdit}
     >
       <Ionicons
         name={isPaid ? "checkmark-circle" : "ellipse-outline"}
         size={16}
-        color={isPaid ? Colors.light.successColor : Colors.light.mutedText}
+        color={isPaid ? Colors.light.successColor : !canEdit ? Colors.light.mutedText : Colors.light.mutedText}
       />
       <Text
         style={[
           styles.roommatePaymentText,
           isPaid && styles.roommatePaymentTextPaid,
+          !canEdit && styles.roommatePaymentTextDisabled,
         ]}
       >
         {roommate}
@@ -39,6 +47,7 @@ export function RoommatePaymentItem({
         style={[
           styles.roommatePaymentAmount,
           isPaid && styles.roommatePaymentAmountPaid,
+          !canEdit && styles.roommatePaymentAmountDisabled,
         ]}
       >
         ₩{amount.toLocaleString()}
@@ -79,5 +88,17 @@ const styles = StyleSheet.create({
   },
   roommatePaymentAmountPaid: {
     color: Colors.light.successColor,
+  },
+  roommatePaymentDisabled: {
+    backgroundColor: Colors.light.surface,
+    opacity: 0.6,
+  },
+  roommatePaymentTextDisabled: {
+    color: Colors.light.mutedText,
+    opacity: 0.7,
+  },
+  roommatePaymentAmountDisabled: {
+    color: Colors.light.mutedText,
+    opacity: 0.7,
   },
 });

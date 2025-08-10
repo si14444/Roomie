@@ -27,6 +27,7 @@ export default function BillsScreen() {
     getPaymentLinkModalData,
     showSettlement,
     showStatistics,
+    canEditPayment,
   } = useBills();
 
   const [showAddModal, setShowAddModal] = useState(false);
@@ -82,7 +83,6 @@ export default function BillsScreen() {
         <QuickActions
           onAddBill={() => setShowAddModal(true)}
           onShowSettlement={showSettlement}
-          onShowStatistics={showStatistics}
         />
 
         <View style={styles.billsList}>
@@ -96,6 +96,7 @@ export default function BillsScreen() {
               onTogglePayment={togglePayment}
               onPressPaymentLink={handlePressPaymentLink}
               onShowBillOptions={showBillOptions}
+              canEditPayment={canEditPayment}
             />
           ))}
         </View>

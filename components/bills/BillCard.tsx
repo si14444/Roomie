@@ -3,18 +3,7 @@ import Colors from "@/constants/Colors";
 import { Ionicons } from "@expo/vector-icons";
 import { StyleSheet, TouchableOpacity } from "react-native";
 import { RoommatePaymentItem } from "./RoommatePaymentItem";
-
-interface Bill {
-  id: number;
-  name: string;
-  amount: number;
-  splitType: "equal" | "custom";
-  status: "pending" | "paid" | "overdue";
-  dueDate: string;
-  icon: keyof typeof Ionicons.glyphMap;
-  category: "utility" | "subscription" | "maintenance";
-  payments: { [roommate: string]: boolean };
-}
+import type { Bill } from "@/hooks/useBills";
 
 interface BillCardProps {
   bill: Bill;
@@ -23,6 +12,7 @@ interface BillCardProps {
   onTogglePayment: (billId: number, roommate: string) => void;
   onPressPaymentLink: (bill: Bill) => void;
   onShowBillOptions: (bill: Bill) => void;
+  canEditPayment: (roommate: string) => boolean;
 }
 
 export function BillCard({
@@ -32,6 +22,7 @@ export function BillCard({
   onTogglePayment,
   onPressPaymentLink,
   onShowBillOptions,
+  canEditPayment,
 }: BillCardProps) {
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -96,6 +87,7 @@ export function BillCard({
                 isPaid={isPaid}
                 amount={amount}
                 onToggle={() => onTogglePayment(bill.id, roommate)}
+                canEdit={canEditPayment(roommate)}
               />
             );
           })}
@@ -107,8 +99,8 @@ export function BillCard({
           style={styles.paymentButton}
           onPress={() => onPressPaymentLink(bill)}
         >
-          <Ionicons name="send" size={16} color="white" />
-          <Text style={styles.paymentButtonText}>송금링크</Text>
+          <Ionicons name="card" size={16} color="white" />
+          <Text style={styles.paymentButtonText}>계좌보기</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.detailButton}

@@ -13,6 +13,7 @@ export interface Bill {
   icon: keyof typeof Ionicons.glyphMap;
   category: "utility" | "subscription" | "maintenance";
   payments: { [roommate: string]: boolean };
+  createdBy: string; // 청구서를 생성한 사람
 }
 
 interface Roommate {
@@ -31,6 +32,9 @@ export interface PaymentLinkModalData {
 
 export function useBills() {
   const { createNotification } = useNotificationContext();
+  // 현재 사용자를 김철수로 시뮬레이션 (실제로는 AuthContext에서 가져와야 함)
+  const currentUser = "김철수";
+  
   const [bills, setBills] = useState<Bill[]>([
     {
       id: 1,
@@ -42,6 +46,7 @@ export function useBills() {
       icon: "flash-outline" as keyof typeof Ionicons.glyphMap,
       category: "utility",
       payments: { 김철수: false, 이영희: false, 박민수: false, 정지수: false },
+      createdBy: "김철수",
     },
     {
       id: 2,
@@ -53,6 +58,7 @@ export function useBills() {
       icon: "flame-outline" as keyof typeof Ionicons.glyphMap,
       category: "utility",
       payments: { 김철수: true, 이영희: true, 박민수: true, 정지수: true },
+      createdBy: "이영희",
     },
     {
       id: 3,
@@ -64,6 +70,7 @@ export function useBills() {
       icon: "play-circle-outline" as keyof typeof Ionicons.glyphMap,
       category: "subscription",
       payments: { 김철수: true, 이영희: false, 박민수: false, 정지수: false },
+      createdBy: "박민수",
     },
     {
       id: 4,
@@ -75,6 +82,7 @@ export function useBills() {
       icon: "wifi-outline" as keyof typeof Ionicons.glyphMap,
       category: "utility",
       payments: { 김철수: false, 이영희: false, 박민수: true, 정지수: false },
+      createdBy: "정지수",
     },
   ]);
 
@@ -194,6 +202,7 @@ export function useBills() {
           acc[roommate] = false;
           return acc;
         }, {} as { [roommate: string]: boolean }),
+        createdBy: currentUser,
       };
 
       setBills((prev) => [...prev, bill]);
@@ -214,8 +223,26 @@ export function useBills() {
     [roommates, createNotification]
   );
 
+  // 현재 사용자가 특정 룸메이트의 송금 상태를 수정할 수 있는지 확인
+  const canEditPayment = useCallback(
+    (roommate: string) => {
+      // 본인의 송금 상태만 수정 가능
+      return roommate === currentUser;
+    },
+    [currentUser]
+  );
+
   const togglePayment = useCallback(
     (billId: number, roommate: string) => {
+      // 권한 체크
+      if (!canEditPayment(roommate)) {
+        Alert.alert(
+          "권한 없음",
+          "본인의 송금 상태만 변경할 수 있습니다.",
+          [{ text: "확인" }]
+        );
+        return;
+      }
       setBills((prev) =>
         prev.map((bill) => {
           if (bill.id === billId) {
@@ -392,5 +419,7 @@ export function useBills() {
     getPaymentLinkModalData, // 변경된 함수 반환
     showSettlement,
     showStatistics,
+    canEditPayment,
+    currentUser,
   };
 }

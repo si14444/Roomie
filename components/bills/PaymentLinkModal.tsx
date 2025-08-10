@@ -2,7 +2,8 @@ import Colors from "@/constants/Colors";
 import type { PaymentLinkModalData } from "@/hooks/useBills";
 import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
-import { Modal, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Alert, Modal, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import * as Clipboard from "expo-clipboard";
 
 interface PaymentLinkModalProps {
   visible: boolean;
@@ -15,57 +16,60 @@ export function PaymentLinkModal({
   data,
   onClose,
 }: PaymentLinkModalProps) {
-  const [completed, setCompleted] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
 
   if (!data) return null;
 
-  const handleSelect = (method: { name: string; icon: string }) => {
-    setCompleted(method.name);
-    // 실제 송금 링크 생성/복사 로직은 추후 구현
+  const handleCopyAccount = async () => {
+    const accountInfo = "국민은행 123456-78-901234 김철수";
+    try {
+      await Clipboard.setStringAsync(accountInfo);
+      setCopied(true);
+      Alert.alert("복사 완료", "계좌 정보가 클립보드에 복사되었습니다!");
+      setTimeout(() => setCopied(false), 2000);
+    } catch (error) {
+      Alert.alert("복사 실패", "계좌 정보 복사에 실패했습니다.");
+    }
   };
 
   return (
     <Modal visible={visible} transparent animationType="fade">
       <View style={styles.overlay}>
         <View style={styles.modalBox}>
-          <Text style={styles.title}>송금 링크 생성</Text>
+          <Text style={styles.title}>송금 정보</Text>
           <Text style={styles.billName}>{data.bill.name}</Text>
           <Text style={styles.amount}>
             금액: ₩{data.amount.toLocaleString()}
           </Text>
-          <Text style={styles.desc}>송금 방법을 선택하세요:</Text>
-          <View style={styles.methodRow}>
+          <Text style={styles.desc}>계좌번호:</Text>
+          <View style={styles.accountInfo}>
+            <Text style={styles.bankName}>국민은행</Text>
+            <Text style={styles.accountNumber}>123456-78-901234</Text>
+            <Text style={styles.accountHolder}>김철수</Text>
+          </View>
+          <View style={styles.buttonContainer}>
             <TouchableOpacity
-              style={styles.methodButton}
-              onPress={() => handleSelect(data.paymentMethods[0])}
-              disabled={!!completed}
+              style={[styles.copyButton, copied && styles.copyButtonSuccess]}
+              onPress={handleCopyAccount}
             >
-              <Ionicons
-                name={data.paymentMethods[0].icon as any}
-                size={22}
-                color={Colors.light.primary}
+              <Ionicons 
+                name={copied ? "checkmark" : "copy"} 
+                size={16} 
+                color="white" 
               />
-              <Text style={styles.methodText}>
-                {data.paymentMethods[0].name}
+              <Text style={styles.copyButtonText}>
+                {copied ? "복사됨" : "계좌 복사"}
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.methodButton, styles.closeButtonHorizon]}
+              style={styles.closeButton}
               onPress={onClose}
             >
-              <Ionicons name="close" size={22} color={Colors.light.mutedText} />
-              <Text style={[styles.methodText, styles.closeTextHorizon]}>
+              <Text style={styles.closeText}>
                 닫기
               </Text>
             </TouchableOpacity>
           </View>
-          {completed && (
-            <View style={styles.resultBox}>
-              <Text style={styles.resultText}>
-                {completed} 링크가 생성되어 미납자들에게 전송되었습니다!
-              </Text>
-            </View>
-          )}
         </View>
       </View>
     </Modal>
@@ -113,6 +117,60 @@ const styles = StyleSheet.create({
     color: Colors.light.mutedText,
     marginBottom: 12,
   },
+  accountInfo: {
+    backgroundColor: Colors.light.surface,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 20,
+    width: "100%",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: Colors.light.borderColor,
+  },
+  bankName: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: Colors.light.primary,
+    marginBottom: 8,
+  },
+  accountNumber: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: Colors.light.text,
+    letterSpacing: 1,
+    marginBottom: 8,
+  },
+  accountHolder: {
+    fontSize: 14,
+    color: Colors.light.mutedText,
+  },
+  buttonContainer: {
+    flexDirection: "row",
+    gap: 12,
+    width: "100%",
+    marginBottom: 16,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  copyButton: {
+    backgroundColor: Colors.light.subColor,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "center",
+    gap: 6,
+    flex: 1,
+  },
+  copyButtonSuccess: {
+    backgroundColor: Colors.light.successColor,
+  },
+  copyButtonText: {
+    color: "white",
+    fontSize: 14,
+    fontWeight: "600",
+  },
   methodRow: {
     flexDirection: "row",
     gap: 14,
@@ -157,14 +215,11 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   closeButton: {
-    marginTop: 8,
+    backgroundColor: Colors.light.surfaceVariant,
+    paddingVertical: 12,
+    borderRadius: 10,
     alignItems: "center",
-    width: "100%",
-    borderRadius: 8,
-    paddingVertical: 10,
-    backgroundColor: "#F5F5F5",
-    minHeight: 36,
-    alignSelf: "center",
+    flex: 1,
   },
   closeText: {
     color: Colors.light.mutedText,

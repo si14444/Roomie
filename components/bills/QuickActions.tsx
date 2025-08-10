@@ -7,13 +7,11 @@ import Colors from "@/constants/Colors";
 interface QuickActionsProps {
   onAddBill: () => void;
   onShowSettlement: () => void;
-  onShowStatistics: () => void;
 }
 
 export function QuickActions({
   onAddBill,
   onShowSettlement,
-  onShowStatistics,
 }: QuickActionsProps) {
   return (
     <View style={styles.quickActions}>
@@ -24,14 +22,6 @@ export function QuickActions({
       <TouchableOpacity style={styles.actionCard} onPress={onShowSettlement}>
         <Ionicons name="calculator" size={24} color={Colors.light.secondary} />
         <Text style={styles.actionText}>정산하기</Text>
-      </TouchableOpacity>
-      <TouchableOpacity style={styles.actionCard} onPress={onShowStatistics}>
-        <Ionicons
-          name="stats-chart"
-          size={24}
-          color={Colors.light.warningColor}
-        />
-        <Text style={styles.actionText}>통계</Text>
       </TouchableOpacity>
     </View>
   );
