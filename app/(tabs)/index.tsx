@@ -24,9 +24,8 @@ import { useRoutines } from "@/hooks/useRoutines";
 
 // Import home components
 import { CurrentRoommates } from "@/components/home/CurrentRoommates";
-import { RecentActivity } from "@/components/home/RecentActivity";
+import { RoommateFeedback } from "@/components/home/RoommateFeedback";
 import { StatusSummaryCard } from "@/components/home/StatusSummaryCard";
-import { TodayTasks } from "@/components/home/TodayTasks";
 
 // Import modals for direct functionality
 import { FontAwesome } from "@expo/vector-icons";
@@ -47,9 +46,6 @@ export default function HomeScreen() {
 
   // Modal states
   const [inviteModalVisible, setInviteModalVisible] = useState(false);
-
-
-
 
   const handleAddTask = () => {
     Alert.prompt(
@@ -141,9 +137,9 @@ export default function HomeScreen() {
     <SafeAreaView style={styles.container} edges={[]}>
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         <StatusSummaryCard />
+        <RoommateFeedback />
         <CurrentRoommates onAddRoommate={handleInvite} />
-        <TodayTasks onAddTask={handleAddTask} onTaskPress={handleTaskPress} />
-        <RecentActivity />
+        {/* <TodayTasks onAddTask={handleAddTask} onTaskPress={handleTaskPress} /> */}
       </ScrollView>
       {/* 초대 모달 */}
       <Modal
@@ -299,7 +295,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: Colors.light.subColor, // 서브 틸 색상 사용
+    backgroundColor: "#FEE500", // 카카오 공식 색상
     borderRadius: 8,
     paddingVertical: 14,
     marginBottom: 8,
@@ -307,7 +303,7 @@ const styles = StyleSheet.create({
     minHeight: 48,
   },
   kakaoButtonText: {
-    color: "#FFFFFF", // 흰색 텍스트로 변경하여 대비 개선
+    color: "#3C1E1E", // 카카오 공식 텍스트 색상
     fontSize: 16,
     fontWeight: "bold",
   },

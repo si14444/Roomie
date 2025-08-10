@@ -230,8 +230,8 @@ const styles = StyleSheet.create({
     borderColor: Colors.light.borderColor,
   },
   roommateButtonSelected: {
-    backgroundColor: Colors.light.primary,
-    borderColor: Colors.light.primary,
+    backgroundColor: Colors.light.subColor,
+    borderColor: Colors.light.subColor,
   },
   roommateButtonText: {
     fontSize: 14,
@@ -255,8 +255,8 @@ const styles = StyleSheet.create({
     borderColor: Colors.light.borderColor,
   },
   frequencyButtonSelected: {
-    backgroundColor: Colors.light.primary,
-    borderColor: Colors.light.primary,
+    backgroundColor: Colors.light.subColor,
+    borderColor: Colors.light.subColor,
   },
   frequencyButtonText: {
     fontSize: 14,
@@ -287,7 +287,7 @@ const styles = StyleSheet.create({
   },
   addButton: {
     flex: 1,
-    backgroundColor: Colors.light.primary,
+    backgroundColor: Colors.light.subColor,
     borderRadius: 12,
     paddingVertical: 14,
     flexDirection: "row",
