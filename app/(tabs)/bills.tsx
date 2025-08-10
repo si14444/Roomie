@@ -8,9 +8,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { AddBillModal } from "@/components/bills/AddBillModal";
 import { BillCard } from "@/components/bills/BillCard";
 import { PaymentLinkModal } from "@/components/bills/PaymentLinkModal";
-import { PaymentMethods } from "@/components/bills/PaymentMethods";
 import { QuickActions } from "@/components/bills/QuickActions";
-import { RoommateStats } from "@/components/bills/RoommateStats";
 import { SummaryCard } from "@/components/bills/SummaryCard";
 
 // Import custom hook
@@ -102,9 +100,9 @@ export default function BillsScreen() {
           ))}
         </View>
 
-        <PaymentMethods />
+        {/* <PaymentMethods /> */}
 
-        <RoommateStats roommateStats={statistics.roommateStats} />
+        {/* <RoommateStats roommateStats={statistics.roommateStats} /> */}
       </ScrollView>
 
       <AddBillModal
