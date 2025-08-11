@@ -9,7 +9,7 @@ const completionCoral = "#FF9F7D"; // 완료용 코랄 (더 밝은 코랄)
 const gradientStart = "#FF6F61"; // 그라데이션 시작
 const gradientEnd = "#FF8A7A"; // 그라데이션 끝
 
-export default {
+const Colors = {
   light: {
     text: "#1F2937", // 깔끔한 다크 그레이 텍스트
     background: "#FFFEFE", // 매우 연한 코랄 배경
@@ -75,3 +75,6 @@ export default {
     inProgressColor: "#FF8A7A",
   },
 };
+
+export default Colors;
+export { Colors };

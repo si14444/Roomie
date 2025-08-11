@@ -1,12 +1,13 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { Ionicons } from "@expo/vector-icons";
 import { TouchableOpacity, View } from "react-native";
-import { Tabs } from "expo-router";
+import { Tabs, useRouter } from "expo-router";
 
 import Colors from "@/constants/Colors";
 import { useNotificationContext } from "@/contexts/NotificationContext";
 import { NotificationsModal } from "@/components/notifications/NotificationsModal";
+import { useTeam } from "@/contexts/TeamContext";
 
 // You can explore the built-in icon families and icons on the web at https://icons.expo.fyi/
 function TabBarIcon(props: {
@@ -81,6 +82,20 @@ function NotificationButton() {
 export default function TabLayout() {
   // 항상 라이트 테마를 사용하도록 고정
   const colorScheme = "light";
+  const router = useRouter();
+  const { hasSelectedTeam, isLoading, currentTeam } = useTeam();
+
+  // 팀이 선택되지 않은 경우 팀 선택 화면으로 리디렉션
+  useEffect(() => {
+    if (!isLoading && !hasSelectedTeam) {
+      router.replace('/team-selection');
+    }
+  }, [hasSelectedTeam, isLoading, router]);
+
+  // 로딩 중이거나 팀이 선택되지 않은 경우 아무것도 렌더링하지 않음
+  if (isLoading || !hasSelectedTeam) {
+    return null;
+  }
 
   return (
     <Tabs
@@ -116,7 +131,7 @@ export default function TabLayout() {
         name="index"
         options={{
           title: "홈",
-          headerTitle: "룸메이트 관리",
+          headerTitle: currentTeam ? `${currentTeam.name} - 홈` : "룸메이트 관리",
           headerRight: () => <NotificationButton />,
           tabBarIcon: ({ color }) => <TabBarIcon name="home" color={color} />,
         }}
