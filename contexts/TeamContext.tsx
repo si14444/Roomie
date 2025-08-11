@@ -23,6 +23,9 @@ interface TeamContextType {
   inviteMember: (email: string) => Promise<void>;
   removeMember: (memberId: string) => Promise<void>;
   updateMemberRole: (memberId: string, role: 'admin' | 'member') => Promise<void>;
+  
+  // 개발 모드 전용 함수
+  skipTeamSelection: () => Promise<void>;
 }
 
 const TeamContext = createContext<TeamContextType | undefined>(undefined);
@@ -262,6 +265,52 @@ export function TeamProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const skipTeamSelection = async () => {
+    try {
+      // 개발 모드 전용: 더미 팀 데이터 생성하여 hasSelectedTeam을 true로 설정
+      const dummyTeam: Team = {
+        id: 'dev_team',
+        name: '개발 팀',
+        description: '개발 모드용 더미 팀',
+        members: [{
+          id: 'dev_member_1',
+          userId: 'dev_user',
+          userName: '개발자',
+          email: 'dev@example.com',
+          role: 'owner',
+          joinedAt: new Date().toISOString()
+        }],
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        ownerId: 'dev_user',
+        inviteCode: 'DEV123',
+        settings: {
+          allowMemberInvites: true,
+          autoAssignNewRoutines: false,
+          notificationPreferences: {
+            routineReminders: true,
+            billAlerts: true,
+            chatMessages: true
+          }
+        }
+      };
+
+      setCurrentTeam(dummyTeam);
+      setUserTeams([dummyTeam]);
+      setHasSelectedTeam(true);
+      
+      // 로컬 스토리지에 저장
+      await Promise.all([
+        AsyncStorage.setItem(STORAGE_KEYS.CURRENT_TEAM, JSON.stringify(dummyTeam)),
+        AsyncStorage.setItem(STORAGE_KEYS.USER_TEAMS, JSON.stringify([dummyTeam])),
+        AsyncStorage.setItem(STORAGE_KEYS.HAS_SELECTED_TEAM, 'true')
+      ]);
+    } catch (error) {
+      console.error('Failed to skip team selection:', error);
+      throw error;
+    }
+  };
+
   const value = {
     currentTeam,
     userTeams,
@@ -274,7 +323,8 @@ export function TeamProvider({ children }: { children: ReactNode }) {
     refreshTeams,
     inviteMember,
     removeMember,
-    updateMemberRole
+    updateMemberRole,
+    skipTeamSelection
   };
 
   return (
