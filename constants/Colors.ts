@@ -22,8 +22,8 @@ const Colors = {
     accentBlue: "#FFF4F3", // 연코랄 악센트
     gradientStart: "#FF6F61",
     gradientEnd: "#FF8A7A",
-    gradientPrimary: ["#FF6F61", "#FF8A7A"], // 예쁜 코랄 그라디언트
-    gradientSecondary: ["#FF8A7A", "#FFE6E4"], // 밝은 코랄 그라디언트
+    gradientPrimary: ["#FF6F61", "#FF8A7A"] as const, // 예쁜 코랄 그라디언트
+    gradientSecondary: ["#FF8A7A", "#FFE6E4"] as const, // 밝은 코랄 그라디언트
     cardBackground: "#FFFFFF",
     surface: "#F8FAFC", // 연한 그레이 서피스
     surfaceVariant: "#F1F5F9", // 중간 그레이
@@ -54,8 +54,8 @@ const Colors = {
     accentBlue: "#2D1B17",
     gradientStart: "#FF8A7A",
     gradientEnd: "#FFB3A8",
-    gradientPrimary: ["#FF8A7A", "#FFB3A8"],
-    gradientSecondary: ["#FF6F61", "#F3F4F6"],
+    gradientPrimary: ["#FF8A7A", "#FFB3A8"] as const,
+    gradientSecondary: ["#FF6F61", "#F3F4F6"] as const,
     cardBackground: "#1E293B",
     surface: "#334155",
     surfaceVariant: "#475569",

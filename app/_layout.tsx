@@ -1,6 +1,7 @@
 import { AuthProvider } from "@/contexts/AuthContext";
 import { NotificationProvider } from "@/contexts/NotificationContext";
 import { TeamProvider } from "@/contexts/TeamContext";
+import AppNavigator from "@/components/navigation/AppNavigator";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { DefaultTheme, ThemeProvider } from "@react-navigation/native";
 import { useFonts } from "expo-font";
@@ -53,14 +54,16 @@ function RootLayoutNav() {
       <AuthProvider>
         <TeamProvider>
           <NotificationProvider>
-            <ThemeProvider value={DefaultTheme}>
-              <Stack>
-                <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-                <Stack.Screen name="login" options={{ headerShown: false }} />
-                <Stack.Screen name="modal" options={{ presentation: "modal" }} />
-                <Stack.Screen name="team-selection" options={{ headerShown: false }} />
-              </Stack>
-            </ThemeProvider>
+            <AppNavigator>
+              <ThemeProvider value={DefaultTheme}>
+                <Stack>
+                  <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                  <Stack.Screen name="login" options={{ headerShown: false }} />
+                  <Stack.Screen name="modal" options={{ presentation: "modal" }} />
+                  <Stack.Screen name="team-selection" options={{ headerShown: false }} />
+                </Stack>
+              </ThemeProvider>
+            </AppNavigator>
           </NotificationProvider>
         </TeamProvider>
       </AuthProvider>

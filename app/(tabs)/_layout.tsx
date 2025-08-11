@@ -1,13 +1,15 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { Ionicons } from "@expo/vector-icons";
 import { TouchableOpacity, View } from "react-native";
-import { Tabs, useRouter } from "expo-router";
+import { Tabs } from "expo-router";
 
 import Colors from "@/constants/Colors";
 import { useNotificationContext } from "@/contexts/NotificationContext";
 import { NotificationsModal } from "@/components/notifications/NotificationsModal";
 import { useTeam } from "@/contexts/TeamContext";
+import { useAuth } from "@/contexts/AuthContext";
+import { Alert } from "react-native";
 
 // You can explore the built-in icon families and icons on the web at https://icons.expo.fyi/
 function TabBarIcon(props: {
@@ -17,8 +19,9 @@ function TabBarIcon(props: {
   return <FontAwesome size={24} style={{ marginBottom: -3 }} {...props} />;
 }
 
-function NotificationButton() {
+function HeaderRightButtons() {
   const [showNotifications, setShowNotifications] = useState(false);
+  const { logout } = useAuth();
   const {
     notifications,
     unreadCount,
@@ -38,27 +41,57 @@ function NotificationButton() {
     setShowNotifications(false);
   };
 
+  const handleLogout = () => {
+    Alert.alert(
+      '로그아웃',
+      '정말 로그아웃하시겠습니까?',
+      [
+        { text: '취소', style: 'cancel' },
+        { 
+          text: '로그아웃', 
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await logout();
+            } catch (error) {
+              Alert.alert('오류', '로그아웃에 실패했습니다.');
+            }
+          }
+        }
+      ]
+    );
+  };
+
   return (
     <>
-      <TouchableOpacity
-        style={{ position: "relative", padding: 8 }}
-        onPress={handleNotificationPress}
-      >
-        <Ionicons name="notifications-outline" size={24} color="#FFFFFF" />
-        {unreadCount > 0 && (
-          <View
-            style={{
-              position: "absolute",
-              top: 6,
-              right: 6,
-              width: 8,
-              height: 8,
-              borderRadius: 4,
-              backgroundColor: "#EF4444",
-            }}
-          />
-        )}
-      </TouchableOpacity>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+        <TouchableOpacity
+          style={{ position: "relative", padding: 8 }}
+          onPress={handleNotificationPress}
+        >
+          <Ionicons name="notifications-outline" size={24} color="#FFFFFF" />
+          {unreadCount > 0 && (
+            <View
+              style={{
+                position: "absolute",
+                top: 6,
+                right: 6,
+                width: 8,
+                height: 8,
+                borderRadius: 4,
+                backgroundColor: "#EF4444",
+              }}
+            />
+          )}
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={{ padding: 8 }}
+          onPress={handleLogout}
+        >
+          <Ionicons name="log-out-outline" size={24} color="#FFFFFF" />
+        </TouchableOpacity>
+      </View>
 
       <NotificationsModal
         visible={showNotifications}
@@ -82,20 +115,7 @@ function NotificationButton() {
 export default function TabLayout() {
   // 항상 라이트 테마를 사용하도록 고정
   const colorScheme = "light";
-  const router = useRouter();
-  const { hasSelectedTeam, isLoading, currentTeam } = useTeam();
-
-  // 팀이 선택되지 않은 경우 팀 선택 화면으로 리디렉션
-  useEffect(() => {
-    if (!isLoading && !hasSelectedTeam) {
-      router.replace('/team-selection');
-    }
-  }, [hasSelectedTeam, isLoading, router]);
-
-  // 로딩 중이거나 팀이 선택되지 않은 경우 아무것도 렌더링하지 않음
-  if (isLoading || !hasSelectedTeam) {
-    return null;
-  }
+  const { currentTeam } = useTeam();
 
   return (
     <Tabs
@@ -132,7 +152,7 @@ export default function TabLayout() {
         options={{
           title: "홈",
           headerTitle: currentTeam ? `${currentTeam.name} - 홈` : "룸메이트 관리",
-          headerRight: () => <NotificationButton />,
+          headerRight: () => <HeaderRightButtons />,
           tabBarIcon: ({ color }) => <TabBarIcon name="home" color={color} />,
         }}
       />
@@ -141,7 +161,7 @@ export default function TabLayout() {
         options={{
           title: "루틴관리",
           headerTitle: "루틴 관리",
-          headerRight: () => <NotificationButton />,
+          headerRight: () => <HeaderRightButtons />,
           tabBarIcon: ({ color }) => (
             <TabBarIcon name="calendar" color={color} />
           ),
@@ -152,7 +172,7 @@ export default function TabLayout() {
         options={{
           title: "공과금",
           headerTitle: "공과금 관리",
-          headerRight: () => <NotificationButton />,
+          headerRight: () => <HeaderRightButtons />,
           tabBarIcon: ({ color }) => (
             <TabBarIcon name="calculator" color={color} />
           ),
@@ -163,7 +183,7 @@ export default function TabLayout() {
         options={{
           title: "공용물품",
           headerTitle: "공용물품 관리",
-          headerRight: () => <NotificationButton />,
+          headerRight: () => <HeaderRightButtons />,
           tabBarIcon: ({ color }) => (
             <TabBarIcon name="shopping-cart" color={color} />
           ),
