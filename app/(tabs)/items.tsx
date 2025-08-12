@@ -58,13 +58,6 @@ export default function ItemsScreen() {
     }
   };
 
-  const handleScanBarcode = () => {
-    console.log("Scan barcode");
-  };
-
-  const handleOpenShoppingList = () => {
-    console.log("Open shopping list");
-  };
 
   const handleAcceptRequest = (requestId: number) => {
     Alert.alert("구매 요청 수락", "이 물품을 구매하시겠습니까?", [
@@ -101,8 +94,6 @@ export default function ItemsScreen() {
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         <ItemQuickActions
           onAddItem={handleAddItem}
-          onScanBarcode={handleScanBarcode}
-          onOpenShoppingList={handleOpenShoppingList}
         />
         <PurchaseRequests
           onAcceptRequest={handleAcceptRequest}

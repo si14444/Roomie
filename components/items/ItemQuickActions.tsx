@@ -6,36 +6,16 @@ import Colors from "@/constants/Colors";
 
 interface ItemQuickActionsProps {
   onAddItem?: () => void;
-  onScanBarcode?: () => void;
-  onOpenShoppingList?: () => void;
 }
 
 export function ItemQuickActions({
   onAddItem,
-  onScanBarcode,
-  onOpenShoppingList,
 }: ItemQuickActionsProps) {
   return (
     <View style={styles.quickActions}>
       <TouchableOpacity style={styles.actionCard} onPress={onAddItem}>
         <Ionicons name="add-circle" size={24} color={Colors.light.primary} />
         <Text style={styles.actionText}>새 물품</Text>
-      </TouchableOpacity>
-      <TouchableOpacity style={styles.actionCard} onPress={onScanBarcode}>
-        <Ionicons
-          name="scan-outline"
-          size={24}
-          color={Colors.light.secondary}
-        />
-        <Text style={styles.actionText}>바코드 스캔</Text>
-      </TouchableOpacity>
-      <TouchableOpacity style={styles.actionCard} onPress={onOpenShoppingList}>
-        <Ionicons
-          name="list-outline"
-          size={24}
-          color={Colors.light.warningColor}
-        />
-        <Text style={styles.actionText}>쇼핑 리스트</Text>
       </TouchableOpacity>
     </View>
   );
