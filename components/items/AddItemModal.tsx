@@ -1,6 +1,5 @@
 import React from "react";
-import { StyleSheet, TouchableOpacity, Modal, TextInput } from "react-native";
-import { Text, View } from "@/components/Themed";
+import { StyleSheet, TouchableOpacity, Modal, TextInput, ScrollView, KeyboardAvoidingView, Platform, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import Colors from "@/constants/Colors";
 import { NewItemInput, ItemCategory, ItemPriority } from "@/types/item.types";
@@ -43,16 +42,24 @@ export function AddItemModal({
       transparent={true}
       onRequestClose={onClose}
     >
-      <View style={styles.modalOverlay}>
+      <KeyboardAvoidingView
+        style={styles.modalOverlay}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
+      >
         <View style={styles.modalContainer}>
-          <View style={styles.modalHeader}>
+          <View style={[styles.modalHeader, { backgroundColor: Colors.light.cardBackground }]}>
             <Text style={styles.modalTitle}>새 물품 추가</Text>
             <TouchableOpacity onPress={onClose}>
               <Ionicons name="close" size={24} color={Colors.light.mutedText} />
             </TouchableOpacity>
           </View>
 
-          <View style={styles.modalContent}>
+          <ScrollView 
+            style={styles.modalContent}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>물품명*</Text>
               <TextInput
@@ -185,9 +192,9 @@ export function AddItemModal({
                 />
               </View>
             </View>
-          </View>
+          </ScrollView>
 
-          <View style={styles.modalActions}>
+          <View style={[styles.modalActions, { backgroundColor: Colors.light.cardBackground }]}>
             <TouchableOpacity style={styles.cancelButton} onPress={onClose}>
               <Text style={styles.cancelButtonText}>취소</Text>
             </TouchableOpacity>
@@ -210,7 +217,7 @@ export function AddItemModal({
             </TouchableOpacity>
           </View>
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
@@ -225,9 +232,9 @@ const styles = StyleSheet.create({
   modalContainer: {
     backgroundColor: Colors.light.cardBackground,
     borderRadius: 24,
-    flex: 1,
     maxHeight: "90%",
-    paddingBottom: 20,
+    marginVertical: 50,
+    overflow: "hidden",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.3,
@@ -241,8 +248,6 @@ const styles = StyleSheet.create({
     padding: 20,
     borderBottomWidth: 1,
     borderBottomColor: Colors.light.borderColor,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
   },
   modalTitle: {
     fontSize: 20,
@@ -250,7 +255,6 @@ const styles = StyleSheet.create({
     color: Colors.light.text,
   },
   modalContent: {
-    flex: 1,
     padding: 20,
     paddingBottom: 0,
   },
@@ -335,10 +339,9 @@ const styles = StyleSheet.create({
     gap: 12,
     paddingHorizontal: 20,
     paddingTop: 20,
+    paddingBottom: 20,
     borderTopWidth: 1,
     borderTopColor: Colors.light.borderColor,
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
   },
   cancelButton: {
     flex: 1,
