@@ -1,5 +1,15 @@
 import React from "react";
-import { StyleSheet, TouchableOpacity, Modal, TextInput, ScrollView, KeyboardAvoidingView, Platform, Text, View } from "react-native";
+import {
+  StyleSheet,
+  TouchableOpacity,
+  Modal,
+  TextInput,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
+  Text,
+  View,
+} from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import Colors from "@/constants/Colors";
 import { NewItemInput, ItemCategory, ItemPriority } from "@/types/item.types";
@@ -21,19 +31,21 @@ export function AddItemModal({
 }: AddItemModalProps) {
   const isFormValid = newItem.name.trim();
 
-  const categories: Array<{ key: ItemCategory; label: string; icon: string }> = [
-    { key: "food", label: "식품", icon: "restaurant" },
-    { key: "household", label: "생활용품", icon: "home" },
-    { key: "personal", label: "개인용품", icon: "person" },
-    { key: "electronics", label: "전자제품", icon: "phone-portrait" },
-    { key: "other", label: "기타", icon: "ellipsis-horizontal" },
-  ];
+  const categories: Array<{ key: ItemCategory; label: string; icon: string }> =
+    [
+      { key: "food", label: "식품", icon: "restaurant" },
+      { key: "household", label: "생활용품", icon: "home" },
+      { key: "personal", label: "개인용품", icon: "person" },
+      { key: "electronics", label: "전자제품", icon: "phone-portrait" },
+      { key: "other", label: "기타", icon: "ellipsis-horizontal" },
+    ];
 
-  const priorities: Array<{ key: ItemPriority; label: string; color: string }> = [
-    { key: "low", label: "낮음", color: Colors.light.successColor },
-    { key: "medium", label: "보통", color: Colors.light.warningColor },
-    { key: "high", label: "높음", color: Colors.light.errorColor },
-  ];
+  const priorities: Array<{ key: ItemPriority; label: string; color: string }> =
+    [
+      { key: "low", label: "낮음", color: Colors.light.successColor },
+      { key: "medium", label: "보통", color: Colors.light.warningColor },
+      { key: "high", label: "높음", color: Colors.light.errorColor },
+    ];
 
   return (
     <Modal
@@ -42,23 +54,25 @@ export function AddItemModal({
       transparent={true}
       onRequestClose={onClose}
     >
-      <KeyboardAvoidingView
-        style={styles.modalOverlay}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
-      >
+      <View style={styles.modalOverlay}>
         <View style={styles.modalContainer}>
-          <View style={[styles.modalHeader, { backgroundColor: Colors.light.cardBackground }]}>
+          <View
+            style={[
+              styles.modalHeader,
+              { backgroundColor: Colors.light.cardBackground },
+            ]}
+          >
             <Text style={styles.modalTitle}>새 물품 추가</Text>
             <TouchableOpacity onPress={onClose}>
               <Ionicons name="close" size={24} color={Colors.light.mutedText} />
             </TouchableOpacity>
           </View>
 
-          <ScrollView 
+          <ScrollView
             style={styles.modalContent}
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
+            contentContainerStyle={styles.scrollContent}
           >
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>물품명*</Text>
@@ -192,6 +206,7 @@ export function AddItemModal({
                 />
               </View>
             </View>
+
           </ScrollView>
 
           <View style={[styles.modalActions, { backgroundColor: Colors.light.cardBackground }]}>
@@ -217,7 +232,7 @@ export function AddItemModal({
             </TouchableOpacity>
           </View>
         </View>
-      </KeyboardAvoidingView>
+      </View>
     </Modal>
   );
 }
@@ -233,7 +248,6 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.light.cardBackground,
     borderRadius: 24,
     maxHeight: "90%",
-    marginVertical: 50,
     overflow: "hidden",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 10 },
@@ -255,8 +269,11 @@ const styles = StyleSheet.create({
     color: Colors.light.text,
   },
   modalContent: {
+    maxHeight: 500,
+  },
+  scrollContent: {
     padding: 20,
-    paddingBottom: 0,
+    paddingBottom: 40,
   },
   inputGroup: {
     marginBottom: 24,
