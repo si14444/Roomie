@@ -67,3 +67,24 @@ export interface ItemStats {
   categoryCounts: Record<ItemCategory, number>;
   priorityCounts: Record<ItemPriority, number>;
 }
+
+// Inventory Management Types
+export type InventoryStatus = "충분" | "보통" | "부족";
+
+export interface InventoryItem {
+  id: string;
+  name: string;
+  category: ItemCategory;
+  status: InventoryStatus;
+  lastUpdated: Date;
+  lastUpdatedBy: string;
+  icon: string; // Ionicons name
+  notes?: string;
+}
+
+export interface StatusUpdate {
+  itemId: string;
+  newStatus: InventoryStatus;
+  updatedBy: string;
+  notes?: string;
+}

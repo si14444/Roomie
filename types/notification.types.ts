@@ -17,6 +17,7 @@ export type NotificationType =
   | "payment_received" // 지불 완료
   | "item_request" // 물품 요청
   | "item_purchased" // 물품 구매 완료
+  | "item_update" // 물품 수량 업데이트
   | "poll_created" // 새 투표 생성
   | "poll_ended" // 투표 종료
   | "chat_message" // 채팅 메시지
