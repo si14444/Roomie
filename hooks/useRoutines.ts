@@ -1,5 +1,5 @@
-import { useState, useMemo } from "react";
-import { Alert } from "react-native";
+import { useState, useMemo, useEffect } from "react";
+import { Alert, AppState } from "react-native";
 import { useNotificationContext } from "@/contexts/NotificationContext";
 
 interface Routine {
@@ -26,20 +26,21 @@ export function useRoutines() {
       id: 1,
       task: "설거지",
       assignee: "김철수",
-      nextDate: "2024-12-28",
-      status: "pending",
+      nextDate: "2025-08-17", // 오늘 날짜로 업데이트
+      status: "completed",
       icon: "restaurant-outline",
       frequency: "daily",
+      completedAt: "2025-08-16", // 어제 완료 (오늘 리셋되어야 함)
     },
     {
       id: 2,
       task: "청소기",
       assignee: "이영희",
-      nextDate: "2024-12-29",
+      nextDate: "2024-12-30", // 다음 주 월요일
       status: "completed",
       icon: "home-outline",
       frequency: "weekly",
-      completedAt: "2024-12-28",
+      completedAt: "2024-12-22", // 지난 주 완료 (리셋되어야 함)
     },
     {
       id: 3,
@@ -62,6 +63,133 @@ export function useRoutines() {
   ]);
 
   const roommates = ["김철수", "이영희", "박민수", "정지수"];
+
+  // 루틴 상태 자동 업데이트 함수
+  const checkAndUpdateRoutineStatus = () => {
+    const today = new Date();
+    const currentDate = today.toISOString().split("T")[0];
+    
+    setRoutines((prev) =>
+      prev.map((routine) => {
+        // 완료된 루틴만 체크
+        if (routine.status !== "completed" || !routine.completedAt) {
+          return routine;
+        }
+
+        const completedDate = new Date(routine.completedAt);
+        const shouldReset = shouldResetRoutine(routine, completedDate, today);
+
+        if (shouldReset) {
+          // 루틴 리셋 - 다음 예정일 계산
+          const nextDate = calculateNextDate(today, routine.frequency);
+          
+          return {
+            ...routine,
+            status: "pending" as const,
+            nextDate: nextDate.toISOString().split("T")[0],
+            completedAt: undefined,
+          };
+        }
+
+        return routine;
+      })
+    );
+  };
+
+  // 루틴이 리셋되어야 하는지 확인
+  const shouldResetRoutine = (routine: Routine, completedDate: Date, currentDate: Date): boolean => {
+    switch (routine.frequency) {
+      case "daily":
+        // 다음 날이 되면 리셋
+        const nextDay = new Date(completedDate);
+        nextDay.setDate(completedDate.getDate() + 1);
+        return currentDate >= nextDay;
+
+      case "weekly":
+        // 다음 주 월요일에 리셋
+        const nextMonday = getNextMonday(completedDate);
+        return currentDate >= nextMonday;
+
+      case "monthly":
+        // 다음 달 1일에 리셋
+        const nextMonth = new Date(completedDate);
+        nextMonth.setMonth(completedDate.getMonth() + 1);
+        nextMonth.setDate(1);
+        return currentDate >= nextMonth;
+
+      default:
+        return false;
+    }
+  };
+
+  // 다음 월요일 날짜 계산
+  const getNextMonday = (fromDate: Date): Date => {
+    const date = new Date(fromDate);
+    const dayOfWeek = date.getDay(); // 0 = 일요일, 1 = 월요일, ...
+    const daysUntilMonday = dayOfWeek === 0 ? 1 : (8 - dayOfWeek); // 다음 월요일까지 남은 일수
+    
+    date.setDate(date.getDate() + daysUntilMonday);
+    return date;
+  };
+
+  // 다음 예정일 계산
+  const calculateNextDate = (fromDate: Date, frequency: "daily" | "weekly" | "monthly"): Date => {
+    const nextDate = new Date(fromDate);
+    
+    switch (frequency) {
+      case "daily":
+        nextDate.setDate(fromDate.getDate() + 1);
+        break;
+      case "weekly":
+        // 주간 루틴은 다음 주 월요일이 예정일
+        return getNextMonday(fromDate);
+      case "monthly":
+        // 월간 루틴은 다음 달 1일이 예정일
+        nextDate.setMonth(fromDate.getMonth() + 1);
+        nextDate.setDate(1);
+        break;
+    }
+    
+    return nextDate;
+  };
+
+  // 앱 로드시와 주기적으로 루틴 상태 체크
+  useEffect(() => {
+    checkAndUpdateRoutineStatus();
+    
+    // 매일 자정에 체크하도록 인터벌 설정
+    const now = new Date();
+    const tomorrow = new Date(now);
+    tomorrow.setDate(now.getDate() + 1);
+    tomorrow.setHours(0, 0, 0, 0);
+    
+    const msUntilMidnight = tomorrow.getTime() - now.getTime();
+    
+    const timeoutId = setTimeout(() => {
+      checkAndUpdateRoutineStatus();
+      
+      // 이후 24시간마다 체크
+      const intervalId = setInterval(checkAndUpdateRoutineStatus, 24 * 60 * 60 * 1000);
+      
+      return () => clearInterval(intervalId);
+    }, msUntilMidnight);
+    
+    return () => clearTimeout(timeoutId);
+  }, []);
+
+  // 앱이 포그라운드로 돌아올 때도 체크
+  useEffect(() => {
+    const handleAppStateChange = (nextAppState: string) => {
+      if (nextAppState === 'active') {
+        // 앱이 포그라운드로 돌아왔을 때 루틴 상태 체크
+        checkAndUpdateRoutineStatus();
+      }
+    };
+    
+    const subscription = AppState.addEventListener('change', handleAppStateChange);
+    
+    return () => subscription?.remove();
+  }, []);
 
   // 동적 통계 계산
   const statistics = useMemo(() => {
@@ -92,10 +220,15 @@ export function useRoutines() {
             relatedId: routineId.toString(),
           });
 
+          // 다음 예정일 계산
+          const today = new Date();
+          const nextDate = calculateNextDate(today, routine.frequency);
+
           return {
             ...routine,
             status: "completed" as const,
-            completedAt: new Date().toISOString().split("T")[0],
+            completedAt: today.toISOString().split("T")[0],
+            nextDate: nextDate.toISOString().split("T")[0],
           };
         }
         return routine;
