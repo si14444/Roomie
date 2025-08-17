@@ -26,6 +26,9 @@ interface TeamContextType {
   
   // 개발 모드 전용 함수
   skipTeamSelection: () => Promise<void>;
+  
+  // 팀 데이터 초기화 (새 사용자 로그인 시)
+  resetTeamData: () => Promise<void>;
 }
 
 const TeamContext = createContext<TeamContextType | undefined>(undefined);
@@ -57,17 +60,39 @@ export function TeamProvider({ children }: { children: ReactNode }) {
         AsyncStorage.getItem(STORAGE_KEYS.HAS_SELECTED_TEAM)
       ]);
 
+      console.log('Loading team data:', {
+        storedCurrentTeam: storedCurrentTeam ? 'exists' : 'null',
+        storedUserTeams: storedUserTeams ? 'exists' : 'null',
+        storedHasSelected
+      });
+
       if (storedCurrentTeam) {
         setCurrentTeam(JSON.parse(storedCurrentTeam));
+      } else {
+        setCurrentTeam(null);
       }
 
       if (storedUserTeams) {
         setUserTeams(JSON.parse(storedUserTeams));
+      } else {
+        setUserTeams([]);
       }
 
-      setHasSelectedTeam(storedHasSelected === 'true');
+      // hasSelectedTeam은 명시적으로 'true'일 때만 true로 설정
+      const hasSelected = storedHasSelected === 'true';
+      setHasSelectedTeam(hasSelected);
+      
+      console.log('Team data loaded:', {
+        hasSelectedTeam: hasSelected,
+        currentTeam: storedCurrentTeam ? 'exists' : 'null',
+        userTeamsCount: storedUserTeams ? JSON.parse(storedUserTeams).length : 0
+      });
     } catch (error) {
       console.error('Failed to load team data:', error);
+      // 오류 발생 시 안전한 기본값으로 설정
+      setCurrentTeam(null);
+      setUserTeams([]);
+      setHasSelectedTeam(false);
     } finally {
       setIsLoading(false);
     }
@@ -265,6 +290,29 @@ export function TeamProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const resetTeamData = async () => {
+    try {
+      console.log('Resetting team data...');
+      
+      // 상태 초기화
+      setCurrentTeam(null);
+      setUserTeams([]);
+      setHasSelectedTeam(false);
+      
+      // 로컬 스토리지에서 제거
+      await Promise.all([
+        AsyncStorage.removeItem(STORAGE_KEYS.CURRENT_TEAM),
+        AsyncStorage.removeItem(STORAGE_KEYS.USER_TEAMS),
+        AsyncStorage.removeItem(STORAGE_KEYS.HAS_SELECTED_TEAM)
+      ]);
+      
+      console.log('Team data reset complete');
+    } catch (error) {
+      console.error('Failed to reset team data:', error);
+      throw error;
+    }
+  };
+
   const skipTeamSelection = async () => {
     try {
       // 개발 모드 전용: 더미 팀 데이터 생성하여 hasSelectedTeam을 true로 설정
@@ -324,7 +372,8 @@ export function TeamProvider({ children }: { children: ReactNode }) {
     inviteMember,
     removeMember,
     updateMemberRole,
-    skipTeamSelection
+    skipTeamSelection,
+    resetTeamData
   };
 
   return (
