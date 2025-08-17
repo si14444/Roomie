@@ -8,7 +8,9 @@ export interface Bill {
   name: string;
   amount: number;
   accountNumber?: string;
+  bank?: string;
   splitType: "equal" | "custom";
+  customSplit?: { [roommate: string]: number };
   status: "pending" | "paid" | "overdue";
   dueDate: string;
   icon: keyof typeof Ionicons.glyphMap;
@@ -90,11 +92,13 @@ export function useBills() {
   const roommates = ["김철수", "이영희", "박민수", "정지수"];
 
   const calculateSplit = useCallback(
-    (amount: number, splitType: "equal" | "custom") => {
+    (amount: number, splitType: "equal" | "custom", customSplit?: { [roommate: string]: number }, roommate?: string) => {
       if (splitType === "equal") {
         return Math.round(amount / roommates.length);
+      } else if (splitType === "custom" && customSplit && roommate) {
+        return customSplit[roommate] || 0;
       }
-      return Math.round(amount / 2);
+      return Math.round(amount / roommates.length);
     },
     [roommates.length]
   );
@@ -116,7 +120,7 @@ export function useBills() {
       let paidAmount = 0;
 
       bills.forEach((bill) => {
-        const individualAmount = calculateSplit(bill.amount, bill.splitType);
+        const individualAmount = calculateSplit(bill.amount, bill.splitType, bill.customSplit, roommate);
         totalDebt += individualAmount;
         if (bill.payments[roommate]) {
           paidAmount += individualAmount;
@@ -148,7 +152,9 @@ export function useBills() {
       name: string;
       amount: string;
       accountNumber: string;
+      bank: string;
       splitType: "equal" | "custom";
+      customSplit?: { [roommate: string]: number };
       dueDate: string;
       category: "utility" | "subscription" | "maintenance";
     }) => {
@@ -193,7 +199,9 @@ export function useBills() {
         name: newBill.name.trim(),
         amount: parseInt(newBill.amount.trim()),
         accountNumber: newBill.accountNumber.trim() || undefined,
+        bank: newBill.bank.trim() || undefined,
         splitType: newBill.splitType,
+        customSplit: newBill.customSplit,
         status: "pending",
         dueDate: newBill.dueDate.trim(),
         icon: getIconForCategory(
@@ -351,6 +359,12 @@ export function useBills() {
     );
     if (unpaidRoommates.length === 0) {
       return null;
+    }
+    // For payment link, we need to handle multiple amounts for custom split
+    if (bill.splitType === "custom" && bill.customSplit) {
+      // Return the bill info, let the modal handle individual amounts
+      const paymentMethods = [{ name: "계좌복사", icon: "copy" }];
+      return { bill, unpaidRoommates, amount: 0, paymentMethods };
     }
     const amount = calculateSplit(bill.amount, bill.splitType);
     const paymentMethods = [{ name: "계좌복사", icon: "copy" }];

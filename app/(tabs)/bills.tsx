@@ -5,7 +5,7 @@ import { ScrollView, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 // Import new components
-import { AddBillModal } from "@/components/bills/AddBillModal";
+import { AddBillModal, type NewBill } from "@/components/bills/AddBillModal";
 import { BillCard } from "@/components/bills/BillCard";
 import { BillOptionsModal } from "@/components/bills/BillOptionsModal";
 import { PaymentLinkModal } from "@/components/bills/PaymentLinkModal";
@@ -34,14 +34,16 @@ export default function BillsScreen() {
   } = useBills();
 
   const [showAddModal, setShowAddModal] = useState(false);
-  const [newBill, setNewBill] = useState({
+  const [newBill, setNewBill] = useState<NewBill>({
     name: "",
     amount: "",
     accountNumber: "",
-    splitType: "equal" as "equal" | "custom",
+    bank: "",
+    splitType: "equal",
+    customSplit: undefined,
     dueDate: "",
-    category: "utility" as "utility" | "subscription" | "maintenance",
-    icon: "flash-outline" as any,
+    category: "utility",
+    icon: "flash-outline",
   });
 
   const handleAddBill = () => {
@@ -51,7 +53,9 @@ export default function BillsScreen() {
         name: "",
         amount: "",
         accountNumber: "",
+        bank: "",
         splitType: "equal",
+        customSplit: undefined,
         dueDate: "",
         category: "utility",
         icon: "flash-outline",

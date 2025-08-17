@@ -8,7 +8,7 @@ import type { Bill } from "@/hooks/useBills";
 interface BillCardProps {
   bill: Bill;
   roommates: string[];
-  calculateSplit: (amount: number, splitType: "equal" | "custom") => number;
+  calculateSplit: (amount: number, splitType: "equal" | "custom", customSplit?: { [roommate: string]: number }, roommate?: string) => number;
   onTogglePayment: (billId: number, roommate: string) => void;
   onPressPaymentLink: (bill: Bill) => void;
   onShowBillOptions: (bill: Bill) => void;
@@ -58,8 +58,11 @@ export function BillCard({
             총액: ₩{bill.amount.toLocaleString()}
           </Text>
           <Text style={styles.splitAmount}>
-            1인당: ₩
-            {calculateSplit(bill.amount, bill.splitType).toLocaleString()}
+            {bill.splitType === "equal" ? "1인당" : "개별분할"}: ₩
+            {bill.splitType === "equal" 
+              ? calculateSplit(bill.amount, bill.splitType).toLocaleString()
+              : "개별설정"
+            }
           </Text>
           <Text style={styles.dueDate}>마감일: {bill.dueDate}</Text>
         </View>
@@ -78,7 +81,7 @@ export function BillCard({
         <View style={styles.roommatePayments}>
           {roommates.map((roommate) => {
             const isPaid = bill.payments[roommate];
-            const amount = calculateSplit(bill.amount, bill.splitType);
+            const amount = calculateSplit(bill.amount, bill.splitType, bill.customSplit, roommate);
 
             return (
               <RoommatePaymentItem
