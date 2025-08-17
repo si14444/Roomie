@@ -127,7 +127,7 @@ export function AddItemModal({
                       color={
                         newItem.category === category.key
                           ? "white"
-                          : Colors.light.subColor
+                          : Colors.light.primary
                       }
                     />
                     <Text
@@ -319,8 +319,8 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   categoryButtonSelected: {
-    backgroundColor: Colors.light.subColor,
-    borderColor: Colors.light.subColor,
+    backgroundColor: Colors.light.primary,
+    borderColor: Colors.light.primary,
   },
   categoryText: {
     fontSize: 14,
@@ -374,7 +374,7 @@ const styles = StyleSheet.create({
   },
   confirmButton: {
     flex: 1,
-    backgroundColor: Colors.light.subColor,
+    backgroundColor: Colors.light.primary,
     paddingVertical: 14,
     borderRadius: 12,
     alignItems: "center",

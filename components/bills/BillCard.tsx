@@ -199,7 +199,7 @@ const styles = StyleSheet.create({
   },
   paymentButton: {
     flex: 1,
-    backgroundColor: Colors.light.subColor,
+    backgroundColor: Colors.light.primary,
     paddingVertical: 12,
     borderRadius: 10,
     alignItems: "center",

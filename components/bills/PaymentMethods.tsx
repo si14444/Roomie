@@ -77,7 +77,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   kakaoButton: {
-    backgroundColor: Colors.light.subColor,
+    backgroundColor: Colors.light.primary,
   },
   tossButton: {
     backgroundColor: Colors.light.primary,

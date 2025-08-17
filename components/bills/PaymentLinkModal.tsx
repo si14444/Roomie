@@ -153,7 +153,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   copyButton: {
-    backgroundColor: Colors.light.subColor,
+    backgroundColor: Colors.light.primary,
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderRadius: 10,

@@ -115,7 +115,7 @@ export function AddBillModal({
                       color={
                         newBill.splitType === split.key
                           ? "white"
-                          : Colors.light.subColor
+                          : Colors.light.primary
                       }
                     />
                     <Text
@@ -273,8 +273,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   splitButtonSelected: {
-    backgroundColor: Colors.light.subColor,
-    borderColor: Colors.light.subColor,
+    backgroundColor: Colors.light.primary,
+    borderColor: Colors.light.primary,
   },
   splitText: {
     fontSize: 14,
@@ -299,8 +299,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   categoryButtonSelected: {
-    backgroundColor: Colors.light.subColor,
-    borderColor: Colors.light.subColor,
+    backgroundColor: Colors.light.primary,
+    borderColor: Colors.light.primary,
   },
   categoryText: {
     fontSize: 14,
@@ -334,7 +334,7 @@ const styles = StyleSheet.create({
   },
   confirmButton: {
     flex: 1,
-    backgroundColor: Colors.light.subColor,
+    backgroundColor: Colors.light.primary,
     paddingVertical: 14,
     borderRadius: 12,
     alignItems: "center",

@@ -263,7 +263,7 @@ const styles = StyleSheet.create({
     color: Colors.light.mutedText,
   },
   addButton: {
-    backgroundColor: Colors.light.subColor,
+    backgroundColor: Colors.light.primary,
     flexDirection: "row",
     alignItems: "center",
     paddingVertical: 8,
@@ -416,7 +416,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderRadius: 12,
     alignItems: "center",
-    backgroundColor: Colors.light.subColor,
+    backgroundColor: Colors.light.primary,
   },
   submitButtonText: {
     fontSize: 16,

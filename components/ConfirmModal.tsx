@@ -88,7 +88,7 @@ const styles = StyleSheet.create({
   },
   confirmButton: {
     flex: 1,
-    backgroundColor: Colors.light.subColor,
+    backgroundColor: Colors.light.primary,
     borderRadius: 8,
     paddingVertical: 12,
     alignItems: "center",
