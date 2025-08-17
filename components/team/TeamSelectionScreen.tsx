@@ -47,8 +47,12 @@ export default function TeamSelectionScreen({ onTeamSelected }: TeamSelectionScr
         description: newTeamDescription.trim() || undefined,
       });
       
-      onTeamSelected?.();
-      Alert.alert('성공', '팀이 생성되었습니다!');
+      Alert.alert('성공', '팀이 생성되었습니다!', [
+        {
+          text: '확인',
+          onPress: () => onTeamSelected?.(),
+        },
+      ]);
     } catch (error) {
       Alert.alert('오류', '팀 생성에 실패했습니다.');
     } finally {
@@ -66,8 +70,12 @@ export default function TeamSelectionScreen({ onTeamSelected }: TeamSelectionScr
       setIsJoining(true);
       await joinTeam({ inviteCode: inviteCode.trim() });
       
-      onTeamSelected?.();
-      Alert.alert('성공', '팀에 참가했습니다!');
+      Alert.alert('성공', '팀에 참가했습니다!', [
+        {
+          text: '확인',
+          onPress: () => onTeamSelected?.(),
+        },
+      ]);
     } catch (error) {
       Alert.alert('오류', '팀 참가에 실패했습니다. 초대 코드를 확인해주세요.');
     } finally {
@@ -85,8 +93,12 @@ export default function TeamSelectionScreen({ onTeamSelected }: TeamSelectionScr
   const handleSkipForDev = async () => {
     try {
       await skipTeamSelection();
-      onTeamSelected?.();
-      Alert.alert('개발 모드', '개발 팀으로 설정되었습니다!');
+      Alert.alert('개발 모드', '개발 팀으로 설정되었습니다!', [
+        {
+          text: '확인',
+          onPress: () => onTeamSelected?.(),
+        },
+      ]);
     } catch (error) {
       Alert.alert('오류', '개발 모드 설정에 실패했습니다.');
     }
@@ -136,10 +148,10 @@ export default function TeamSelectionScreen({ onTeamSelected }: TeamSelectionScr
             // 초기 선택 화면
             <View style={styles.selectionContainer}>
               <View style={styles.welcomeSection}>
-                <Ionicons name="home" size={80} color={Colors.light.mutedText} />
-                <Text style={styles.welcomeTitle}>아직 팀이 없습니다</Text>
+                <Ionicons name="people" size={80} color={Colors.light.mutedText} />
+                <Text style={styles.welcomeTitle}>팀에 참가하세요</Text>
                 <Text style={styles.welcomeSubtitle}>
-                  새로운 팀을 만들거나{'\n'}초대 코드로 팀에 참가해보세요
+                  룸메이트들과 함께 살림을 관리해보세요{'\n'}새로운 팀을 만들거나 기존 팀에 참가할 수 있습니다
                 </Text>
               </View>
 
@@ -155,7 +167,7 @@ export default function TeamSelectionScreen({ onTeamSelected }: TeamSelectionScr
                   <View style={styles.optionContent}>
                     <Text style={styles.optionTitle}>새 팀 만들기</Text>
                     <Text style={styles.optionDescription}>
-                      나만의 팀을 만들고 룸메이트를 초대하세요
+                      새로운 팀을 만들고 초대 코드를 공유해서{'\n'}룸메이트들을 초대하세요
                     </Text>
                   </View>
                   <Ionicons name="chevron-forward" size={20} color={Colors.light.mutedText} />
@@ -172,7 +184,7 @@ export default function TeamSelectionScreen({ onTeamSelected }: TeamSelectionScr
                   <View style={styles.optionContent}>
                     <Text style={styles.optionTitle}>팀에 참가하기</Text>
                     <Text style={styles.optionDescription}>
-                      초대 코드를 입력하여 기존 팀에 참가하세요
+                      룸메이트에게 받은 초대 코드를 입력해서{'\n'}기존 팀에 참가하세요
                     </Text>
                   </View>
                   <Ionicons name="chevron-forward" size={20} color={Colors.light.mutedText} />
