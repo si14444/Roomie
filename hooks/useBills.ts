@@ -7,6 +7,7 @@ export interface Bill {
   id: number;
   name: string;
   amount: number;
+  accountNumber?: string;
   splitType: "equal" | "custom";
   status: "pending" | "paid" | "overdue";
   dueDate: string;
@@ -146,6 +147,7 @@ export function useBills() {
     (newBill: {
       name: string;
       amount: string;
+      accountNumber: string;
       splitType: "equal" | "custom";
       dueDate: string;
       category: "utility" | "subscription" | "maintenance";
@@ -190,6 +192,7 @@ export function useBills() {
         id: Date.now(),
         name: newBill.name.trim(),
         amount: parseInt(newBill.amount.trim()),
+        accountNumber: newBill.accountNumber.trim() || undefined,
         splitType: newBill.splitType,
         status: "pending",
         dueDate: newBill.dueDate.trim(),

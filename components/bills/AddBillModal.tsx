@@ -1,12 +1,14 @@
-import React from "react";
+import React, { useState } from "react";
 import { StyleSheet, TouchableOpacity, Modal, TextInput } from "react-native";
 import { Text, View } from "@/components/Themed";
 import { Ionicons } from "@expo/vector-icons";
 import Colors from "@/constants/Colors";
+import { CalendarModal } from "./CalendarModal";
 
 interface NewBill {
   name: string;
   amount: string;
+  accountNumber: string;
   splitType: "equal" | "custom";
   dueDate: string;
   category: "utility" | "subscription" | "maintenance";
@@ -28,7 +30,21 @@ export function AddBillModal({
   onClose,
   onAddBill,
 }: AddBillModalProps) {
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const isFormValid = newBill.name.trim() && newBill.amount.trim();
+
+  const handleDateSelect = (date: string) => {
+    setNewBill((prev) => ({ ...prev, dueDate: date }));
+  };
+
+  const formatDisplayDate = (dateString: string) => {
+    if (!dateString) return "";
+    const date = new Date(dateString);
+    const year = date.getFullYear();
+    const month = date.getMonth() + 1;
+    const day = date.getDate();
+    return `${year}년 ${month}월 ${day}일`;
+  };
 
   return (
     <Modal
@@ -76,16 +92,33 @@ export function AddBillModal({
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>마감일</Text>
+              <Text style={styles.inputLabel}>계좌번호</Text>
               <TextInput
                 style={styles.textInput}
-                value={newBill.dueDate}
+                value={newBill.accountNumber}
                 onChangeText={(text) =>
-                  setNewBill((prev) => ({ ...prev, dueDate: text }))
+                  setNewBill((prev) => ({ ...prev, accountNumber: text }))
                 }
-                placeholder="예: 2024-12-31"
+                placeholder="예: 123-456-789012"
                 placeholderTextColor={Colors.light.placeholderText}
+                keyboardType="numeric"
               />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>마감일</Text>
+              <TouchableOpacity
+                style={styles.datePickerButton}
+                onPress={() => setShowDatePicker(true)}
+              >
+                <Text style={[
+                  styles.datePickerText,
+                  !newBill.dueDate && styles.datePickerPlaceholder
+                ]}>
+                  {newBill.dueDate ? formatDisplayDate(newBill.dueDate) : "날짜를 선택하세요"}
+                </Text>
+                <Ionicons name="calendar" size={20} color={Colors.light.primary} />
+              </TouchableOpacity>
             </View>
 
             <View style={styles.inputGroup}>
@@ -193,6 +226,13 @@ export function AddBillModal({
           </View>
         </View>
       </View>
+
+      <CalendarModal
+        visible={showDatePicker}
+        selectedDate={newBill.dueDate}
+        onClose={() => setShowDatePicker(false)}
+        onSelectDate={handleDateSelect}
+      />
     </Modal>
   );
 }
@@ -351,5 +391,23 @@ const styles = StyleSheet.create({
   },
   confirmButtonTextDisabled: {
     color: Colors.light.mutedText,
+  },
+  datePickerButton: {
+    backgroundColor: Colors.light.surface,
+    borderWidth: 1,
+    borderColor: Colors.light.borderColor,
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  datePickerText: {
+    fontSize: 16,
+    color: Colors.light.text,
+  },
+  datePickerPlaceholder: {
+    color: Colors.light.placeholderText,
   },
 });

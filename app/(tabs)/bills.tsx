@@ -37,6 +37,7 @@ export default function BillsScreen() {
   const [newBill, setNewBill] = useState({
     name: "",
     amount: "",
+    accountNumber: "",
     splitType: "equal" as "equal" | "custom",
     dueDate: "",
     category: "utility" as "utility" | "subscription" | "maintenance",
@@ -49,6 +50,7 @@ export default function BillsScreen() {
       setNewBill({
         name: "",
         amount: "",
+        accountNumber: "",
         splitType: "equal",
         dueDate: "",
         category: "utility",
