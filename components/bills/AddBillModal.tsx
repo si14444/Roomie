@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { StyleSheet, TouchableOpacity, Modal, TextInput, ScrollView } from "react-native";
 import { Text, View } from "@/components/Themed";
 import { Ionicons } from "@expo/vector-icons";
@@ -37,11 +37,29 @@ export function AddBillModal({
   onAddBill,
 }: AddBillModalProps) {
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [customBankInput, setCustomBankInput] = useState("");
+
+  // Reset custom bank input when modal closes or when bank changes to non-custom
+  useEffect(() => {
+    if (!visible) {
+      setCustomBankInput("");
+    }
+  }, [visible]);
+
+  useEffect(() => {
+    if (newBill.bank && newBill.bank !== "기타" && !banks.includes(newBill.bank)) {
+      // If bank is a custom value, set it as custom input
+      setCustomBankInput(newBill.bank);
+    } else if (newBill.bank && newBill.bank !== "기타" && banks.includes(newBill.bank)) {
+      // If bank is a predefined bank, clear custom input
+      setCustomBankInput("");
+    }
+  }, [newBill.bank]);
   
   const roommates = ["김철수", "이영희", "박민수", "정지수"];
   const banks = [
     "KB국민은행", "신한은행", "우리은행", "하나은행", 
-    "IBK기업은행", "NH농협은행", "카카오뱅크", "토스뱅크"
+    "IBK기업은행", "NH농협은행", "카카오뱅크", "토스뱅크", "기타"
   ];
 
   const isFormValid = newBill.name.trim() && newBill.amount.trim();
@@ -156,16 +174,23 @@ export function AddBillModal({
                     key={bank}
                     style={[
                       styles.bankButton,
-                      newBill.bank === bank && styles.bankButtonSelected,
+                      (newBill.bank === bank || (bank === "기타" && !banks.slice(0, -1).includes(newBill.bank))) && styles.bankButtonSelected,
                     ]}
-                    onPress={() =>
-                      setNewBill((prev) => ({ ...prev, bank }))
-                    }
+                    onPress={() => {
+                      if (bank === "기타") {
+                        // Select "기타" - enable custom input
+                        setNewBill((prev) => ({ ...prev, bank: "기타" }));
+                      } else {
+                        // Select predefined bank
+                        setNewBill((prev) => ({ ...prev, bank }));
+                        setCustomBankInput("");
+                      }
+                    }}
                   >
                     <Text
                       style={[
                         styles.bankText,
-                        newBill.bank === bank && styles.bankTextSelected,
+                        (newBill.bank === bank || (bank === "기타" && !banks.slice(0, -1).includes(newBill.bank))) && styles.bankTextSelected,
                       ]}
                     >
                       {bank}
@@ -173,6 +198,24 @@ export function AddBillModal({
                   </TouchableOpacity>
                 ))}
               </View>
+              
+              {/* 기타 은행 입력 필드 */}
+              {newBill.bank === "기타" && (
+                <View style={styles.customBankContainer}>
+                  <Text style={styles.customBankLabel}>은행명 직접 입력</Text>
+                  <TextInput
+                    style={styles.customBankInput}
+                    value={customBankInput}
+                    onChangeText={(text) => {
+                      setCustomBankInput(text);
+                      // Update the actual bank value with the custom input
+                      setNewBill((prev) => ({ ...prev, bank: text.trim() || "기타" }));
+                    }}
+                    placeholder="예: 새마을금고, 저축은행 등"
+                    placeholderTextColor={Colors.light.placeholderText}
+                  />
+                </View>
+              )}
             </View>
 
             {/* 계좌번호 */}
@@ -440,6 +483,28 @@ const styles = StyleSheet.create({
   },
   bankTextSelected: {
     color: "white",
+  },
+  customBankContainer: {
+    marginTop: 12,
+    backgroundColor: Colors.light.surface,
+    borderRadius: 12,
+    padding: 16,
+  },
+  customBankLabel: {
+    fontSize: 14,
+    fontWeight: "500",
+    color: Colors.light.text,
+    marginBottom: 8,
+  },
+  customBankInput: {
+    backgroundColor: Colors.light.cardBackground,
+    borderWidth: 1,
+    borderColor: Colors.light.borderColor,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 14,
+    color: Colors.light.text,
   },
   splitOptions: {
     flexDirection: "row",
