@@ -551,6 +551,9 @@ const styles = StyleSheet.create({
     paddingVertical: 20,
     borderTopWidth: 1,
     borderTopColor: Colors.light.borderColor,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+    backgroundColor: Colors.light.cardBackground,
   },
   cancelButton: {
     flex: 1,

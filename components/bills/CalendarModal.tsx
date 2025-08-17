@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { StyleSheet, TouchableOpacity, Modal, Dimensions } from "react-native";
+import React, { useState, useEffect } from "react";
+import { StyleSheet, TouchableOpacity, Modal, Pressable } from "react-native";
 import { Text, View } from "@/components/Themed";
 import { Ionicons } from "@expo/vector-icons";
 import Colors from "@/constants/Colors";
@@ -19,6 +19,15 @@ export function CalendarModal({
 }: CalendarModalProps) {
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
+
+  // Reset to current month when modal opens
+  useEffect(() => {
+    if (visible) {
+      const now = new Date();
+      setCurrentMonth(now.getMonth());
+      setCurrentYear(now.getFullYear());
+    }
+  }, [visible]);
 
   const monthNames = [
     "1월", "2월", "3월", "4월", "5월", "6월",
@@ -63,97 +72,91 @@ export function CalendarModal({
     onClose();
   };
 
-  const renderCalendarWeeks = () => {
+  const handleBackdropPress = () => {
+    onClose();
+  };
+
+  const renderCalendarGrid = () => {
     const daysInMonth = getDaysInMonth(currentMonth, currentYear);
     const firstDay = getFirstDayOfMonth(currentMonth, currentYear);
     const today = new Date();
     const isCurrentMonth = currentMonth === today.getMonth() && currentYear === today.getFullYear();
 
-    const weeks = [];
-    let dayCount = 1;
-    
-    // Create 6 weeks to ensure consistent height
-    for (let week = 0; week < 6; week++) {
-      const weekDays = [];
-      
-      for (let day = 0; day < 7; day++) {
-        let dayElement;
-        
-        if (week === 0 && day < firstDay) {
-          // Empty cell before first day of month
-          dayElement = <View key={`empty-${day}`} style={styles.dayCell} />;
-        } else if (dayCount > daysInMonth) {
-          // Empty cell after last day of month
-          dayElement = <View key={`empty-after-${day}`} style={styles.dayCell} />;
-        } else {
-          // Actual day
-          const dateString = formatDate(currentYear, currentMonth, dayCount);
-          const isSelected = selectedDate === dateString;
-          const isToday = isCurrentMonth && dayCount === today.getDate();
-          
-          dayElement = (
-            <TouchableOpacity
-              key={dayCount}
-              style={[
-                styles.dayCell,
-                styles.dayButton,
-              ]}
-              onPress={() => handleDateSelect(dayCount)}
-              activeOpacity={0.6}
-            >
-              <View style={[
-                styles.dayContent,
-                isSelected && styles.selectedDay,
-                isToday && !isSelected && styles.todayDay,
-              ]}>
-                <Text
-                  style={[
-                    styles.dayText,
-                    isSelected && styles.selectedDayText,
-                    isToday && !isSelected && styles.todayDayText,
-                  ]}
-                >
-                  {dayCount}
-                </Text>
-              </View>
-            </TouchableOpacity>
-          );
-          dayCount++;
-        }
-        
-        weekDays.push(dayElement);
-      }
-      
-      weeks.push(
-        <View key={`week-${week}`} style={styles.calendarWeek}>
-          {weekDays}
-        </View>
+    const totalCells = 42; // 6 weeks × 7 days
+    const days = [];
+
+    // Add empty cells for days before the first day
+    for (let i = 0; i < firstDay; i++) {
+      days.push(
+        <View key={`empty-${i}`} style={styles.dayCell} />
       );
-      
-      // Break if we've rendered all days
-      if (dayCount > daysInMonth) break;
     }
 
-    return weeks;
+    // Add actual days
+    for (let day = 1; day <= daysInMonth; day++) {
+      const dateString = formatDate(currentYear, currentMonth, day);
+      const isSelected = selectedDate === dateString;
+      const isToday = isCurrentMonth && day === today.getDate();
+
+      days.push(
+        <TouchableOpacity
+          key={day}
+          style={[
+            styles.dayCell,
+            styles.dayButton,
+          ]}
+          onPress={() => handleDateSelect(day)}
+          activeOpacity={0.7}
+        >
+          <View style={[
+            styles.dayContent,
+            isSelected && styles.selectedDay,
+            isToday && !isSelected && styles.todayDay,
+          ]}>
+            <Text
+              style={[
+                styles.dayText,
+                isSelected && styles.selectedDayText,
+                isToday && !isSelected && styles.todayDayText,
+              ]}
+            >
+              {day}
+            </Text>
+          </View>
+        </TouchableOpacity>
+      );
+    }
+
+    // Fill remaining cells
+    const remainingCells = totalCells - (firstDay + daysInMonth);
+    for (let i = 0; i < remainingCells; i++) {
+      days.push(
+        <View key={`empty-end-${i}`} style={styles.dayCell} />
+      );
+    }
+
+    return days;
   };
+
+  if (!visible) return null;
 
   return (
     <Modal
       visible={visible}
-      animationType="slide"
+      animationType="fade"
       transparent={true}
       onRequestClose={onClose}
     >
-      <View style={styles.modalOverlay}>
-        <View style={styles.modalContainer}>
-          {/* Header with navigation */}
+      <Pressable style={styles.modalOverlay} onPress={handleBackdropPress}>
+        <Pressable style={styles.modalContainer} onPress={(e) => e.stopPropagation()}>
+          {/* Header */}
           <View style={styles.header}>
             <TouchableOpacity
               style={styles.navButton}
               onPress={() => navigateMonth('prev')}
               activeOpacity={0.7}
             >
-              <Ionicons name="chevron-back" size={18} color={Colors.light.primary} />
+              <Ionicons name="chevron-back" size={20} color={Colors.light.primary} />
             </TouchableOpacity>
             
             <View style={styles.titleContainer}>
@@ -167,9 +170,10 @@ export function CalendarModal({
               onPress={() => navigateMonth('next')}
               activeOpacity={0.7}
             >
-              <Ionicons name="chevron-forward" size={18} color={Colors.light.primary} />
+              <Ionicons name="chevron-forward" size={20} color={Colors.light.primary} />
             </TouchableOpacity>
           </View>
+
 
           {/* Week days header */}
           <View style={styles.weekDaysHeader}>
@@ -186,23 +190,36 @@ export function CalendarModal({
             ))}
           </View>
 
-          {/* Calendar weeks */}
-          <View style={styles.calendarContainer}>
-            {renderCalendarWeeks()}
+          {/* Calendar grid */}
+          <View style={styles.calendarGrid}>
+            {renderCalendarGrid()}
           </View>
 
-          {/* Actions */}
+          {/* Bottom actions */}
           <View style={styles.actions}>
             <TouchableOpacity 
-              style={styles.cancelButton} 
+              style={styles.todayButton} 
+              onPress={() => {
+                const today = new Date();
+                setCurrentMonth(today.getMonth());
+                setCurrentYear(today.getFullYear());
+                handleDateSelect(today.getDate());
+              }}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.todayButtonText}>오늘</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={styles.closeButton} 
               onPress={onClose}
               activeOpacity={0.7}
             >
-              <Text style={styles.cancelButtonText}>취소</Text>
+              <Text style={styles.closeButtonText}>닫기</Text>
             </TouchableOpacity>
           </View>
-        </View>
-      </View>
+        </Pressable>
+      </Pressable>
     </Modal>
   );
 }
@@ -217,13 +234,14 @@ const styles = StyleSheet.create({
   },
   modalContainer: {
     backgroundColor: Colors.light.cardBackground,
-    borderRadius: 16,
+    borderRadius: 20,
     padding: 20,
     width: "100%",
-    maxWidth: 340,
+    maxWidth: 350,
+    position: "relative",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
+    shadowOpacity: 0.25,
     shadowRadius: 12,
     elevation: 8,
   },
@@ -231,13 +249,13 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 16,
-    height: 44,
+    marginBottom: 20,
+    paddingHorizontal: 4,
   },
   navButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: Colors.light.surface,
     justifyContent: "center",
     alignItems: "center",
@@ -255,15 +273,13 @@ const styles = StyleSheet.create({
   },
   weekDaysHeader: {
     flexDirection: "row",
-    marginBottom: 8,
-    height: 32,
-    justifyContent: "space-around",
+    marginBottom: 10,
+    paddingHorizontal: 4,
   },
   weekDayCell: {
-    width: 44,
-    height: 32,
-    justifyContent: "center",
+    flex: 1,
     alignItems: "center",
+    paddingVertical: 8,
   },
   weekDayText: {
     fontSize: 12,
@@ -277,28 +293,26 @@ const styles = StyleSheet.create({
   saturdayText: {
     color: "#4DABF7",
   },
-  calendarContainer: {
-    marginBottom: 16,
-  },
-  calendarWeek: {
+  calendarGrid: {
     flexDirection: "row",
-    height: 46,
-    marginBottom: 3,
-    justifyContent: "space-around",
+    flexWrap: "wrap",
+    marginBottom: 20,
+    paddingHorizontal: 4,
   },
   dayCell: {
-    width: 44,
-    height: 44,
+    width: "14.285714%", // 100% / 7
+    aspectRatio: 1,
     justifyContent: "center",
     alignItems: "center",
+    paddingVertical: 2,
   },
   dayButton: {
-    borderRadius: 22,
+    // No additional styles needed
   },
   dayContent: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -307,7 +321,7 @@ const styles = StyleSheet.create({
   },
   todayDay: {
     backgroundColor: Colors.light.surface,
-    borderWidth: 1.5,
+    borderWidth: 2,
     borderColor: Colors.light.primary,
   },
   dayText: {
@@ -315,29 +329,45 @@ const styles = StyleSheet.create({
     color: Colors.light.text,
     fontWeight: "500",
     textAlign: "center",
-    lineHeight: 20,
   },
   selectedDayText: {
     color: "white",
-    fontWeight: "700",
+    fontWeight: "bold",
   },
   todayDayText: {
     color: Colors.light.primary,
-    fontWeight: "700",
+    fontWeight: "bold",
   },
   actions: {
-    alignItems: "center",
+    flexDirection: "row",
+    gap: 12,
     paddingTop: 8,
+    justifyContent: "space-between",
   },
-  cancelButton: {
-    paddingVertical: 12,
+  todayButton: {
+    flex: 1,
     paddingHorizontal: 24,
+    paddingVertical: 12,
     borderRadius: 12,
     backgroundColor: Colors.light.surface,
+    alignItems: "center",
   },
-  cancelButtonText: {
+  todayButtonText: {
     fontSize: 14,
     fontWeight: "600",
-    color: Colors.light.text,
+    color: Colors.light.primary,
+  },
+  closeButton: {
+    flex: 1,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 12,
+    backgroundColor: Colors.light.primary,
+    alignItems: "center",
+  },
+  closeButtonText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "white",
   },
 });
