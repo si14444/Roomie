@@ -5,7 +5,6 @@
 
 -- 1. 확장 기능 활성화
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-CREATE EXTENSION IF NOT EXISTS "realtime";
 
 -- 2. 업데이트 트리거 함수 생성
 CREATE OR REPLACE FUNCTION update_updated_at_column()
