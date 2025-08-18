@@ -9,6 +9,7 @@ import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
 import { SafeAreaProvider } from "react-native-safe-area-context";
+import { initializeKakaoSDK } from "@react-native-kakao/core";
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -28,6 +29,8 @@ export default function RootLayout() {
     SpaceMono: require("../assets/fonts/SpaceMono-Regular.ttf"),
     ...FontAwesome.font,
   });
+
+  initializeKakaoSDK("5fdc09b5ccda187fc82936305ec8308c");
 
   // Expo Router uses Error Boundaries to catch errors in the navigation tree.
   useEffect(() => {
@@ -57,10 +60,19 @@ function RootLayoutNav() {
             <AppNavigator>
               <ThemeProvider value={DefaultTheme}>
                 <Stack>
-                  <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                  <Stack.Screen
+                    name="(tabs)"
+                    options={{ headerShown: false }}
+                  />
                   <Stack.Screen name="login" options={{ headerShown: false }} />
-                  <Stack.Screen name="modal" options={{ presentation: "modal" }} />
-                  <Stack.Screen name="team-selection" options={{ headerShown: false }} />
+                  <Stack.Screen
+                    name="modal"
+                    options={{ presentation: "modal" }}
+                  />
+                  <Stack.Screen
+                    name="team-selection"
+                    options={{ headerShown: false }}
+                  />
                 </Stack>
               </ThemeProvider>
             </AppNavigator>
