@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -7,14 +7,15 @@ import {
   Alert,
   ActivityIndicator,
   Image,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons } from '@expo/vector-icons';
-import { useAuth } from '@/contexts/AuthContext';
-import { useTeam } from '@/contexts/TeamContext';
-import Colors from '@/constants/Colors';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { LinearGradient } from "expo-linear-gradient";
+import { Ionicons } from "@expo/vector-icons";
+import { useAuth } from "@/contexts/AuthContext";
+import { useTeam } from "@/contexts/TeamContext";
+import Colors from "@/constants/Colors";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { login as kakaoLogin } from "@react-native-kakao/user";
 
 interface LoginScreenProps {
   onLoginSuccess?: () => void;
@@ -28,28 +29,31 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
   const handleTestLogin = async () => {
     try {
       setIsLoading(true);
-      
-      console.log('Before reset - hasSelectedTeam:', hasSelectedTeam);
-      
+
+      console.log("Before reset - hasSelectedTeam:", hasSelectedTeam);
+
       // 팀 데이터 초기화 (새 사용자 로그인 시뮬레이션)
       await resetTeamData();
-      
-      console.log('After reset - hasSelectedTeam:', hasSelectedTeam);
-      
+
+      console.log("After reset - hasSelectedTeam:", hasSelectedTeam);
+
       // 테스트용 더미 사용자 데이터로 로그인 처리
       await login({
-        id: 'test_user_1',
-        email: 'test@example.com',
-        name: '테스트 사용자',
-        avatar: 'https://via.placeholder.com/100x100/4285F4/FFFFFF?text=T'
+        id: "test_user_1",
+        email: "test@example.com",
+        name: "테스트 사용자",
+        avatar: "https://via.placeholder.com/100x100/4285F4/FFFFFF?text=T",
       });
-      
-      console.log('After login - hasSelectedTeam:', hasSelectedTeam);
-      
+
+      console.log("After login - hasSelectedTeam:", hasSelectedTeam);
+
       // 로그인 후 AppNavigator가 자동으로 팀 선택 화면으로 라우팅
-      Alert.alert('성공', `로그인이 완료되었습니다!\nhasSelectedTeam: ${hasSelectedTeam}\n콘솔을 확인해주세요.`);
+      Alert.alert(
+        "성공",
+        `로그인이 완료되었습니다!\nhasSelectedTeam: ${hasSelectedTeam}\n콘솔을 확인해주세요.`
+      );
     } catch (error) {
-      Alert.alert('오류', '로그인에 실패했습니다.');
+      Alert.alert("오류", "로그인에 실패했습니다.");
     } finally {
       setIsLoading(false);
     }
@@ -58,22 +62,23 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
   const handleKakaoLogin = async () => {
     try {
       setIsLoading(true);
-      
+
       // 팀 데이터 초기화 (새 사용자 로그인 시뮬레이션)
       await resetTeamData();
-      
+
       // TODO: 실제 카카오 SDK 연동
+      kakaoLogin();
       // 임시로 더미 사용자 데이터로 로그인 처리
       await login({
-        id: 'kakao_user_1',
-        email: 'user@kakao.com',
-        name: '카카오 사용자',
-        avatar: 'https://via.placeholder.com/100x100/FFD700/000000?text=K'
+        id: "kakao_user_1",
+        email: "user@kakao.com",
+        name: "카카오 사용자",
+        avatar: "https://via.placeholder.com/100x100/FFD700/000000?text=K",
       });
-      
-      Alert.alert('성공', '카카오 로그인이 완료되었습니다!');
+
+      Alert.alert("성공", "카카오 로그인이 완료되었습니다!");
     } catch (error) {
-      Alert.alert('오류', '카카오 로그인에 실패했습니다.');
+      Alert.alert("오류", "카카오 로그인에 실패했습니다.");
     } finally {
       setIsLoading(false);
     }
@@ -91,7 +96,9 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
             <View style={styles.logoContainer}>
               <Ionicons name="home" size={80} color="white" />
               <Text style={styles.title}>Roomie</Text>
-              <Text style={styles.subtitle}>룸메이트와 함께하는 즐거운 생활</Text>
+              <Text style={styles.subtitle}>
+                룸메이트와 함께하는 즐거운 생활
+              </Text>
             </View>
           </View>
 
@@ -115,11 +122,13 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
                   <>
                     <Image
                       source={{
-                        uri: "https://developers.kakao.com/assets/img/about/logos/kakaolink/kakaolink_btn_medium.png"
+                        uri: "https://developers.kakao.com/assets/img/about/logos/kakaolink/kakaolink_btn_medium.png",
                       }}
                       style={styles.kakaoIcon}
                     />
-                    <Text style={styles.kakaoButtonText}>카카오로 시작하기</Text>
+                    <Text style={styles.kakaoButtonText}>
+                      카카오로 시작하기
+                    </Text>
                   </>
                 )}
               </TouchableOpacity>
@@ -127,7 +136,10 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
               {/* 개발 모드 전용 테스트 로그인 버튼 */}
               {__DEV__ && (
                 <TouchableOpacity
-                  style={[styles.testButton, isLoading && styles.disabledButton]}
+                  style={[
+                    styles.testButton,
+                    isLoading && styles.disabledButton,
+                  ]}
                   onPress={handleTestLogin}
                   disabled={isLoading}
                   activeOpacity={0.8}
@@ -145,7 +157,8 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
 
               <View style={styles.infoSection}>
                 <Text style={styles.infoText}>
-                  로그인하면 서비스 이용약관 및{'\n'}개인정보처리방침에 동의하게 됩니다.
+                  로그인하면 서비스 이용약관 및{"\n"}개인정보처리방침에 동의하게
+                  됩니다.
                 </Text>
               </View>
             </View>
@@ -165,39 +178,39 @@ const styles = StyleSheet.create({
   },
   header: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     paddingHorizontal: 20,
   },
   logoContainer: {
-    alignItems: 'center',
+    alignItems: "center",
   },
   title: {
     fontSize: 48,
-    fontWeight: 'bold',
-    color: 'white',
+    fontWeight: "bold",
+    color: "white",
     marginTop: 20,
     marginBottom: 12,
-    textShadowColor: 'rgba(0, 0, 0, 0.1)',
+    textShadowColor: "rgba(0, 0, 0, 0.1)",
     textShadowOffset: { width: 0, height: 2 },
     textShadowRadius: 4,
   },
   subtitle: {
     fontSize: 18,
-    color: 'rgba(255, 255, 255, 0.9)',
-    textAlign: 'center',
-    fontWeight: '400',
+    color: "rgba(255, 255, 255, 0.9)",
+    textAlign: "center",
+    fontWeight: "400",
   },
   loginSection: {
     paddingHorizontal: 20,
     paddingBottom: 40,
   },
   loginCard: {
-    backgroundColor: 'white',
+    backgroundColor: "white",
     borderRadius: 20,
     padding: 30,
-    alignItems: 'center',
-    shadowColor: '#000',
+    alignItems: "center",
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
     shadowRadius: 12,
@@ -205,27 +218,27 @@ const styles = StyleSheet.create({
   },
   loginTitle: {
     fontSize: 24,
-    fontWeight: '700',
+    fontWeight: "700",
     color: Colors.light.text,
     marginBottom: 8,
   },
   loginSubtitle: {
     fontSize: 16,
     color: Colors.light.mutedText,
-    textAlign: 'center',
+    textAlign: "center",
     marginBottom: 30,
     lineHeight: 22,
   },
   kakaoButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#FEE500', // 카카오 공식 색상
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#FEE500", // 카카오 공식 색상
     borderRadius: 12,
     paddingVertical: 16,
     paddingHorizontal: 24,
-    width: '100%',
-    shadowColor: '#FEE500',
+    width: "100%",
+    shadowColor: "#FEE500",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
     shadowRadius: 4,
@@ -238,31 +251,31 @@ const styles = StyleSheet.create({
   },
   kakaoButtonText: {
     fontSize: 16,
-    fontWeight: '700',
-    color: '#3C1E1E', // 카카오 공식 텍스트 색상
+    fontWeight: "700",
+    color: "#3C1E1E", // 카카오 공식 텍스트 색상
   },
   disabledButton: {
     opacity: 0.6,
     shadowOpacity: 0.1,
   },
   testButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#F5F5F5',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#F5F5F5",
     borderRadius: 12,
     paddingVertical: 12,
     paddingHorizontal: 24,
-    width: '100%',
+    width: "100%",
     marginTop: 12,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderColor: "#E0E0E0",
     gap: 8,
   },
   testButtonText: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#666',
+    fontWeight: "600",
+    color: "#666",
   },
   infoSection: {
     marginTop: 24,
@@ -273,7 +286,7 @@ const styles = StyleSheet.create({
   infoText: {
     fontSize: 12,
     color: Colors.light.mutedText,
-    textAlign: 'center',
+    textAlign: "center",
     lineHeight: 16,
   },
 });
