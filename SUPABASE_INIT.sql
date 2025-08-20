@@ -26,6 +26,8 @@ CREATE TABLE public.profiles (
     phone TEXT,
     date_of_birth DATE,
     current_team_id UUID,
+    provider TEXT DEFAULT 'email',  -- 로그인 제공자 (email, kakao, google 등)
+    provider_id TEXT,  -- 제공자별 고유 ID
     preferences JSONB DEFAULT '{}',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()

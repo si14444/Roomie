@@ -1,6 +1,6 @@
 import React, { createContext, ReactNode, useContext, useState, useEffect } from "react";
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { supabase, createSupabaseSessionFromKakao } from '@/lib/supabase';
+import { supabase, signInWithKakaoUser, createSupabaseSessionFromKakao } from '@/lib/supabase';
 import { Session, User as SupabaseUser } from '@supabase/supabase-js';
 
 interface User {
@@ -165,22 +165,43 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         throw new Error('카카오 로그인 정보가 비어있습니다.');
       }
       
-      // 카카오 사용자 정보를 Supabase 프로필로 변환 및 저장
-      const profile = await createSupabaseSessionFromKakao(kakaoUser);
+      // 카카오 사용자를 실제 Supabase Auth 세션으로 변환
+      const authUser = await signInWithKakaoUser(kakaoUser);
       
-      if (!profile) {
-        throw new Error('프로필 생성 또는 조회에 실패했습니다.');
+      if (!authUser) {
+        throw new Error('Supabase Auth 세션 생성에 실패했습니다.');
       }
       
-      // 로컬 상태 업데이트
+      // Supabase 세션 확인 (onAuthStateChange가 자동으로 처리하지만 확실히 하기 위해)
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError) {
+        console.warn('Session retrieval warning:', sessionError);
+      }
+
+      // 프로필 정보 가져오기
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', authUser.id)
+        .single();
+
+      if (profileError) {
+        console.warn('Profile retrieval warning:', profileError);
+        // 프로필이 없어도 기본 정보로 진행
+      }
+
+      // 로컬 상태 업데이트 (onAuthStateChange에서도 처리되지만 즉시 반영을 위해)
       const userData = {
-        id: profile.id,
-        email: profile.email,
-        name: profile.full_name || '카카오 사용자',
-        avatar: profile.avatar_url || undefined,
+        id: authUser.id,
+        email: authUser.email || profile?.email || '사용자',
+        name: profile?.full_name || authUser.user_metadata?.full_name || '카카오 사용자',
+        avatar: profile?.avatar_url || authUser.user_metadata?.avatar_url || undefined,
       };
 
       setUser(userData);
+      setSupabaseUser(authUser);
+      setSession(session);
       setIsAuthenticated(true);
 
       // AsyncStorage에도 저장 (기존 호환성)
@@ -189,7 +210,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         AsyncStorage.setItem(STORAGE_KEYS.USER_DATA, JSON.stringify(userData))
       ]);
 
-      console.log('Kakao login successful:', userData);
+      console.log('Kakao login successful with Supabase Auth:', {
+        userId: authUser.id,
+        email: userData.email,
+        hasSession: !!session,
+        hasProfile: !!profile
+      });
+      
     } catch (error) {
       console.error('Failed to login with Kakao:', error);
       
