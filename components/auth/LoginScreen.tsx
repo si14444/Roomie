@@ -1,32 +1,33 @@
-import React, { useState } from "react";
+import { useState } from "react";
+
 import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  Alert,
   ActivityIndicator,
+  Alert,
   Image,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { LinearGradient } from "expo-linear-gradient";
-import { Ionicons } from "@expo/vector-icons";
+
+import Colors from "@/constants/Colors";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTeam } from "@/contexts/TeamContext";
-import Colors from "@/constants/Colors";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Ionicons } from "@expo/vector-icons";
 import { login as kakaoLogin } from "@react-native-kakao/user";
+import { LinearGradient } from "expo-linear-gradient";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 interface LoginScreenProps {
   onLoginSuccess?: () => void;
 }
 
 export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
-  const { login } = useAuth();
+  const { loginWithKakao } = useAuth();
   const { hasSelectedTeam, resetTeamData } = useTeam();
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleTestLogin = async () => {
+  const handleKakaoLogin = async () => {
     try {
       setIsLoading(true);
 
@@ -37,48 +38,25 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
 
       console.log("After reset - hasSelectedTeam:", hasSelectedTeam);
 
-      // 테스트용 더미 사용자 데이터로 로그인 처리
-      await login({
-        id: "test_user_1",
-        email: "test@example.com",
-        name: "테스트 사용자",
-        avatar: "https://via.placeholder.com/100x100/4285F4/FFFFFF?text=T",
-      });
+      // 카카오 로그인 시도
+      const kakaoResult = await kakaoLogin();
+
+      // 카카오 로그인 결과를 Supabase와 연동하여 로그인 처리
+      await loginWithKakao(kakaoResult);
 
       console.log("After login - hasSelectedTeam:", hasSelectedTeam);
 
-      // 로그인 후 AppNavigator가 자동으로 팀 선택 화면으로 라우팅
-      Alert.alert(
-        "성공",
-        `로그인이 완료되었습니다!\nhasSelectedTeam: ${hasSelectedTeam}\n콘솔을 확인해주세요.`
-      );
+      // 성공 콜백 호출
+      onLoginSuccess?.();
     } catch (error) {
-      Alert.alert("오류", "로그인에 실패했습니다.");
-    } finally {
-      setIsLoading(false);
-    }
-  };
+      console.error("Kakao login error:", error);
 
-  const handleKakaoLogin = async () => {
-    try {
-      setIsLoading(true);
+      let errorMessage = "카카오 로그인에 실패했습니다.";
+      if (error instanceof Error) {
+        errorMessage += `\n오류: ${error.message}`;
+      }
 
-      // 팀 데이터 초기화 (새 사용자 로그인 시뮬레이션)
-      await resetTeamData();
-
-      // TODO: 실제 카카오 SDK 연동
-      kakaoLogin();
-      // 임시로 더미 사용자 데이터로 로그인 처리
-      await login({
-        id: "kakao_user_1",
-        email: "user@kakao.com",
-        name: "카카오 사용자",
-        avatar: "https://via.placeholder.com/100x100/FFD700/000000?text=K",
-      });
-
-      Alert.alert("성공", "카카오 로그인이 완료되었습니다!");
-    } catch (error) {
-      Alert.alert("오류", "카카오 로그인에 실패했습니다.");
+      Alert.alert("오류", errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -132,28 +110,6 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
                   </>
                 )}
               </TouchableOpacity>
-
-              {/* 개발 모드 전용 테스트 로그인 버튼 */}
-              {__DEV__ && (
-                <TouchableOpacity
-                  style={[
-                    styles.testButton,
-                    isLoading && styles.disabledButton,
-                  ]}
-                  onPress={handleTestLogin}
-                  disabled={isLoading}
-                  activeOpacity={0.8}
-                >
-                  {isLoading ? (
-                    <ActivityIndicator size="small" color="#666" />
-                  ) : (
-                    <>
-                      <Ionicons name="bug" size={16} color="#666" />
-                      <Text style={styles.testButtonText}>테스트 로그인</Text>
-                    </>
-                  )}
-                </TouchableOpacity>
-              )}
 
               <View style={styles.infoSection}>
                 <Text style={styles.infoText}>
@@ -257,25 +213,6 @@ const styles = StyleSheet.create({
   disabledButton: {
     opacity: 0.6,
     shadowOpacity: 0.1,
-  },
-  testButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#F5F5F5",
-    borderRadius: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    width: "100%",
-    marginTop: 12,
-    borderWidth: 1,
-    borderColor: "#E0E0E0",
-    gap: 8,
-  },
-  testButtonText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#666",
   },
   infoSection: {
     marginTop: 24,
