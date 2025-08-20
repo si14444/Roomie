@@ -28,6 +28,8 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
   const [isLoading, setIsLoading] = useState(false);
 
   const handleKakaoLogin = async () => {
+    let kakaoResult: any = null;
+    
     try {
       setIsLoading(true);
 
@@ -39,7 +41,8 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
       console.log("After reset - hasSelectedTeam:", hasSelectedTeam);
 
       // 카카오 로그인 시도
-      const kakaoResult = await kakaoLogin();
+      kakaoResult = await kakaoLogin();
+      console.log("Kakao login result:", kakaoResult);
 
       // 카카오 로그인 결과를 Supabase와 연동하여 로그인 처리
       await loginWithKakao(kakaoResult);
@@ -49,13 +52,19 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
       // 성공 콜백 호출
       onLoginSuccess?.();
     } catch (error) {
-      console.error("Kakao login error:", error);
-
+      console.error("Kakao login error details:", {
+        error: error,
+        message: error instanceof Error ? error.message : 'Unknown error',
+        kakaoResult: kakaoResult,
+        hasKakaoResult: !!kakaoResult,
+        stack: error instanceof Error ? error.stack : 'No stack trace'
+      });
+      
       let errorMessage = "카카오 로그인에 실패했습니다.";
       if (error instanceof Error) {
-        errorMessage += `\n오류: ${error.message}`;
+        errorMessage += `\n상세 오류: ${error.message}`;
       }
-
+      
       Alert.alert("오류", errorMessage);
     } finally {
       setIsLoading(false);

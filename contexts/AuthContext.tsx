@@ -158,19 +158,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       setIsLoading(true);
       
+      console.log('Starting Kakao login process with user:', kakaoUser);
+      
+      // 입력 데이터 검증
+      if (!kakaoUser) {
+        throw new Error('카카오 로그인 정보가 비어있습니다.');
+      }
+      
       // 카카오 사용자 정보를 Supabase 프로필로 변환 및 저장
       const profile = await createSupabaseSessionFromKakao(kakaoUser);
       
+      if (!profile) {
+        throw new Error('프로필 생성 또는 조회에 실패했습니다.');
+      }
+      
       // 로컬 상태 업데이트
-      setUser({
-        id: profile.id,
-        email: profile.email,
-        name: profile.full_name || '카카오 사용자',
-        avatar: profile.avatar_url || undefined,
-      });
-      setIsAuthenticated(true);
-
-      // AsyncStorage에도 저장 (기존 호환성)
       const userData = {
         id: profile.id,
         email: profile.email,
@@ -178,14 +180,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         avatar: profile.avatar_url || undefined,
       };
 
+      setUser(userData);
+      setIsAuthenticated(true);
+
+      // AsyncStorage에도 저장 (기존 호환성)
       await Promise.all([
         AsyncStorage.setItem(STORAGE_KEYS.IS_AUTHENTICATED, 'true'),
         AsyncStorage.setItem(STORAGE_KEYS.USER_DATA, JSON.stringify(userData))
       ]);
 
-      console.log('Kakao login successful:', profile);
+      console.log('Kakao login successful:', userData);
     } catch (error) {
       console.error('Failed to login with Kakao:', error);
+      
+      // 상태 초기화
+      setIsAuthenticated(false);
+      setUser(null);
+      setSupabaseUser(null);
+      setSession(null);
+      
       throw error;
     } finally {
       setIsLoading(false);
