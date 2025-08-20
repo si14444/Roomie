@@ -24,7 +24,7 @@ interface LoginScreenProps {
 
 export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
   const { loginWithKakao } = useAuth();
-  const { hasSelectedTeam, resetTeamData } = useTeam();
+  const { hasSelectedTeam, skipTeamSelection } = useTeam();
   const [isLoading, setIsLoading] = useState(false);
 
   const handleKakaoLogin = async () => {
@@ -33,21 +33,73 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
     try {
       setIsLoading(true);
 
-      console.log("Before reset - hasSelectedTeam:", hasSelectedTeam);
-
-      // 팀 데이터 초기화 (새 사용자 로그인 시뮬레이션)
-      await resetTeamData();
-
-      console.log("After reset - hasSelectedTeam:", hasSelectedTeam);
+      console.log("Starting Kakao login - current team state:", { hasSelectedTeam });
 
       // 카카오 로그인 시도
       kakaoResult = await kakaoLogin();
-      console.log("Kakao login result:", kakaoResult);
+      
+      // 이메일 정보가 없으면 추가 정보 요청 시도
+      if (!kakaoResult?.kakaoAccount?.email) {
+        console.log("No email in initial result, trying to get additional info...");
+        try {
+          // React Native Kakao SDK - 사용자 정보 다시 요청
+          const { getProfile } = await import('@react-native-kakao/user');
+          const profileResult = await getProfile();
+          console.log("Additional profile result:", JSON.stringify(profileResult, null, 2));
+          
+          // 추가 정보가 있으면 병합
+          if (profileResult?.kakaoAccount?.email) {
+            kakaoResult = {
+              ...kakaoResult,
+              kakaoAccount: {
+                ...kakaoResult.kakaoAccount,
+                email: profileResult.kakaoAccount.email,
+                emailValid: profileResult.kakaoAccount.emailValid,
+                isEmailVerified: profileResult.kakaoAccount.isEmailVerified
+              }
+            };
+            console.log("Email info merged from profile");
+          }
+        } catch (profileError) {
+          console.warn('Failed to get additional profile info:', profileError);
+        }
+      }
+      console.log("=== KAKAO LOGIN RESULT ANALYSIS ===");
+      console.log("Raw Kakao login result:", JSON.stringify(kakaoResult, null, 2));
+      console.log("=== EMAIL ANALYSIS ===");
+      console.log("kakaoAccount exists:", !!kakaoResult?.kakaoAccount);
+      console.log("kakaoAccount.email:", kakaoResult?.kakaoAccount?.email);
+      console.log("kakaoAccount.emailValid:", kakaoResult?.kakaoAccount?.emailValid);
+      console.log("kakaoAccount.isEmailVerified:", kakaoResult?.kakaoAccount?.isEmailVerified);
+      console.log("=== PROFILE ANALYSIS ===");
+      console.log("profile exists:", !!kakaoResult?.kakaoAccount?.profile);
+      console.log("profile.nickname:", kakaoResult?.kakaoAccount?.profile?.nickname);
+      console.log("Kakao user info extraction check:", {
+        // 닉네임 경로들
+        nickname1: kakaoResult?.kakaoAccount?.profile?.nickname,
+        nickname2: kakaoResult?.kakaoAccount?.profile?.nickName,
+        nickname3: kakaoResult?.profile?.nickname,
+        nickname4: kakaoResult?.nickname,
+        nickname5: kakaoResult?.name,
+        // 이메일 경로들  
+        email1: kakaoResult?.kakaoAccount?.email,
+        email2: kakaoResult?.kakaoAccount?.account?.email,
+        email3: kakaoResult?.email,
+        email4: kakaoResult?.account?.email
+      });
 
       // 카카오 로그인 결과를 Supabase와 연동하여 로그인 처리
       await loginWithKakao(kakaoResult);
 
-      console.log("After login - hasSelectedTeam:", hasSelectedTeam);
+      console.log("Login successful, creating default team for quick start...");
+      
+      // 로그인 후 바로 기본 팀 생성 (사용자 편의를 위해)
+      try {
+        await skipTeamSelection();
+        console.log("Default team created successfully");
+      } catch (teamError) {
+        console.warn("Failed to create default team, user will need to select team manually:", teamError);
+      }
 
       // 성공 콜백 호출
       onLoginSuccess?.();

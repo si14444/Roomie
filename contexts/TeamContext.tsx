@@ -50,6 +50,7 @@ export function TeamProvider({ children }: { children: ReactNode }) {
     loadStoredTeamData();
   }, []);
 
+
   const loadStoredTeamData = async () => {
     try {
       setIsLoading(true);
