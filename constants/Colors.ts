@@ -30,6 +30,7 @@ const Colors = {
     borderColor: "#E2E8F0", // 연한 그레이 테두리
     mutedText: "#64748B", // 음소거된 그레이 텍스트
     placeholderText: "#94A3B8",
+    inputBackground: "#F8FAFC", // 입력 필드 배경색
     divider: "#E2E8F0",
     shadow: "#000000",
     overlay: "rgba(0, 0, 0, 0.5)", // 중성적인 어둠 오버레이
@@ -62,6 +63,7 @@ const Colors = {
     borderColor: "#64748B",
     mutedText: "#94A3B8",
     placeholderText: "#64748B",
+    inputBackground: "#334155", // 다크모드 입력 필드 배경색
     divider: "#475569",
     shadow: "#000000",
     overlay: "rgba(0, 0, 0, 0.7)",

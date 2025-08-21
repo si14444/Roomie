@@ -109,16 +109,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 userData = {
                   id: profile.id,
                   email: profile.email,
-                  name: profile.full_name || session.user.user_metadata?.full_name || '사용자',
+                  name: profile.full_name || session.user.user_metadata?.full_name || session.user.user_metadata?.display_name || '사용자',
                   avatar: profile.avatar_url || session.user.user_metadata?.avatar_url || undefined,
                 };
               } else {
                 // 프로필이 없으면 user_metadata에서 정보 추출
                 console.warn('Profile not found, using user metadata:', profileError?.message);
+                const extractedName = session.user.user_metadata?.full_name || 
+                                     session.user.user_metadata?.display_name || 
+                                     session.user.email?.split('@')[0] || 
+                                     '카카오 사용자';
                 userData = {
                   id: session.user.id,
                   email: session.user.email || '사용자',
-                  name: session.user.user_metadata?.full_name || '카카오 사용자',
+                  name: extractedName,
                   avatar: session.user.user_metadata?.avatar_url || undefined,
                 };
 
@@ -132,10 +136,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                         email: session.user.email || userData.email,
                         full_name: userData.name,
                         avatar_url: userData.avatar,
-                        provider: session.user.user_metadata?.provider || 'email',
+                        provider: session.user.user_metadata?.provider || 'kakao',
                         provider_id: session.user.user_metadata?.provider_id,
                       });
-                    console.log('Auto-created profile for existing auth user');
+                    console.log('Auto-created profile for existing auth user with correct name:', userData.name);
                   } catch (insertError) {
                     console.warn('Failed to auto-create profile:', insertError);
                   }
@@ -272,7 +276,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const userData = {
           id: authUser.id,
           email: authUser.email || profile?.email || '사용자',
-          name: profile?.full_name || authUser.user_metadata?.full_name || '카카오 사용자',
+          name: profile?.full_name || authUser.user_metadata?.full_name || authUser.user_metadata?.display_name || 
+                authUser.email?.split('@')[0] || '카카오 사용자',
           avatar: profile?.avatar_url || authUser.user_metadata?.avatar_url || undefined,
         };
 

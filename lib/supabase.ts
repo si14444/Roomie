@@ -64,25 +64,39 @@ export const mapKakaoUserToProfile = (kakaoUser: any) => {
   
   // 카카오 닉네임을 다양한 경로에서 추출
   const extractNickname = (user: any) => {
+    console.log('=== NICKNAME EXTRACTION DEBUG ===');
+    
     // 가능한 모든 닉네임 경로 확인
     const possiblePaths = [
-      user?.kakaoAccount?.profile?.nickname,        // 일반적인 경로
-      user?.kakaoAccount?.profile?.nickName,        // 대소문자 변형
-      user?.profile?.nickname,                      // 단축 경로
-      user?.profile?.nickName,                      // 단축 경로 변형
-      user?.nickname,                               // 직접 경로
-      user?.nickName,                               // 직접 경로 변형
-      user?.kakaoAccount?.name,                     // 이름 필드
-      user?.name                                    // 직접 이름 필드
+      { path: 'kakaoAccount.profile.nickname', value: user?.kakaoAccount?.profile?.nickname },
+      { path: 'kakaoAccount.profile.nickName', value: user?.kakaoAccount?.profile?.nickName },
+      { path: 'kakaoAccount.profile.display_name', value: user?.kakaoAccount?.profile?.display_name },
+      { path: 'kakaoAccount.profile.name', value: user?.kakaoAccount?.profile?.name },
+      { path: 'profile.nickname', value: user?.profile?.nickname },
+      { path: 'profile.nickName', value: user?.profile?.nickName },
+      { path: 'profile.display_name', value: user?.profile?.display_name },
+      { path: 'profile.name', value: user?.profile?.name },
+      { path: 'nickname', value: user?.nickname },
+      { path: 'nickName', value: user?.nickName },
+      { path: 'display_name', value: user?.display_name },
+      { path: 'name', value: user?.name },
+      { path: 'kakaoAccount.name', value: user?.kakaoAccount?.name }
     ];
     
-    // null이 아닌 첫 번째 값 반환
-    for (const path of possiblePaths) {
-      if (path && typeof path === 'string' && path.trim()) {
-        return path.trim();
+    // 각 경로 체크 로그
+    possiblePaths.forEach(({ path, value }) => {
+      console.log(`${path}:`, value, `(type: ${typeof value})`);
+    });
+    
+    // null이 아닌 첫 번째 유효한 값 반환
+    for (const { path, value } of possiblePaths) {
+      if (value && typeof value === 'string' && value.trim()) {
+        console.log(`✅ NICKNAME FOUND at ${path}:`, value.trim());
+        return value.trim();
       }
     }
     
+    console.log('❌ NO VALID NICKNAME FOUND');
     return null;
   };
   
@@ -108,20 +122,33 @@ export const mapKakaoUserToProfile = (kakaoUser: any) => {
   
   const userEmail = extractEmail(kakaoUser);
   
-  console.log('Kakao user data detailed:', {
-    id: kakaoUser?.id,
-    userId: kakaoUser?.userId,
-    extractedEmail: userEmail,
-    rawEmail: kakaoUser?.kakaoAccount?.email,
-    extractedNickname: nickname,
-    rawNickname: kakaoUser?.kakaoAccount?.profile?.nickname,
-    fullStructure: JSON.stringify(kakaoUser, null, 2)
-  });
+  console.log('=== KAKAO USER DATA EXTRACTION ===');
+  console.log('Kakao User ID:', kakaoUser?.id);
+  console.log('Provider ID:', providerId);
+  console.log('Extracted Email:', userEmail);
+  console.log('Extracted Nickname:', nickname);
+  console.log('=== EMAIL PATHS CHECK ===');
+  console.log('kakaoAccount.email:', kakaoUser?.kakaoAccount?.email);
+  console.log('kakaoAccount.emailValid:', kakaoUser?.kakaoAccount?.emailValid);
+  console.log('kakaoAccount.isEmailVerified:', kakaoUser?.kakaoAccount?.isEmailVerified);
+  console.log('=== NICKNAME PATHS CHECK ===');
+  console.log('kakaoAccount.profile.nickname:', kakaoUser?.kakaoAccount?.profile?.nickname);
+  console.log('profile.nickname:', kakaoUser?.profile?.nickname);
+  console.log('=== FULL KAKAO OBJECT ===');
+  console.log('Full structure:', JSON.stringify(kakaoUser, null, 2));
+  
+  // 최종 이메일과 이름 결정
+  const finalEmail = userEmail || `user${providerId}@roomie.app`;
+  const finalName = nickname || `카카오사용자_${providerId.slice(-4)}`;
+  
+  console.log('=== FINAL MAPPING RESULT ===');
+  console.log('Final Email:', finalEmail, '(is real kakao email:', !!userEmail, ')');
+  console.log('Final Name:', finalName, '(is real kakao nickname:', !!nickname, ')');
   
   return {
     id: `kakao_${providerId}`,
-    email: userEmail || `kakao_${providerId}@temp.com`,
-    full_name: nickname || '카카오 사용자',
+    email: finalEmail,
+    full_name: finalName,
     avatar_url: kakaoUser.kakaoAccount?.profile?.profileImageUrl || 
                 kakaoUser.kakaoAccount?.profile?.profile_image_url || 
                 kakaoUser?.profile?.profileImageUrl || 
@@ -211,16 +238,23 @@ export const signInWithKakaoUser = async (kakaoUser: any) => {
 
       // Supabase Auth 사용자 메타데이터도 업데이트
       try {
+        console.log('=== UPDATING AUTH USER METADATA ===');
+        console.log('Updating with name:', profile.full_name);
+        
         await supabase.auth.updateUser({
           data: {
             full_name: profile.full_name,
             display_name: profile.full_name,
+            name: profile.full_name,
+            nickname: profile.full_name,
             avatar_url: profile.avatar_url,
+            provider: profile.provider,
+            provider_id: profile.provider_id,
           }
         });
-        console.log('Auth user metadata updated successfully');
+        console.log('✅ Auth user metadata updated successfully with name:', profile.full_name);
       } catch (authUpdateError) {
-        console.warn('Auth metadata update failed (continuing):', authUpdateError);
+        console.warn('❌ Auth metadata update failed (continuing):', authUpdateError);
       }
 
     } else {
@@ -239,8 +273,8 @@ export const signInWithKakaoUser = async (kakaoUser: any) => {
         await supabase
           .from('profiles')
           .insert({
-            id: finalUser.id,
-            email: finalUser.email || profile.email, // Auth 사용자의 실제 이메일 사용
+            id: finalUser!.id,
+            email: finalUser!.email || profile.email, // Auth 사용자의 실제 이메일 사용
             full_name: profile.full_name,
             avatar_url: profile.avatar_url,
             provider: profile.provider,
@@ -264,7 +298,7 @@ export const signInWithKakaoUser = async (kakaoUser: any) => {
 
     return finalUser;
     
-  } catch (error) {
+  } catch (error: any) {
     // 이미 AuthError인 경우 그대로 전달
     if (error.isFallbackMode || error.code) {
       throw error;
@@ -278,27 +312,27 @@ export const signInWithKakaoUser = async (kakaoUser: any) => {
 // 이메일 validation 및 정제 함수
 const sanitizeEmail = (email: string, providerId: string): string => {
   if (!email || typeof email !== 'string') {
-    return `kakao_${providerId}@temp.roomie.app`;
+    return `user${providerId}@roomie.app`;
   }
   
   // 이메일 형식 검증
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if (!emailRegex.test(email)) {
-    console.warn('Invalid email format, using temp email:', email);
-    return `kakao_${providerId}@temp.roomie.app`;
+    console.warn('Invalid email format, using fallback email:', email);
+    return `user${providerId}@roomie.app`;
   }
   
   // 이메일 길이 검증 (Supabase 제한: 보통 254자)
   if (email.length > 250) {
-    console.warn('Email too long, using temp email:', email.length);
-    return `kakao_${providerId}@temp.roomie.app`;
+    console.warn('Email too long, using fallback email:', email.length);
+    return `user${providerId}@roomie.app`;
   }
   
   // 특수문자 정제 (기본적인 이메일 문자만 허용)
   const cleanEmail = email.toLowerCase().trim();
   if (!/^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$/.test(cleanEmail)) {
-    console.warn('Email contains invalid characters, using temp email:', email);
-    return `kakao_${providerId}@temp.roomie.app`;
+    console.warn('Email contains invalid characters, using fallback email:', email);
+    return `user${providerId}@roomie.app`;
   }
   
   return cleanEmail;
@@ -315,6 +349,11 @@ const createNewAuthUser = async (profile: any, email: string) => {
     changed: email !== sanitizedEmail
   });
   
+  console.log('=== CREATING AUTH USER ===');
+  console.log('Email:', sanitizedEmail);
+  console.log('Profile name for Auth:', profile.full_name);
+  console.log('Creating user with metadata...');
+  
   const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
     email: sanitizedEmail,
     password: password,
@@ -322,6 +361,8 @@ const createNewAuthUser = async (profile: any, email: string) => {
       data: {
         full_name: profile.full_name,
         display_name: profile.full_name,  // display_name도 명시적으로 설정
+        name: profile.full_name,         // name 필드도 추가
+        nickname: profile.full_name,     // nickname 필드도 추가
         avatar_url: profile.avatar_url,
         provider: profile.provider,
         provider_id: profile.provider_id,
@@ -351,7 +392,7 @@ const createNewAuthUser = async (profile: any, email: string) => {
     if (signUpError.message.includes('already registered') || 
         signUpError.message.includes('invalid') || 
         signUpError.message.includes('email')) {
-      const timestampEmail = `kakao_${profile.provider_id}_${Date.now()}@temp.roomie.app`;
+      const timestampEmail = `user${profile.provider_id}${Date.now()}@roomie.app`;
       
       const { data: retryData, error: retryError } = await supabase.auth.signUp({
         email: timestampEmail,
@@ -360,6 +401,8 @@ const createNewAuthUser = async (profile: any, email: string) => {
           data: {
             full_name: profile.full_name,
             display_name: profile.full_name,  // display_name도 명시적으로 설정
+            name: profile.full_name,         // name 필드도 추가
+            nickname: profile.full_name,     // nickname 필드도 추가
             avatar_url: profile.avatar_url,
             provider: profile.provider,
             provider_id: profile.provider_id,

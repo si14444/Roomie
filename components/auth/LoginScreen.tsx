@@ -35,30 +35,44 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
 
       console.log("Starting Kakao login - current team state:", { hasSelectedTeam });
 
-      // 카카오 로그인 시도
-      kakaoResult = await kakaoLogin();
+      // 카카오 로그인 시도 (이메일 권한 포함하여 요청)
+      console.log("Requesting Kakao login with email permission...");
+      try {
+        // 이메일 권한을 포함하여 로그인 요청
+        kakaoResult = await kakaoLogin({
+          scopes: ['account_email', 'profile_nickname']
+        });
+      } catch (scopeError) {
+        console.log("Scoped login failed, trying basic login:", scopeError);
+        // scope가 지원되지 않으면 기본 로그인
+        kakaoResult = await kakaoLogin();
+      }
       
       // 이메일 정보가 없으면 추가 정보 요청 시도
       if (!kakaoResult?.kakaoAccount?.email) {
         console.log("No email in initial result, trying to get additional info...");
         try {
-          // React Native Kakao SDK - 사용자 정보 다시 요청
-          const { getProfile } = await import('@react-native-kakao/user');
-          const profileResult = await getProfile();
-          console.log("Additional profile result:", JSON.stringify(profileResult, null, 2));
-          
-          // 추가 정보가 있으면 병합
-          if (profileResult?.kakaoAccount?.email) {
-            kakaoResult = {
-              ...kakaoResult,
-              kakaoAccount: {
-                ...kakaoResult.kakaoAccount,
-                email: profileResult.kakaoAccount.email,
-                emailValid: profileResult.kakaoAccount.emailValid,
-                isEmailVerified: profileResult.kakaoAccount.isEmailVerified
-              }
-            };
-            console.log("Email info merged from profile");
+          // React Native Kakao SDK - 사용자 정보 다시 요청 시도
+          const KakaoUser = await import('@react-native-kakao/user');
+          if ('getProfile' in KakaoUser) {
+            const profileResult = await (KakaoUser as any).getProfile();
+            console.log("Additional profile result:", JSON.stringify(profileResult, null, 2));
+            
+            // 추가 정보가 있으면 병합
+            if (profileResult?.kakaoAccount?.email) {
+              kakaoResult = {
+                ...kakaoResult,
+                kakaoAccount: {
+                  ...kakaoResult.kakaoAccount,
+                  email: profileResult.kakaoAccount.email,
+                  emailValid: profileResult.kakaoAccount.emailValid,
+                  isEmailVerified: profileResult.kakaoAccount.isEmailVerified
+                }
+              };
+              console.log("Email info merged from profile");
+            }
+          } else {
+            console.log("getProfile method not available in this SDK version");
           }
         } catch (profileError) {
           console.warn('Failed to get additional profile info:', profileError);
