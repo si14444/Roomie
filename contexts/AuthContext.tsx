@@ -117,6 +117,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 console.warn('Profile not found, using user metadata:', profileError?.message);
                 const extractedName = session.user.user_metadata?.full_name || 
                                      session.user.user_metadata?.display_name || 
+                                     session.user.user_metadata?.name ||
+                                     session.user.user_metadata?.nickname ||
                                      session.user.email?.split('@')[0] || 
                                      '카카오 사용자';
                 userData = {
@@ -238,20 +240,48 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       setIsLoading(true);
       
-      console.log('Starting Kakao login process with user:', kakaoUser);
+      console.log('🚀 Starting Kakao login process with user:', kakaoUser?.id ? 'User ID present' : 'No user ID');
       
-      // 입력 데이터 검증
+      // 입력 데이터 검증 - 더 관대한 검증으로 변경
       if (!kakaoUser) {
+        console.error('❌ No Kakao user data provided');
         throw new Error('카카오 로그인 정보가 비어있습니다.');
       }
       
+      // 카카오 로그인 응답 구조 상세 로그
+      console.log('🔍 Kakao user data structure analysis:', {
+        hasId: !!kakaoUser.id,
+        hasKakaoAccount: !!kakaoUser.kakaoAccount,
+        hasUserId: !!kakaoUser.userId,
+        topLevelKeys: Object.keys(kakaoUser),
+        dataType: typeof kakaoUser,
+        isArray: Array.isArray(kakaoUser)
+      });
+      
+      // 더 유연한 검증: 최소한 하나의 식별 가능한 정보가 있으면 진행
+      const hasValidId = kakaoUser.id || kakaoUser.userId || kakaoUser.kakaoAccount?.profile || kakaoUser.profile;
+      if (!hasValidId) {
+        console.error('❌ No valid identifier found in Kakao user data:', {
+          keys: Object.keys(kakaoUser),
+          sample: JSON.stringify(kakaoUser).substring(0, 200) + '...'
+        });
+        throw new Error('카카오 사용자 식별 정보를 찾을 수 없습니다. 다시 시도해주세요.');
+      }
+      
+      console.log('✅ Kakao user data validation passed');
+      
       try {
+        console.log('🔄 Attempting Supabase Auth session creation...');
+        
         // 카카오 사용자를 실제 Supabase Auth 세션으로 변환
         const authUser = await signInWithKakaoUser(kakaoUser);
         
         if (!authUser) {
+          console.error('❌ No auth user returned from signInWithKakaoUser');
           throw new Error('Supabase Auth 세션 생성에 실패했습니다.');
         }
+        
+        console.log('✅ Supabase Auth user created:', authUser.id);
         
         // Supabase 세션 확인 (onAuthStateChange가 자동으로 처리하지만 확실히 하기 위해)
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
@@ -300,37 +330,52 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         });
         
       } catch (supabaseError: any) {
+        console.error('🚨 Supabase Auth session creation failed:', {
+          error: supabaseError?.message,
+          code: supabaseError?.code,
+          isFallbackMode: supabaseError?.isFallbackMode
+        });
+        
         // Supabase 연동 실패 시 fallback 모드로 처리
         if (supabaseError?.isFallbackMode) {
-          console.log('Using fallback mode for offline/connection issues');
+          console.log('🔄 Using fallback mode for offline/connection issues');
           
-          // 레거시 방식으로 사용자 프로필 생성 및 로컬 저장
-          const fallbackProfile = await createSupabaseSessionFromKakao(kakaoUser);
-          
-          const userData = {
-            id: fallbackProfile.id,
-            email: fallbackProfile.email,
-            name: fallbackProfile.full_name,
-            avatar: fallbackProfile.avatar_url || undefined,
-          };
+          try {
+            // 레거시 방식으로 사용자 프로필 생성 및 로컬 저장
+            const fallbackProfile = await createSupabaseSessionFromKakao(kakaoUser);
+            
+            const userData = {
+              id: fallbackProfile.id,
+              email: fallbackProfile.email,
+              name: fallbackProfile.full_name,
+              avatar: fallbackProfile.avatar_url || undefined,
+            };
 
-          // 로컬 상태만 업데이트 (Supabase 세션 없음)
-          setUser(userData);
-          setSupabaseUser(null);
-          setSession(null);
-          setIsAuthenticated(true);
+            // 로컬 상태만 업데이트 (Supabase 세션 없음)
+            setUser(userData);
+            setSupabaseUser(null);
+            setSession(null);
+            setIsAuthenticated(true);
 
-          // AsyncStorage에 저장 (오프라인 모드)
-          await Promise.all([
-            AsyncStorage.setItem(STORAGE_KEYS.IS_AUTHENTICATED, 'true'),
-            AsyncStorage.setItem(STORAGE_KEYS.USER_DATA, JSON.stringify(userData))
-          ]);
+            // AsyncStorage에 저장 (오프라인 모드)
+            await Promise.all([
+              AsyncStorage.setItem(STORAGE_KEYS.IS_AUTHENTICATED, 'true'),
+              AsyncStorage.setItem(STORAGE_KEYS.USER_DATA, JSON.stringify(userData))
+            ]);
 
-          console.log('Kakao login successful in fallback mode:', {
-            userId: userData.id,
-            email: userData.email,
-            mode: 'local-only'
-          });
+            console.log('✅ Kakao login successful in fallback mode:', {
+              userId: userData.id,
+              email: userData.email,
+              mode: 'local-only'
+            });
+          } catch (fallbackError: any) {
+            console.error('❌ Fallback mode also failed:', fallbackError);
+            throw new Error('로그인 처리 중 문제가 발생했습니다. 네트워크를 확인하고 다시 시도해주세요.');
+          }
+        } else if (supabaseError?.message?.includes('형식이 올바르지 않')) {
+          // 특별히 이 에러를 처리
+          console.error('❌ Data format validation failed, attempting recovery...');
+          throw new Error('카카오 로그인 정보 처리 중 문제가 발생했습니다. 다시 시도해주세요.');
         } else {
           // 다른 에러는 그대로 전파
           throw supabaseError;

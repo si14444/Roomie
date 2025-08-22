@@ -21,13 +21,36 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   },
 })
 
-// Supabase 연결 상태 확인
+// Supabase 연결 상태 확인 (타임아웃 포함)
 export const checkSupabaseConnection = async (): Promise<boolean> => {
   try {
-    const { data, error } = await supabase.from('profiles').select('count').limit(1);
-    return !error;
-  } catch (error) {
-    console.warn('Supabase connection check failed:', error);
+    console.log('🔍 Checking Supabase connection...');
+    
+    // 5초 타임아웃으로 연결 상태 확인
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
+    
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('count')
+      .limit(1)
+      .abortSignal(controller.signal);
+    
+    clearTimeout(timeoutId);
+    
+    if (error) {
+      console.warn('⚠️ Supabase connection check failed:', error.message);
+      return false;
+    }
+    
+    console.log('✅ Supabase connection successful');
+    return true;
+  } catch (error: any) {
+    if (error.name === 'AbortError') {
+      console.warn('⏰ Supabase connection timeout after 5 seconds');
+    } else {
+      console.warn('❌ Supabase connection error:', error.message);
+    }
     return false;
   }
 };
@@ -58,9 +81,23 @@ export const handleAuthError = (error: any, context: string): AuthError => {
 
 // 카카오 사용자 정보를 Supabase 프로필에 매핑하는 헬퍼 함수
 export const mapKakaoUserToProfile = (kakaoUser: any) => {
-  // 카카오 사용자 ID 안전 처리
-  const kakaoId = kakaoUser?.id || kakaoUser?.userId || Date.now().toString();
+  console.log('🔄 Starting Kakao user mapping...');
+  
+  // 카카오 사용자 ID 안전 처리 - 더 많은 경로 지원
+  const kakaoId = kakaoUser?.id || 
+                  kakaoUser?.userId || 
+                  kakaoUser?.user_id ||
+                  kakaoUser?.kakaoAccount?.profile?.id ||
+                  Date.now().toString();
   const providerId = kakaoId ? kakaoId.toString() : Date.now().toString();
+  
+  console.log('🆔 Kakao ID extraction:', {
+    originalId: kakaoUser?.id,
+    userId: kakaoUser?.userId,
+    user_id: kakaoUser?.user_id,
+    profileId: kakaoUser?.kakaoAccount?.profile?.id,
+    finalProviderId: providerId
+  });
   
   // 카카오 닉네임을 다양한 경로에서 추출
   const extractNickname = (user: any) => {
@@ -104,6 +141,8 @@ export const mapKakaoUserToProfile = (kakaoUser: any) => {
   
   // 카카오 이메일을 다양한 경로에서 추출
   const extractEmail = (user: any) => {
+    console.log('📧 Starting email extraction...');
+    
     const possibleEmailPaths = [
       user?.kakaoAccount?.email,                    // 일반적인 경로
       user?.kakaoAccount?.account?.email,           // 계정 하위 경로
@@ -111,12 +150,18 @@ export const mapKakaoUserToProfile = (kakaoUser: any) => {
       user?.account?.email,                         // 단축 경로
     ];
     
+    possibleEmailPaths.forEach((email, index) => {
+      console.log(`Email path ${index + 1}:`, email, `(valid: ${email && typeof email === 'string' && email.includes('@')})`);
+    });
+    
     for (const email of possibleEmailPaths) {
       if (email && typeof email === 'string' && email.includes('@') && email.trim()) {
+        console.log('✅ Valid email found:', email.trim());
         return email.trim();
       }
     }
     
+    console.log('⚠️ No valid email found in any path');
     return null;
   };
   
@@ -137,9 +182,9 @@ export const mapKakaoUserToProfile = (kakaoUser: any) => {
   console.log('=== FULL KAKAO OBJECT ===');
   console.log('Full structure:', JSON.stringify(kakaoUser, null, 2));
   
-  // 최종 이메일과 이름 결정
-  const finalEmail = userEmail || `user${providerId}@roomie.app`;
-  const finalName = nickname || `카카오사용자_${providerId.slice(-4)}`;
+  // 최종 이메일과 이름 결정 - 일관된 fallback 도메인 사용
+  const finalEmail = userEmail || `kakao_user_${providerId}@roomie.app`;
+  const finalName = nickname || `카카오사용자${providerId.slice(-4)}`;
   
   console.log('=== FINAL MAPPING RESULT ===');
   console.log('Final Email:', finalEmail, '(is real kakao email:', !!userEmail, ')');
@@ -160,11 +205,20 @@ export const mapKakaoUserToProfile = (kakaoUser: any) => {
 
 // 카카오 사용자를 Supabase Auth 사용자로 생성/로그인 (완전 구현 + 에러 처리)
 export const signInWithKakaoUser = async (kakaoUser: any) => {
+  console.log('🚀 signInWithKakaoUser called with data type:', typeof kakaoUser);
+  
   if (!kakaoUser) {
     throw handleAuthError(new Error('카카오 사용자 정보가 없습니다.'), 'KAKAO_USER_VALIDATION');
   }
 
-  console.log('Creating Supabase Auth session from Kakao user:', kakaoUser);
+  // 더 상세한 디버깅을 위한 로그
+  console.log('📄 Creating Supabase Auth session from Kakao user:', {
+    hasId: !!kakaoUser.id,
+    hasUserId: !!kakaoUser.userId,
+    hasKakaoAccount: !!kakaoUser.kakaoAccount,
+    topKeys: Object.keys(kakaoUser).slice(0, 10), // 처음 10개 키만
+    dataStructure: typeof kakaoUser
+  });
   
   const profile = mapKakaoUserToProfile(kakaoUser);
   
@@ -312,27 +366,27 @@ export const signInWithKakaoUser = async (kakaoUser: any) => {
 // 이메일 validation 및 정제 함수
 const sanitizeEmail = (email: string, providerId: string): string => {
   if (!email || typeof email !== 'string') {
-    return `user${providerId}@roomie.app`;
+    return `kakao_user_${providerId}@roomie.app`;
   }
   
   // 이메일 형식 검증
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if (!emailRegex.test(email)) {
     console.warn('Invalid email format, using fallback email:', email);
-    return `user${providerId}@roomie.app`;
+    return `kakao_user_${providerId}@roomie.app`;
   }
   
   // 이메일 길이 검증 (Supabase 제한: 보통 254자)
   if (email.length > 250) {
     console.warn('Email too long, using fallback email:', email.length);
-    return `user${providerId}@roomie.app`;
+    return `kakao_user_${providerId}@roomie.app`;
   }
   
   // 특수문자 정제 (기본적인 이메일 문자만 허용)
   const cleanEmail = email.toLowerCase().trim();
   if (!/^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$/.test(cleanEmail)) {
     console.warn('Email contains invalid characters, using fallback email:', email);
-    return `user${providerId}@roomie.app`;
+    return `kakao_user_${providerId}@roomie.app`;
   }
   
   return cleanEmail;
@@ -392,7 +446,7 @@ const createNewAuthUser = async (profile: any, email: string) => {
     if (signUpError.message.includes('already registered') || 
         signUpError.message.includes('invalid') || 
         signUpError.message.includes('email')) {
-      const timestampEmail = `user${profile.provider_id}${Date.now()}@roomie.app`;
+      const timestampEmail = `kakao_user_${profile.provider_id}_${Date.now()}@roomie.app`;
       
       const { data: retryData, error: retryError } = await supabase.auth.signUp({
         email: timestampEmail,

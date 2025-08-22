@@ -30,7 +30,19 @@ export default function RootLayout() {
     ...FontAwesome.font,
   });
 
-  initializeKakaoSDK("5fdc09b5ccda187fc82936305ec8308c");
+  // 카카오 SDK 초기화를 useEffect 내부로 이동
+  useEffect(() => {
+    const initKakao = async () => {
+      try {
+        await initializeKakaoSDK("5fdc09b5ccda187fc82936305ec8308c");
+        console.log("Kakao SDK initialized successfully");
+      } catch (error) {
+        console.error("Failed to initialize Kakao SDK:", error);
+      }
+    };
+    
+    initKakao();
+  }, []);
 
   // Expo Router uses Error Boundaries to catch errors in the navigation tree.
   useEffect(() => {
