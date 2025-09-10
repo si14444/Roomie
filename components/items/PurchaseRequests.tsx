@@ -1,77 +1,148 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { StyleSheet, TouchableOpacity } from "react-native";
 import { Text, View } from "@/components/Themed";
 import { Ionicons } from "@expo/vector-icons";
 import Colors from "@/constants/Colors";
-
-interface PurchaseRequest {
-  id: number;
-  item: string;
-  requester: string;
-  urgent: boolean;
-}
+import { itemsService, PurchaseRequest } from "@/lib/supabase-service";
+import { useTeam } from "@/contexts/TeamContext";
 
 interface PurchaseRequestsProps {
-  onAcceptRequest?: (requestId: number) => void;
-  onIgnoreRequest?: (requestId: number) => void;
+  onAcceptRequest?: (requestId: string) => void;
+  onIgnoreRequest?: (requestId: string) => void;
 }
 
 export function PurchaseRequests({
   onAcceptRequest,
   onIgnoreRequest,
 }: PurchaseRequestsProps) {
-  const requests: PurchaseRequest[] = [
-    { id: 1, item: "휴지", requester: "이영희", urgent: true },
-    { id: 2, item: "주방세제", requester: "박민수", urgent: false },
-    { id: 3, item: "우유", requester: "김철수", urgent: false },
-  ];
+  const [requests, setRequests] = useState<PurchaseRequest[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { currentTeam } = useTeam();
+
+  useEffect(() => {
+    if (currentTeam?.id) {
+      loadPurchaseRequests();
+    }
+  }, [currentTeam?.id]);
+
+  const loadPurchaseRequests = async () => {
+    if (!currentTeam?.id) return;
+
+    try {
+      setLoading(true);
+      const data = await itemsService.getPurchaseRequests(currentTeam.id);
+      setRequests(data);
+    } catch (error) {
+      console.error('Error loading purchase requests:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAcceptRequest = async (requestId: string) => {
+    try {
+      // 부모 컴포넌트의 핸들러 호출
+      onAcceptRequest?.(requestId);
+      
+      // 요청 목록에서 제거
+      setRequests(prevRequests => 
+        prevRequests.filter(request => request.id !== requestId)
+      );
+    } catch (error) {
+      console.error('Error accepting request:', error);
+    }
+  };
+
+  const handleIgnoreRequest = async (requestId: string) => {
+    try {
+      // Supabase에서 요청 거절 처리
+      await itemsService.rejectPurchaseRequest(requestId);
+      
+      // 부모 컴포넌트의 핸들러 호출
+      onIgnoreRequest?.(requestId);
+      
+      // 요청 목록에서 제거
+      setRequests(prevRequests => 
+        prevRequests.filter(request => request.id !== requestId)
+      );
+    } catch (error) {
+      console.error('Error rejecting request:', error);
+    }
+  };
+
+  if (loading) {
+    return (
+      <View style={styles.requestsSection}>
+        <Text style={styles.sectionTitle}>구매 요청</Text>
+        <View style={styles.emptyState}>
+          <Ionicons name="hourglass-outline" size={48} color={Colors.light.mutedText} />
+          <Text style={styles.emptyText}>로딩 중...</Text>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.requestsSection}>
       <Text style={styles.sectionTitle}>구매 요청</Text>
-      {requests.map((request) => (
-        <View key={request.id} style={styles.requestCard}>
-          <View style={styles.requestCardContent}>
-            <View style={styles.requestIconContainer}>
-              <Ionicons
-                name="bag-handle-outline"
-                size={20}
-                color={Colors.light.primary}
-              />
-            </View>
-            <View style={styles.requestInfo}>
-              <View style={styles.requestHeader}>
-                <Text style={styles.requestItem}>{request.item}</Text>
-                {request.urgent && (
-                  <View style={styles.urgentBadge}>
-                    <Ionicons name="flame" size={12} color="white" />
-                    <Text style={styles.urgentText}>긴급</Text>
-                  </View>
+      {requests.length === 0 ? (
+        <View style={styles.emptyState}>
+          <Ionicons name="bag-check-outline" size={48} color={Colors.light.mutedText} />
+          <Text style={styles.emptyText}>현재 구매 요청이 없습니다</Text>
+        </View>
+      ) : (
+        requests.map((request) => (
+          <View key={request.id} style={styles.requestCard}>
+            <View style={styles.requestCardContent}>
+              <View style={styles.requestIconContainer}>
+                <Ionicons
+                  name="bag-handle-outline"
+                  size={20}
+                  color={Colors.light.primary}
+                />
+              </View>
+              <View style={styles.requestInfo}>
+                <View style={styles.requestHeader}>
+                  <Text style={styles.requestItem}>
+                    {request.item?.name || '알 수 없는 물품'}
+                  </Text>
+                  {request.urgency === 'urgent' && (
+                    <View style={styles.urgentBadge}>
+                      <Ionicons name="flame" size={12} color="white" />
+                      <Text style={styles.urgentText}>긴급</Text>
+                    </View>
+                  )}
+                </View>
+                <Text style={styles.requesterText}>
+                  요청자: {request.requested_profile?.full_name || '알 수 없음'}
+                </Text>
+                <Text style={styles.quantityText}>
+                  수량: {request.quantity}{request.item?.unit || '개'}
+                </Text>
+                {request.notes && (
+                  <Text style={styles.notesText}>{request.notes}</Text>
                 )}
               </View>
-              <Text style={styles.requesterText}>
-                요청자: {request.requester}
-              </Text>
+            </View>
+            <View style={styles.requestActions}>
+              <TouchableOpacity
+                style={styles.acceptButton}
+                onPress={() => handleAcceptRequest(request.id)}
+              >
+                <Ionicons name="checkmark" size={16} color="white" />
+                <Text style={styles.acceptButtonText}>수락</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.ignoreButton}
+                onPress={() => handleIgnoreRequest(request.id)}
+              >
+                <Ionicons name="close" size={16} color={Colors.light.mutedText} />
+                <Text style={styles.ignoreButtonText}>무시</Text>
+              </TouchableOpacity>
             </View>
           </View>
-          <View style={styles.requestActions}>
-            <TouchableOpacity
-              style={styles.acceptButton}
-              onPress={() => onAcceptRequest?.(request.id)}
-            >
-              <Ionicons name="checkmark" size={16} color="white" />
-              <Text style={styles.acceptButtonText}>수락</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.ignoreButton}
-              onPress={() => onIgnoreRequest?.(request.id)}
-            >
-              <Ionicons name="close" size={16} color={Colors.light.mutedText} />
-              <Text style={styles.ignoreButtonText}>무시</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      ))}
+        ))
+      )}
     </View>
   );
 }
@@ -179,5 +250,16 @@ const styles = StyleSheet.create({
     color: Colors.light.mutedText,
     fontSize: 14,
     fontWeight: "600",
+  },
+  emptyState: {
+    alignItems: "center",
+    paddingVertical: 40,
+    paddingHorizontal: 20,
+  },
+  emptyText: {
+    fontSize: 16,
+    color: Colors.light.mutedText,
+    marginTop: 12,
+    textAlign: "center",
   },
 });

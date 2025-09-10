@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   StyleSheet,
   TouchableOpacity,
@@ -13,6 +13,8 @@ import { Ionicons } from "@expo/vector-icons";
 import Colors from "@/constants/Colors";
 import { InventoryItem, InventoryStatus, StatusUpdate } from "@/types/item.types";
 import { AddInventoryItemModal } from "./AddInventoryItemModal";
+import { itemsService, Item } from "@/lib/supabase-service";
+import { useTeam } from "@/contexts/TeamContext";
 
 interface ItemInventoryProps {
   onUpdateStatus?: (update: StatusUpdate) => void;
@@ -20,61 +22,54 @@ interface ItemInventoryProps {
 }
 
 export function ItemInventory({ onUpdateStatus, onAddItem }: ItemInventoryProps) {
-  const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null);
+  const [selectedItem, setSelectedItem] = useState<Item | null>(null);
   const [showUpdateModal, setShowUpdateModal] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
-  const [newStatus, setNewStatus] = useState<InventoryStatus>("보통");
+  const [newQuantity, setNewQuantity] = useState<number>(0);
+  const [items, setItems] = useState<Item[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { currentTeam } = useTeam();
 
-  // Mock data - 실제로는 Context나 API에서 가져와야 함
-  const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([
-    {
-      id: "1",
-      name: "화장지",
-      category: "household",
-      status: "충분",
-      lastUpdated: new Date("2024-12-20"),
-      lastUpdatedBy: "김철수",
-      icon: "flower-outline",
-    },
-    {
-      id: "2",
-      name: "주방세제",
-      category: "household",
-      status: "부족",
-      lastUpdated: new Date("2024-12-18"),
-      lastUpdatedBy: "이영희",
-      icon: "water-outline",
-    },
-    {
-      id: "3",
-      name: "쌀",
-      category: "food",
-      status: "부족",
-      lastUpdated: new Date("2024-12-15"),
-      lastUpdatedBy: "박민수",
-      icon: "nutrition-outline",
-    },
-    {
-      id: "4",
-      name: "샴푸",
-      category: "personal",
-      status: "보통",
-      lastUpdated: new Date("2024-12-19"),
-      lastUpdatedBy: "이영희",
-      icon: "sparkles-outline",
-    },
-  ]);
+  useEffect(() => {
+    if (currentTeam?.id) {
+      loadItems();
+    }
+  }, [currentTeam?.id]);
 
-  const getStatusColor = (status: InventoryStatus) => {
-    switch (status) {
-      case "충분":
-        return Colors.light.successColor;
-      case "보통":
-        return Colors.light.warningColor;
-      case "부족":
-        return Colors.light.errorColor;
-      default:
-        return Colors.light.mutedText;
+  const loadItems = async () => {
+    if (!currentTeam?.id) return;
+
+    try {
+      setLoading(true);
+      const data = await itemsService.getItems(currentTeam.id);
+      setItems(data);
+    } catch (error) {
+      console.error('Error loading items:', error);
+      Alert.alert('오류', '물품 목록을 불러오는 중 오류가 발생했습니다.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getStatusColor = (currentQuantity: number, minQuantity: number) => {
+    const ratio = currentQuantity / minQuantity;
+    if (ratio >= 2) {
+      return Colors.light.successColor; // 충분
+    } else if (ratio >= 1) {
+      return Colors.light.warningColor; // 보통
+    } else {
+      return Colors.light.errorColor; // 부족
+    }
+  };
+
+  const getStatusText = (currentQuantity: number, minQuantity: number) => {
+    const ratio = currentQuantity / minQuantity;
+    if (ratio >= 2) {
+      return '충분';
+    } else if (ratio >= 1) {
+      return '보통';
+    } else {
+      return '부족';
     }
   };
 
@@ -82,67 +77,126 @@ export function ItemInventory({ onUpdateStatus, onAddItem }: ItemInventoryProps)
     switch (category) {
       case "food":
         return Colors.light.secondary;
-      case "household":
+      case "toiletries":
         return Colors.light.primary;
-      case "personal":
+      case "cleaning":
         return Colors.light.successColor;
-      case "electronics":
+      case "maintenance":
         return "#9333EA";
+      case "general":
       default:
         return Colors.light.mutedText;
     }
   };
 
-  const handleItemPress = (item: InventoryItem) => {
+  const getCategoryIcon = (category: string) => {
+    switch (category) {
+      case "food":
+        return "nutrition-outline";
+      case "toiletries":
+        return "sparkles-outline";
+      case "cleaning":
+        return "water-outline";
+      case "maintenance":
+        return "construct-outline";
+      case "general":
+      default:
+        return "cube-outline";
+    }
+  };
+
+  const handleItemPress = (item: Item) => {
     setSelectedItem(item);
-    setNewStatus(item.status);
+    setNewQuantity(item.current_quantity);
     setShowUpdateModal(true);
   };
 
-  const handleUpdateStatus = () => {
-    if (!selectedItem) {
+  const handleUpdateQuantity = async () => {
+    if (!selectedItem || !currentTeam?.id) {
       return;
     }
 
-    // 로컬 상태 업데이트
-    setInventoryItems(prev =>
-      prev.map(item =>
-        item.id === selectedItem.id
-          ? {
-              ...item,
-              status: newStatus,
-              lastUpdated: new Date(),
-              lastUpdatedBy: "현재사용자", // 실제로는 인증된 사용자명
-            }
-          : item
-      )
-    );
+    try {
+      await itemsService.updateItemQuantity(
+        selectedItem.id,
+        newQuantity,
+        currentTeam.id
+      );
 
-    // 부모 컴포넌트에 알림
-    const update: StatusUpdate = {
-      itemId: selectedItem.id,
-      newStatus: newStatus,
-      updatedBy: "현재사용자",
-    };
+      // 로컬 상태 업데이트
+      setItems(prev =>
+        prev.map(item =>
+          item.id === selectedItem.id
+            ? {
+                ...item,
+                current_quantity: newQuantity,
+                updated_at: new Date().toISOString(),
+              }
+            : item
+        )
+      );
 
-    onUpdateStatus?.(update);
+      // 부모 컴포넌트에 알림
+      const status = getStatusText(newQuantity, selectedItem.min_quantity);
+      const update: StatusUpdate = {
+        itemId: selectedItem.id,
+        newStatus: status as InventoryStatus,
+        updatedBy: "현재사용자",
+      };
 
-    setShowUpdateModal(false);
-    setSelectedItem(null);
-    setNewStatus("보통");
+      onUpdateStatus?.(update);
+
+      setShowUpdateModal(false);
+      setSelectedItem(null);
+      setNewQuantity(0);
+      
+      Alert.alert('완료', '물품 수량이 업데이트되었습니다.');
+    } catch (error) {
+      console.error('Error updating quantity:', error);
+      Alert.alert('오류', '수량 업데이트 중 오류가 발생했습니다.');
+    }
   };
 
-  const handleAddItem = (newItem: InventoryItem) => {
-    // 로컬 상태 업데이트
-    setInventoryItems(prev => [...prev, newItem]);
-    
-    // 부모 컴포넌트에 알림
-    onAddItem?.(newItem);
-    
-    Alert.alert("완료", `${newItem.name}이(가) 물품 목록에 추가되었습니다!`);
+  const handleAddItem = async (newItemData: any) => {
+    if (!currentTeam?.id) return;
+
+    try {
+      const newItem = await itemsService.createItem({
+        team_id: currentTeam.id,
+        name: newItemData.name,
+        description: newItemData.description,
+        category: newItemData.category,
+        current_quantity: newItemData.quantity || 0,
+        min_quantity: newItemData.minQuantity || 1,
+        unit: newItemData.unit || 'ea',
+        estimated_price: newItemData.estimatedPrice ? parseFloat(newItemData.estimatedPrice) : null,
+        preferred_store: newItemData.store,
+      });
+
+      // 로컬 상태 업데이트
+      setItems(prev => [...prev, newItem]);
+      
+      // 부모 컴포넌트에 알림 (타입 변환)
+      const inventoryItem: InventoryItem = {
+        id: newItem.id,
+        name: newItem.name,
+        category: newItem.category,
+        status: getStatusText(newItem.current_quantity, newItem.min_quantity) as InventoryStatus,
+        lastUpdated: new Date(newItem.updated_at),
+        lastUpdatedBy: "현재사용자",
+        icon: getCategoryIcon(newItem.category) as any,
+      };
+      onAddItem?.(inventoryItem);
+      
+      Alert.alert("완료", `${newItem.name}이(가) 물품 목록에 추가되었습니다!`);
+    } catch (error) {
+      console.error('Error adding item:', error);
+      Alert.alert('오류', '물품 추가 중 오류가 발생했습니다.');
+    }
   };
 
-  const formatLastUpdated = (date: Date) => {
+  const formatLastUpdated = (dateString: string) => {
+    const date = new Date(dateString);
     const now = new Date();
     const diff = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
     
@@ -151,6 +205,27 @@ export function ItemInventory({ onUpdateStatus, onAddItem }: ItemInventoryProps)
     if (diff <= 7) return `${diff}일 전`;
     return date.toLocaleDateString();
   };
+
+  if (loading) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.headerContainer}>
+          <Text style={styles.sectionTitle}>물품 현황</Text>
+          <TouchableOpacity
+            style={styles.addButton}
+            onPress={() => setShowAddModal(true)}
+          >
+            <Ionicons name="add" size={20} color="white" />
+          </TouchableOpacity>
+        </View>
+        
+        <View style={styles.emptyState}>
+          <Ionicons name="hourglass-outline" size={48} color={Colors.light.mutedText} />
+          <Text style={styles.emptyText}>물품 목록을 불러오는 중...</Text>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -164,36 +239,57 @@ export function ItemInventory({ onUpdateStatus, onAddItem }: ItemInventoryProps)
         </TouchableOpacity>
       </View>
       
-      {inventoryItems.map((item) => (
-        <TouchableOpacity
-          key={item.id}
-          style={styles.itemCard}
-          onPress={() => handleItemPress(item)}
-        >
-          <View style={styles.itemHeader}>
-            <View style={[styles.iconContainer, { backgroundColor: getCategoryColor(item.category) + "20" }]}>
-              <Ionicons
-                name={item.icon as any}
-                size={24}
-                color={getCategoryColor(item.category)}
-              />
-            </View>
-            
-            <View style={styles.itemInfo}>
-              <Text style={styles.itemName}>{item.name}</Text>
-              <Text style={styles.updateText}>
-                {formatLastUpdated(item.lastUpdated)} • {item.lastUpdatedBy}
-              </Text>
-            </View>
-            
-            <View style={styles.statusContainer}>
-              <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) }]}>
-                <Text style={styles.statusText}>{item.status}</Text>
+      {items.length === 0 ? (
+        <View style={styles.emptyState}>
+          <Ionicons name="cube-outline" size={48} color={Colors.light.mutedText} />
+          <Text style={styles.emptyText}>등록된 물품이 없습니다</Text>
+          <Text style={styles.emptySubtext}>+ 버튼을 눌러 물품을 추가해보세요</Text>
+        </View>
+      ) : (
+        items.map((item) => {
+          const statusColor = getStatusColor(item.current_quantity, item.min_quantity);
+          const statusText = getStatusText(item.current_quantity, item.min_quantity);
+          const categoryColor = getCategoryColor(item.category);
+          const categoryIcon = getCategoryIcon(item.category);
+          
+          return (
+            <TouchableOpacity
+              key={item.id}
+              style={styles.itemCard}
+              onPress={() => handleItemPress(item)}
+            >
+              <View style={styles.itemHeader}>
+                <View style={[styles.iconContainer, { backgroundColor: categoryColor + "20" }]}>
+                  <Ionicons
+                    name={categoryIcon as any}
+                    size={24}
+                    color={categoryColor}
+                  />
+                </View>
+                
+                <View style={styles.itemInfo}>
+                  <Text style={styles.itemName}>{item.name}</Text>
+                  <Text style={styles.updateText}>
+                    {formatLastUpdated(item.updated_at)} • {item.current_quantity}{item.unit}
+                  </Text>
+                  {item.description && (
+                    <Text style={styles.descriptionText}>{item.description}</Text>
+                  )}
+                </View>
+                
+                <View style={styles.statusContainer}>
+                  <View style={[styles.statusBadge, { backgroundColor: statusColor }]}>
+                    <Text style={styles.statusText}>{statusText}</Text>
+                  </View>
+                  <Text style={styles.quantityText}>
+                    {item.current_quantity}/{item.min_quantity}
+                  </Text>
+                </View>
               </View>
-            </View>
-          </View>
-        </TouchableOpacity>
-      ))}
+            </TouchableOpacity>
+          );
+        })
+      )}
 
       {/* 상태 업데이트 모달 */}
       <Modal
@@ -212,36 +308,36 @@ export function ItemInventory({ onUpdateStatus, onAddItem }: ItemInventoryProps)
               <>
                 <Text style={styles.modalItemName}>{selectedItem.name}</Text>
                 
-                <View style={styles.statusUpdateContainer}>
-                  <Text style={styles.inputLabel}>현재 상태</Text>
-                  <View style={styles.statusOptions}>
-                    {(["충분", "보통", "부족"] as const).map((status) => (
-                      <TouchableOpacity
-                        key={status}
-                        style={[
-                          styles.statusOption,
-                          newStatus === status && {
-                            backgroundColor: getStatusColor(status) + "20",
-                            borderColor: getStatusColor(status),
-                          }
-                        ]}
-                        onPress={() => setNewStatus(status)}
-                      >
-                        <View style={[styles.statusIndicator, { backgroundColor: getStatusColor(status) }]} />
-                        <Text
-                          style={[
-                            styles.statusOptionText,
-                            newStatus === status && { 
-                              color: getStatusColor(status), 
-                              fontWeight: "600" 
-                            }
-                          ]}
-                        >
-                          {status}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
+                <View style={styles.quantityUpdateContainer}>
+                  <Text style={styles.inputLabel}>현재 수량</Text>
+                  <View style={styles.quantityInputContainer}>
+                    <TouchableOpacity
+                      style={styles.quantityButton}
+                      onPress={() => setNewQuantity(Math.max(0, newQuantity - 1))}
+                    >
+                      <Ionicons name="remove" size={20} color={Colors.light.primary} />
+                    </TouchableOpacity>
+                    <TextInput
+                      style={styles.quantityInput}
+                      value={newQuantity.toString()}
+                      onChangeText={(text) => {
+                        const num = parseInt(text) || 0;
+                        setNewQuantity(Math.max(0, num));
+                      }}
+                      keyboardType="numeric"
+                      textAlign="center"
+                    />
+                    <Text style={styles.unitText}>{selectedItem?.unit || 'ea'}</Text>
+                    <TouchableOpacity
+                      style={styles.quantityButton}
+                      onPress={() => setNewQuantity(newQuantity + 1)}
+                    >
+                      <Ionicons name="add" size={20} color={Colors.light.primary} />
+                    </TouchableOpacity>
                   </View>
+                  <Text style={styles.minQuantityText}>
+                    최소 수량: {selectedItem?.min_quantity}{selectedItem?.unit || 'ea'}
+                  </Text>
                 </View>
 
                 <View style={styles.modalButtons}>
@@ -254,9 +350,9 @@ export function ItemInventory({ onUpdateStatus, onAddItem }: ItemInventoryProps)
                   
                   <TouchableOpacity
                     style={[styles.modalButton, styles.updateButton]}
-                    onPress={handleUpdateStatus}
+                    onPress={handleUpdateQuantity}
                   >
-                    <Text style={styles.updateButtonText}>업데이트</Text>
+                    <Text style={styles.updateButtonText}>수량 업데이트</Text>
                   </TouchableOpacity>
                 </View>
               </>
@@ -339,6 +435,34 @@ const styles = StyleSheet.create({
   updateText: {
     fontSize: 12,
     color: Colors.light.mutedText,
+  },
+  descriptionText: {
+    fontSize: 11,
+    color: Colors.light.mutedText,
+    fontStyle: 'italic',
+    marginTop: 2,
+  },
+  quantityText: {
+    fontSize: 10,
+    color: Colors.light.mutedText,
+    marginTop: 4,
+  },
+  emptyState: {
+    alignItems: 'center',
+    paddingVertical: 40,
+    paddingHorizontal: 20,
+  },
+  emptyText: {
+    fontSize: 16,
+    color: Colors.light.mutedText,
+    marginTop: 12,
+    textAlign: 'center',
+  },
+  emptySubtext: {
+    fontSize: 14,
+    color: Colors.light.mutedText,
+    marginTop: 4,
+    textAlign: 'center',
   },
   statusContainer: {
     alignItems: "flex-end",
@@ -463,31 +587,21 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     color: "white",
   },
-  statusUpdateContainer: {
+  quantityUpdateContainer: {
     marginBottom: 24,
   },
-  statusOptions: {
-    gap: 8,
-  },
-  statusOption: {
-    flexDirection: "row",
-    alignItems: "center",
+  quantityButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     backgroundColor: Colors.light.surface,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    gap: 12,
-    borderWidth: 2,
-    borderColor: "transparent",
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  statusIndicator: {
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-  },
-  statusOptionText: {
-    flex: 1,
-    fontSize: 16,
-    color: Colors.light.text,
+  minQuantityText: {
+    fontSize: 12,
+    color: Colors.light.mutedText,
+    marginTop: 8,
+    textAlign: 'center',
   },
 });

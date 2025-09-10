@@ -1,9 +1,11 @@
 import { useState, useMemo, useEffect } from "react";
 import { Alert, AppState } from "react-native";
 import { useNotificationContext } from "@/contexts/NotificationContext";
+import { routinesService, Routine as SupabaseRoutine, RoutineCompletion } from "@/lib/supabase-service";
+import { useTeam } from "@/contexts/TeamContext";
 
 interface Routine {
-  id: number;
+  id: string;
   task: string;
   assignee: string;
   nextDate: string;
@@ -11,6 +13,10 @@ interface Routine {
   icon: string;
   frequency: "daily" | "weekly" | "monthly";
   completedAt?: string;
+  assigned_profile?: {
+    id: string;
+    full_name: string;
+  };
 }
 
 interface NewRoutine {
@@ -21,48 +27,65 @@ interface NewRoutine {
 
 export function useRoutines() {
   const { createNotification } = useNotificationContext();
-  const [routines, setRoutines] = useState<Routine[]>([
-    {
-      id: 1,
-      task: "설거지",
-      assignee: "김철수",
-      nextDate: "2025-08-17", // 오늘 날짜로 업데이트
-      status: "completed",
-      icon: "restaurant-outline",
-      frequency: "daily",
-      completedAt: "2025-08-16", // 어제 완료 (오늘 리셋되어야 함)
-    },
-    {
-      id: 2,
-      task: "청소기",
-      assignee: "이영희",
-      nextDate: "2024-12-30", // 다음 주 월요일
-      status: "completed",
-      icon: "home-outline",
-      frequency: "weekly",
-      completedAt: "2024-12-22", // 지난 주 완료 (리셋되어야 함)
-    },
-    {
-      id: 3,
-      task: "화장실 청소",
-      assignee: "박민수",
-      nextDate: "2024-12-30",
-      status: "pending",
-      icon: "water-outline",
-      frequency: "weekly",
-    },
-    {
-      id: 4,
-      task: "쓰레기 버리기",
-      assignee: "김철수",
-      nextDate: "2024-12-31",
-      status: "overdue",
-      icon: "trash-outline",
-      frequency: "daily",
-    },
-  ]);
+  const { currentTeam } = useTeam();
+  const [routines, setRoutines] = useState<Routine[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [roommates, setRoommates] = useState<string[]>([]);
 
-  const roommates = ["김철수", "이영희", "박민수", "정지수"];
+  // Load routines and team members
+  useEffect(() => {
+    if (currentTeam?.id) {
+      loadRoutines();
+      loadTeamMembers();
+    }
+  }, [currentTeam?.id]);
+
+  const loadRoutines = async () => {
+    if (!currentTeam?.id) return;
+
+    try {
+      setLoading(true);
+      const data = await routinesService.getRoutines(currentTeam.id);
+      const routinesWithStatus = data.map(mapSupabaseRoutineToLocal);
+      setRoutines(routinesWithStatus);
+    } catch (error) {
+      console.error('Error loading routines:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadTeamMembers = async () => {
+    if (!currentTeam?.id) return;
+
+    try {
+      const members = await routinesService.getTeamMembers(currentTeam.id);
+      setRoommates(members.map(m => m.profile?.full_name || 'Unknown'));
+    } catch (error) {
+      console.error('Error loading team members:', error);
+      setRoommates([]);
+    }
+  };
+
+  const mapSupabaseRoutineToLocal = (supabaseRoutine: SupabaseRoutine): Routine => {
+    // Check for recent completion to determine status
+    const today = new Date();
+    const todayString = today.toISOString().split('T')[0];
+    
+    // Simple status determination - in real app would check recent completions
+    const status = "pending"; // Would need completion checking logic
+    
+    return {
+      id: supabaseRoutine.id,
+      task: supabaseRoutine.title,
+      assignee: supabaseRoutine.assigned_profile?.full_name || 'Unassigned',
+      nextDate: todayString, // Would calculate based on frequency
+      status: status as "pending" | "completed" | "overdue",
+      icon: getIconForTask(supabaseRoutine.title),
+      frequency: supabaseRoutine.frequency as "daily" | "weekly" | "monthly",
+      assigned_profile: supabaseRoutine.assigned_profile,
+    };
+  };
 
   // 루틴 상태 자동 업데이트 함수
   const checkAndUpdateRoutineStatus = () => {
@@ -208,36 +231,55 @@ export function useRoutines() {
   }, [routines]);
 
   // 루틴 완료 처리
-  const completeRoutine = (routineId: number) => {
-    setRoutines((prev) =>
-      prev.map((routine) => {
-        if (routine.id === routineId) {
-          // 알림 생성
-          createNotification({
-            title: "루틴 완료",
-            message: `${routine.assignee}가 "${routine.task}"를 완료했습니다`,
-            type: "routine_completed",
-            relatedId: routineId.toString(),
-          });
+  const completeRoutine = async (routineId: string) => {
+    if (!currentTeam?.id) return;
 
-          // 다음 예정일 계산
-          const today = new Date();
-          const nextDate = calculateNextDate(today, routine.frequency);
+    try {
+      const routine = routines.find(r => r.id === routineId);
+      if (!routine) return;
 
-          return {
-            ...routine,
-            status: "completed" as const,
-            completedAt: today.toISOString().split("T")[0],
-            nextDate: nextDate.toISOString().split("T")[0],
-          };
-        }
-        return routine;
-      })
-    );
+      // Create routine completion record
+      await routinesService.completeRoutine({
+        routine_id: routineId,
+        notes: '',
+        due_date: new Date().toISOString().split('T')[0],
+        is_late: false,
+      });
+
+      // Update local state
+      setRoutines((prev) =>
+        prev.map((r) => {
+          if (r.id === routineId) {
+            // 알림 생성
+            createNotification({
+              title: "루틴 완료",
+              message: `${r.assignee}가 "${r.task}"를 완료했습니다`,
+              type: "routine_completed",
+              relatedId: routineId,
+            });
+
+            // 다음 예정일 계산
+            const today = new Date();
+            const nextDate = calculateNextDate(today, r.frequency);
+
+            return {
+              ...r,
+              status: "completed" as const,
+              completedAt: today.toISOString().split("T")[0],
+              nextDate: nextDate.toISOString().split("T")[0],
+            };
+          }
+          return r;
+        })
+      );
+    } catch (error) {
+      console.error('Error completing routine:', error);
+      Alert.alert('오류', '루틴 완료 처리 중 오류가 발생했습니다.');
+    }
   };
 
   // 루틴 미루기 처리
-  const postponeRoutine = (routineId: number) => {
+  const postponeRoutine = async (routineId: string) => {
     setRoutines((prev) =>
       prev.map((routine) => {
         if (routine.id === routineId) {
@@ -255,110 +297,124 @@ export function useRoutines() {
   };
 
   // 담당자 변경
-  const changeAssignee = (routineId: number, newAssignee: string) => {
-    setRoutines((prev) =>
-      prev.map((routine) =>
-        routine.id === routineId
-          ? { ...routine, assignee: newAssignee }
-          : routine
-      )
-    );
+  const changeAssignee = async (routineId: string, newAssignee: string) => {
+    try {
+      // Find the team member ID for the new assignee
+      const members = await routinesService.getTeamMembers(currentTeam!.id);
+      const newAssigneeProfile = members.find(m => m.profile?.full_name === newAssignee);
+      
+      if (newAssigneeProfile) {
+        await routinesService.updateRoutine(routineId, {
+          assigned_to: newAssigneeProfile.user_id,
+        });
+      }
+
+      setRoutines((prev) =>
+        prev.map((routine) =>
+          routine.id === routineId
+            ? { ...routine, assignee: newAssignee }
+            : routine
+        )
+      );
+    } catch (error) {
+      console.error('Error changing assignee:', error);
+      Alert.alert('오류', '담당자 변경 중 오류가 발생했습니다.');
+    }
   };
 
   // 주기 변경
-  const changeFrequency = (routineId: number, newFrequency: "daily" | "weekly" | "monthly") => {
-    setRoutines((prev) =>
-      prev.map((routine) => {
-        if (routine.id === routineId) {
-          // 새로운 주기에 따라 다음 날짜 계산
-          const today = new Date();
-          const nextDate = new Date(today);
-          
-          switch (newFrequency) {
-            case "daily":
-              nextDate.setDate(today.getDate() + 1);
-              break;
-            case "weekly":
-              nextDate.setDate(today.getDate() + 7);
-              break;
-            case "monthly":
-              nextDate.setMonth(today.getMonth() + 1);
-              break;
-          }
+  const changeFrequency = async (routineId: string, newFrequency: "daily" | "weekly" | "monthly") => {
+    try {
+      await routinesService.updateRoutine(routineId, {
+        frequency: newFrequency,
+      });
 
-          return {
-            ...routine,
-            frequency: newFrequency,
-            nextDate: nextDate.toISOString().split("T")[0],
-          };
-        }
-        return routine;
-      })
-    );
+      setRoutines((prev) =>
+        prev.map((routine) => {
+          if (routine.id === routineId) {
+            // 새로운 주기에 따라 다음 날짜 계산
+            const today = new Date();
+            const nextDate = new Date(today);
+            
+            switch (newFrequency) {
+              case "daily":
+                nextDate.setDate(today.getDate() + 1);
+                break;
+              case "weekly":
+                nextDate.setDate(today.getDate() + 7);
+                break;
+              case "monthly":
+                nextDate.setMonth(today.getMonth() + 1);
+                break;
+            }
+
+            return {
+              ...routine,
+              frequency: newFrequency,
+              nextDate: nextDate.toISOString().split("T")[0],
+            };
+          }
+          return routine;
+        })
+      );
+    } catch (error) {
+      console.error('Error changing frequency:', error);
+      Alert.alert('오류', '주기 변경 중 오류가 발생했습니다.');
+    }
   };
 
 
   // 새 루틴 추가
-  const addNewRoutine = (newRoutine: NewRoutine) => {
-    const today = new Date();
-    const nextDate = new Date(today);
+  const addNewRoutine = async (newRoutine: NewRoutine) => {
+    if (!currentTeam?.id) return;
 
-    // 빈도에 따라 다음 날짜 계산
-    switch (newRoutine.frequency) {
-      case "daily":
-        nextDate.setDate(today.getDate() + 1);
-        break;
-      case "weekly":
-        nextDate.setDate(today.getDate() + 7);
-        break;
-      case "monthly":
-        nextDate.setMonth(today.getMonth() + 1);
-        break;
-    }
-
-    // 작업명에 따라 적절한 아이콘 자동 선택
-    const getIconForTask = (task: string) => {
-      const taskLower = task.toLowerCase();
-      if (
-        taskLower.includes("설거지") ||
-        taskLower.includes("음식") ||
-        taskLower.includes("요리")
-      ) {
-        return "restaurant-outline";
-      } else if (taskLower.includes("청소") || taskLower.includes("닦기")) {
-        return "home-outline";
-      } else if (taskLower.includes("화장실") || taskLower.includes("세면")) {
-        return "water-outline";
-      } else if (
-        taskLower.includes("쓰레기") ||
-        taskLower.includes("분리수거")
-      ) {
-        return "trash-outline";
-      } else if (taskLower.includes("빨래") || taskLower.includes("세탁")) {
-        return "shirt-outline";
-      } else if (taskLower.includes("침대") || taskLower.includes("정리")) {
-        return "bed-outline";
-      } else {
-        return "home-outline";
+    try {
+      // Find the team member ID for the assignee
+      const members = await routinesService.getTeamMembers(currentTeam.id);
+      const assigneeProfile = members.find(m => m.profile?.full_name === newRoutine.assignee);
+      
+      if (!assigneeProfile) {
+        Alert.alert('오류', '담당자를 찾을 수 없습니다.');
+        return;
       }
-    };
 
-    const routine: Routine = {
-      id: Date.now(), // 임시 ID 생성
-      task: newRoutine.task.trim(),
-      assignee: newRoutine.assignee,
-      nextDate: nextDate.toISOString().split("T")[0],
-      status: "pending",
-      icon: getIconForTask(newRoutine.task),
-      frequency: newRoutine.frequency,
-    };
+      const supabaseRoutine = await routinesService.createRoutine({
+        team_id: currentTeam.id,
+        title: newRoutine.task.trim(),
+        description: '',
+        category: 'general',
+        frequency: newRoutine.frequency,
+        frequency_details: {},
+        assigned_to: assigneeProfile.user_id,
+        priority: 'medium',
+      });
 
-    setRoutines((prev) => [...prev, routine]);
+      const routine: Routine = {
+        id: supabaseRoutine.id,
+        task: newRoutine.task.trim(),
+        assignee: newRoutine.assignee,
+        nextDate: new Date().toISOString().split("T")[0],
+        status: "pending",
+        icon: getIconForTask(newRoutine.task),
+        frequency: newRoutine.frequency,
+      };
+
+      setRoutines((prev) => [...prev, routine]);
+    } catch (error) {
+      console.error('Error adding routine:', error);
+      Alert.alert('오류', '루틴 추가 중 오류가 발생했습니다.');
+    }
   };
 
   // 루틴 삭제 (모달에서 확인 후 호출됨)
-  const deleteRoutine = (routineId: number) => {
-    setRoutines((prev) => prev.filter((r) => r.id !== routineId));
+  const deleteRoutine = async (routineId: string) => {
+    try {
+      await routinesService.deleteRoutine(routineId);
+      setRoutines((prev) => prev.filter((r) => r.id !== routineId));
+    } catch (error) {
+      console.error('Error deleting routine:', error);
+      Alert.alert('오류', '루틴 삭제 중 오류가 발생했습니다.');
+    }
   };
 
   // 담당자 옵션 표시
@@ -374,16 +430,45 @@ export function useRoutines() {
     Alert.alert("담당자 변경", "새 담당자를 선택해주세요.", buttons);
   };
 
+  // 작업명에 따라 적절한 아이콘 자동 선택
+  const getIconForTask = (task: string) => {
+    const taskLower = task.toLowerCase();
+    if (
+      taskLower.includes("설거지") ||
+      taskLower.includes("음식") ||
+      taskLower.includes("요리")
+    ) {
+      return "restaurant-outline";
+    } else if (taskLower.includes("청소") || taskLower.includes("닦기")) {
+      return "home-outline";
+    } else if (taskLower.includes("화장실") || taskLower.includes("세면")) {
+      return "water-outline";
+    } else if (
+      taskLower.includes("쓰레기") ||
+      taskLower.includes("분리수거")
+    ) {
+      return "trash-outline";
+    } else if (taskLower.includes("빨래") || taskLower.includes("세탁")) {
+      return "shirt-outline";
+    } else if (taskLower.includes("침대") || taskLower.includes("정리")) {
+      return "bed-outline";
+    } else {
+      return "home-outline";
+    }
+  };
+
   return {
     routines,
     statistics,
     roommates,
+    loading,
     completeRoutine,
     postponeRoutine,
     addNewRoutine,
     changeAssignee,
     changeFrequency,
     deleteRoutine,
+    loadRoutines,
     showAssigneeOptions: (routine: Routine) => showAssigneeOptions(routine),
   };
 }
