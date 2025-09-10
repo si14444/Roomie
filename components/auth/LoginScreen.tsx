@@ -33,146 +33,39 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
     try {
       setIsLoading(true);
 
-      console.log("Starting Kakao login - current team state:", {
-        hasSelectedTeam,
-      });
+      // 카카오 로그인 (이메일, 닉네임, 프로필 이미지 권한 요청)
+      await kakaoLogin();
 
-      // 카카오 로그인 시도 (더 견고한 에러 처리와 함께)
-      console.log("Requesting Kakao login with enhanced error handling...");
+      // 사용자 정보 가져오기
+      const { me } = await import("@react-native-kakao/user");
+      kakaoResult = await me();
 
-      // 1단계: Scoped login 시도 (이메일, 닉네임, 프로필 이미지 권한)
-      try {
-        kakaoResult = await kakaoLogin({
-          scopes: ["account_email", "profile_nickname", "profile_image"],
-        });
-        console.log(kakaoResult);
-        console.log("✅ Scoped login successful with permissions");
-      } catch (scopeError: any) {
-        console.log(
-          "⚠️ Scoped login failed, trying basic login:",
-          scopeError?.message || scopeError
-        );
+      console.log("Kakao user data:", kakaoResult);
 
-        // 2단계: 기본 로그인 시도 (권한 없이)
-        try {
-          kakaoResult = await kakaoLogin();
-          console.log("✅ Basic login successful (no permissions)");
-        } catch (basicError: any) {
-          console.error("❌ Both scoped and basic login failed");
-
-          // 사용자에게 더 친화적인 에러 메시지 제공
-          if (
-            basicError?.message?.includes("user_cancel") ||
-            basicError?.message?.includes("cancelled")
-          ) {
-            throw new Error("로그인이 취소되었습니다.");
-          } else if (
-            basicError?.message?.includes("KakaoSDK") ||
-            basicError?.message?.includes("initialize")
-          ) {
-            throw new Error(
-              "카카오 앱 초기화 문제가 있습니다. 앱을 재시작해주세요."
-            );
-          } else if (
-            basicError?.message?.includes("network") ||
-            basicError?.message?.includes("connection")
-          ) {
-            throw new Error(
-              "네트워크 연결 문제가 있습니다. 인터넷 연결을 확인해주세요."
-            );
-          } else {
-            throw new Error(
-              `카카오 로그인에 실패했습니다: ${
-                basicError?.message || "알 수 없는 오류"
-              }`
-            );
-          }
-        }
+      // me() API는 이미 사용자 정보를 반환하므로 kakaoAccount 형태로 변환
+      if (kakaoResult) {
+        // KakaoUser 형태를 AuthContext에서 예상하는 형태로 변환
+        const transformedResult = {
+          id: kakaoResult.id,
+          kakaoAccount: {
+            email: kakaoResult.email,
+            emailValid: kakaoResult.isEmailValid,
+            isEmailVerified: kakaoResult.isEmailVerified,
+            profile: {
+              nickname: kakaoResult.nickname,
+              profileImageUrl: kakaoResult.profileImageUrl,
+            },
+          },
+        };
+        kakaoResult = transformedResult;
       }
-
-      // 이메일 정보가 없으면 추가 정보 요청 시도
-      if (!kakaoResult?.kakaoAccount?.email) {
-        console.log(
-          "No email in initial result, trying to get additional info..."
-        );
-        try {
-          // React Native Kakao SDK - 사용자 정보 다시 요청 시도
-          const { me } = await import("@react-native-kakao/user");
-          const profileResult = await me();
-          console.log(
-            "Additional profile result:",
-            JSON.stringify(profileResult, null, 2)
-          );
-
-          // Kakao User API의 반환 형태는 다르므로 올바르게 병합
-          if (profileResult?.email) {
-            console.log("Email found in profile result:", profileResult.email);
-            // KakaoUser API 형태로 반환되므로 kakaoAccount 형태로 변환
-            kakaoResult = {
-              ...kakaoResult,
-              kakaoAccount: {
-                ...kakaoResult.kakaoAccount,
-                email: profileResult.email,
-                emailValid: profileResult.isEmailValid,
-                isEmailVerified: profileResult.isEmailVerified,
-                profile: {
-                  ...kakaoResult.kakaoAccount?.profile,
-                  nickname: profileResult.nickname,
-                  profileImageUrl: profileResult.profileImageUrl,
-                },
-              },
-            };
-            console.log("Email info merged from profile");
-          }
-        } catch (profileError) {
-          console.warn("Failed to get additional profile info:", profileError);
-        }
-      }
-      console.log("=== KAKAO LOGIN RESULT ANALYSIS ===");
-      console.log(
-        "Raw Kakao login result:",
-        JSON.stringify(kakaoResult, null, 2)
-      );
-      console.log("=== EMAIL ANALYSIS ===");
-      console.log("kakaoAccount exists:", !!kakaoResult?.kakaoAccount);
-      console.log("kakaoAccount.email:", kakaoResult?.kakaoAccount?.email);
-      console.log(
-        "kakaoAccount.emailValid:",
-        kakaoResult?.kakaoAccount?.emailValid
-      );
-      console.log(
-        "kakaoAccount.isEmailVerified:",
-        kakaoResult?.kakaoAccount?.isEmailVerified
-      );
-      console.log("=== PROFILE ANALYSIS ===");
-      console.log("profile exists:", !!kakaoResult?.kakaoAccount?.profile);
-      console.log(
-        "profile.nickname:",
-        kakaoResult?.kakaoAccount?.profile?.nickname
-      );
-      console.log("Kakao user info extraction check:", {
-        // 닉네임 경로들
-        nickname1: kakaoResult?.kakaoAccount?.profile?.nickname,
-        nickname2: kakaoResult?.kakaoAccount?.profile?.nickName,
-        nickname3: kakaoResult?.profile?.nickname,
-        nickname4: kakaoResult?.nickname,
-        nickname5: kakaoResult?.name,
-        // 이메일 경로들
-        email1: kakaoResult?.kakaoAccount?.email,
-        email2: kakaoResult?.kakaoAccount?.account?.email,
-        email3: kakaoResult?.email,
-        email4: kakaoResult?.account?.email,
-      });
 
       // 카카오 로그인 결과를 Supabase와 연동하여 로그인 처리
       await loginWithKakao(kakaoResult);
 
-      console.log("Login successful, creating default team for quick start...");
-
       // 로그인 후 바로 기본 팀 생성 (사용자 편의를 위해)
       try {
         await skipTeamSelection();
-        console.log("Default team created successfully");
       } catch (teamError) {
         console.warn(
           "Failed to create default team, user will need to select team manually:",
@@ -183,14 +76,7 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
       // 성공 콜백 호출
       onLoginSuccess?.();
     } catch (error) {
-      console.error("Kakao login error details:", {
-        error: error,
-        message: error instanceof Error ? error.message : "Unknown error",
-        kakaoResult: kakaoResult,
-        hasKakaoResult: !!kakaoResult,
-        stack: error instanceof Error ? error.stack : "No stack trace",
-      });
-
+      console.error("Kakao login failed:", error);
       let errorMessage = "카카오 로그인에 실패했습니다.";
       if (error instanceof Error) {
         // 사용자에게 더 친숙한 에러 메시지 제공
@@ -210,6 +96,12 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
         ) {
           errorMessage =
             "인증 과정에서 문제가 발생했습니다. 다시 시도해주세요.";
+        } else if (
+          error.message.includes("KakaoSDK") ||
+          error.message.includes("initialize")
+        ) {
+          errorMessage =
+            "카카오 앱 초기화 문제가 있습니다. 앱을 재시작해주세요.";
         } else {
           errorMessage += `\n상세 오류: ${error.message}`;
         }

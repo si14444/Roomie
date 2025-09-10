@@ -3,7 +3,8 @@
     "allow": [
       "Bash(claude mcp add:*)",
       "Bash(claude mcp:*)",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(npx expo install:*)"
     ],
     "deny": []
   }
