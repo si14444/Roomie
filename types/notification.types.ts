@@ -3,10 +3,18 @@ export interface Notification {
   title: string;
   message: string;
   type: NotificationType;
-  isRead: boolean;
-  createdAt: string;
-  relatedId?: string; // 관련된 엔티티 ID (bill, routine, item 등)
-  actionData?: Record<string, any>; // 알림 클릭 시 필요한 데이터
+  is_read: boolean;
+  created_at: string;
+  related_id?: string; // 관련된 엔티티 ID (bill, routine, item 등)
+  action_data?: Record<string, any>; // 알림 클릭 시 필요한 데이터
+  team_id?: string;
+  user_id?: string;
+  
+  // Legacy support (for backward compatibility)
+  isRead?: boolean;
+  createdAt?: string;
+  relatedId?: string;
+  actionData?: Record<string, any>;
 }
 
 export type NotificationType =
@@ -21,6 +29,7 @@ export type NotificationType =
   | "poll_created" // 새 투표 생성
   | "poll_ended" // 투표 종료
   | "chat_message" // 채팅 메시지
+  | "announcement" // 공지사항
   | "system"; // 시스템 알림
 
 export interface NotificationIcon {

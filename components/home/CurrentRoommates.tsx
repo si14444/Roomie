@@ -1,8 +1,10 @@
-import React from "react";
-import { StyleSheet, TouchableOpacity, View, Image } from "react-native";
+import React, { useState, useEffect } from "react";
+import { StyleSheet, TouchableOpacity, View, Image, ActivityIndicator } from "react-native";
 import { Text } from "@/components/Themed";
 import { Ionicons } from "@expo/vector-icons";
 import Colors from "@/constants/Colors";
+import { useTeam } from "@/contexts/TeamContext";
+import { teamsService, TeamMember } from "@/lib/supabase-service";
 
 interface Roommate {
   id: string;
@@ -11,6 +13,7 @@ interface Roommate {
   status: "online" | "offline" | "busy";
   role?: string;
   joinedDate: string;
+  email?: string;
 }
 
 interface CurrentRoommatesProps {
@@ -18,28 +21,47 @@ interface CurrentRoommatesProps {
 }
 
 export function CurrentRoommates({ onAddRoommate }: CurrentRoommatesProps) {
-  // 임시 데이터 - 실제로는 Context나 API에서 가져올 데이터
-  const roommates: Roommate[] = [
-    {
-      id: "1",
-      name: "김철수",
-      status: "online",
-      role: "방장",
-      joinedDate: "2024-01-15",
-    },
-    {
-      id: "2", 
-      name: "이영희",
-      status: "offline",
-      joinedDate: "2024-02-01",
-    },
-    {
-      id: "3",
-      name: "박민준",
-      status: "busy",
-      joinedDate: "2024-02-10",
-    },
-  ];
+  const { currentTeam } = useTeam();
+  const [roommates, setRoommates] = useState<Roommate[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Load team members from Supabase
+  const loadTeamMembers = async () => {
+    if (!currentTeam?.id) {
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      const members = await teamsService.getTeamMembers(currentTeam.id);
+      
+      // Transform team members to roommate format
+      const transformedRoommates: Roommate[] = members.map(member => ({
+        id: member.user_id || member.id,
+        name: member.user?.full_name || member.user?.email || 'Unknown User',
+        email: member.user?.email,
+        profileImage: member.user?.avatar_url || undefined,
+        status: 'offline' as const, // Default to offline since we don't have real-time status
+        role: member.role === 'admin' ? '방장' : undefined,
+        joinedDate: member.joined_at || new Date().toISOString(),
+      }));
+      
+      setRoommates(transformedRoommates);
+    } catch (err) {
+      console.error('Error loading team members:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load team members');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadTeamMembers();
+  }, [currentTeam?.id]);
 
   const getStatusColor = (status: Roommate["status"]) => {
     switch (status) {
@@ -86,6 +108,50 @@ export function CurrentRoommates({ onAddRoommate }: CurrentRoommatesProps) {
       return `${years}년 전 입주`;
     }
   };
+
+  if (isLoading) {
+    return (
+      <View style={styles.card}>
+        <View style={styles.header}>
+          <Text style={styles.cardTitle}>현재 룸메이트</Text>
+          <ActivityIndicator size="small" color={Colors.light.primary} />
+        </View>
+        <View style={styles.loadingContainer}>
+          <Text style={styles.loadingText}>팀 멤버를 불러오는 중...</Text>
+        </View>
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={styles.card}>
+        <View style={styles.header}>
+          <Text style={styles.cardTitle}>현재 룸메이트</Text>
+          <TouchableOpacity onPress={loadTeamMembers}>
+            <Ionicons name="refresh" size={20} color={Colors.light.primary} />
+          </TouchableOpacity>
+        </View>
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>데이터를 불러올 수 없습니다</Text>
+          <Text style={styles.errorSubtext}>{error}</Text>
+        </View>
+      </View>
+    );
+  }
+
+  if (!currentTeam) {
+    return (
+      <View style={styles.card}>
+        <View style={styles.header}>
+          <Text style={styles.cardTitle}>현재 룸메이트</Text>
+        </View>
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyText}>팀을 먼저 선택해주세요</Text>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.card}>
@@ -276,5 +342,35 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
     color: Colors.light.primary,
+  },
+  loadingContainer: {
+    padding: 20,
+    alignItems: "center",
+  },
+  loadingText: {
+    fontSize: 14,
+    color: Colors.light.mutedText,
+  },
+  errorContainer: {
+    padding: 20,
+    alignItems: "center",
+  },
+  errorText: {
+    fontSize: 14,
+    color: Colors.light.errorColor,
+    marginBottom: 4,
+  },
+  errorSubtext: {
+    fontSize: 12,
+    color: Colors.light.mutedText,
+    textAlign: "center",
+  },
+  emptyContainer: {
+    padding: 20,
+    alignItems: "center",
+  },
+  emptyText: {
+    fontSize: 14,
+    color: Colors.light.mutedText,
   },
 });

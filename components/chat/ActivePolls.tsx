@@ -2,6 +2,7 @@ import { Text, View } from "@/components/Themed";
 import Colors from "@/constants/Colors";
 import { Ionicons } from "@expo/vector-icons";
 import { StyleSheet, TouchableOpacity } from "react-native";
+import { useTeam } from "@/contexts/TeamContext";
 
 interface Poll {
   id: number;
@@ -22,106 +23,37 @@ interface ActivePollsProps {
 }
 
 export function ActivePolls({ onVote, onCreatePoll }: ActivePollsProps) {
-  const polls: Poll[] = [
-    {
-      id: 1,
-      question: "오늘 저녁 뭐 시켜먹을까요?",
-      options: [
-        { text: "치킨", votes: 2, voters: ["김철수", "이영희"] },
-        { text: "피자", votes: 1, voters: ["박민수"] },
-        { text: "중국집", votes: 0, voters: [] },
-      ],
-      creator: "김철수",
-      deadline: "2024-12-27 18:00",
-      status: "active",
-    },
-    {
-      id: 2,
-      question: "이번 주말 대청소 어떠세요?",
-      options: [
-        { text: "찬성", votes: 3, voters: ["김철수", "이영희", "박민수"] },
-        { text: "반대", votes: 0, voters: [] },
-      ],
-      creator: "이영희",
-      deadline: "2024-12-28 12:00",
-      status: "closed",
-    },
-  ];
+  const { currentTeam } = useTeam();
 
-  const activePolls = polls.filter((poll) => poll.status === "active");
+  // Note: Polls feature requires backend implementation
+  // This would integrate with a polls table in Supabase
+  const activePolls: Poll[] = [];
+
+  if (!currentTeam) {
+    return (
+      <View style={styles.pollsSection}>
+        <Text style={styles.sectionTitle}>진행 중인 투표</Text>
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyText}>팀을 먼저 선택해주세요</Text>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.pollsSection}>
       <Text style={styles.sectionTitle}>진행 중인 투표</Text>
-      {activePolls.map((poll) => (
-        <View key={poll.id} style={styles.pollCard}>
-          <View style={styles.pollHeader}>
-            <Ionicons
-              name="bar-chart-outline"
-              size={20}
-              color={Colors.light.primary}
-            />
-            <Text style={styles.pollQuestion}>{poll.question}</Text>
-          </View>
-          <View style={styles.pollInfo}>
-            <Text style={styles.pollInfoText}>
-              <Ionicons
-                name="person-outline"
-                size={14}
-                color={Colors.light.mutedText}
-              />{" "}
-              {poll.creator}
-            </Text>
-            <Text style={styles.pollInfoText}>
-              <Ionicons
-                name="time-outline"
-                size={14}
-                color={Colors.light.mutedText}
-              />{" "}
-              {poll.deadline}
-            </Text>
-          </View>
-
-          <View style={styles.pollOptions}>
-            {poll.options.map((option, index) => {
-              const totalVotes = poll.options.reduce(
-                (sum, opt) => sum + opt.votes,
-                0
-              );
-              const percentage =
-                totalVotes > 0 ? (option.votes / totalVotes) * 100 : 0;
-
-              return (
-                <TouchableOpacity
-                  key={index}
-                  style={styles.pollOption}
-                  onPress={() => onVote?.(poll.id, index)}
-                >
-                  <View style={styles.pollOptionHeader}>
-                    <Text style={styles.optionText}>{option.text}</Text>
-                    <Text style={styles.voteCount}>{option.votes}표</Text>
-                  </View>
-                  <View style={styles.progressBar}>
-                    <View
-                      style={[styles.progressFill, { width: `${percentage}%` }]}
-                    />
-                  </View>
-                  {option.voters.length > 0 && (
-                    <Text style={styles.votersText}>
-                      투표자: {option.voters.join(", ")}
-                    </Text>
-                  )}
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-
-          <TouchableOpacity style={styles.voteButton}>
-            <Ionicons name="thumbs-up-outline" size={16} color="white" />
-            <Text style={styles.voteButtonText}>투표하기</Text>
-          </TouchableOpacity>
+      
+      {activePolls.length === 0 ? (
+        <View style={styles.emptyContainer}>
+          <Ionicons name="bar-chart-outline" size={48} color={Colors.light.mutedText} />
+          <Text style={styles.emptyText}>진행 중인 투표가 없습니다</Text>
+          <Text style={styles.emptySubtext}>룸메이트들과 함께 결정할 일이 있다면 투표를 만들어보세요</Text>
         </View>
-      ))}
+      ) : (
+        // Render active polls here when implemented
+        <View />
+      )}
 
       <TouchableOpacity style={styles.createPollButton} onPress={onCreatePoll}>
         <View style={styles.createPollContent}>
@@ -248,5 +180,31 @@ const styles = StyleSheet.create({
     color: "white",
     fontSize: 16,
     fontWeight: "600",
+  },
+  emptyContainer: {
+    backgroundColor: Colors.light.cardBackground,
+    borderRadius: 16,
+    padding: 40,
+    alignItems: "center",
+    marginBottom: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  emptyText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: Colors.light.text,
+    marginTop: 16,
+    marginBottom: 8,
+    textAlign: "center",
+  },
+  emptySubtext: {
+    fontSize: 14,
+    color: Colors.light.mutedText,
+    textAlign: "center",
+    lineHeight: 20,
   },
 });

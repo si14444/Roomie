@@ -32,7 +32,7 @@ import { FontAwesome } from "@expo/vector-icons";
 
 export default function HomeScreen() {
   const { createNotification } = useNotificationContext();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
@@ -58,7 +58,7 @@ export default function HomeScreen() {
           onPress: (taskName) => {
             if (taskName && taskName.trim()) {
               // 현재 사용자
-              const currentUser = "김철수";
+              const currentUser = user?.user_metadata?.full_name || user?.email || "Unknown User";
 
               // 새 루틴 추가 (일회성 작업으로)
               addNewRoutine({

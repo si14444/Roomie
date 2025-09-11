@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { Alert, AppState } from "react-native";
 import { useNotificationContext } from "@/contexts/NotificationContext";
-import { routinesService, Routine as SupabaseRoutine, RoutineCompletion } from "@/lib/supabase-service";
+import { routinesService, teamsService, Routine as SupabaseRoutine, RoutineCompletion } from "@/lib/supabase-service";
 import { useTeam } from "@/contexts/TeamContext";
 
 interface Routine {
@@ -45,7 +45,7 @@ export function useRoutines() {
 
     try {
       setLoading(true);
-      const data = await routinesService.getRoutines(currentTeam.id);
+      const data = await routinesService.getTeamRoutines(currentTeam.id);
       const routinesWithStatus = data.map(mapSupabaseRoutineToLocal);
       setRoutines(routinesWithStatus);
     } catch (error) {
@@ -59,7 +59,7 @@ export function useRoutines() {
     if (!currentTeam?.id) return;
 
     try {
-      const members = await routinesService.getTeamMembers(currentTeam.id);
+      const members = await teamsService.getTeamMembers(currentTeam.id);
       setRoommates(members.map(m => m.profile?.full_name || 'Unknown'));
     } catch (error) {
       console.error('Error loading team members:', error);
@@ -239,12 +239,7 @@ export function useRoutines() {
       if (!routine) return;
 
       // Create routine completion record
-      await routinesService.completeRoutine({
-        routine_id: routineId,
-        notes: '',
-        due_date: new Date().toISOString().split('T')[0],
-        is_late: false,
-      });
+      await routinesService.completeRoutine(routineId, 'current_user', '');
 
       // Update local state
       setRoutines((prev) =>
@@ -300,7 +295,7 @@ export function useRoutines() {
   const changeAssignee = async (routineId: string, newAssignee: string) => {
     try {
       // Find the team member ID for the new assignee
-      const members = await routinesService.getTeamMembers(currentTeam!.id);
+      const members = await teamsService.getTeamMembers(currentTeam!.id);
       const newAssigneeProfile = members.find(m => m.profile?.full_name === newAssignee);
       
       if (newAssigneeProfile) {
@@ -370,7 +365,7 @@ export function useRoutines() {
 
     try {
       // Find the team member ID for the assignee
-      const members = await routinesService.getTeamMembers(currentTeam.id);
+      const members = await teamsService.getTeamMembers(currentTeam.id);
       const assigneeProfile = members.find(m => m.profile?.full_name === newRoutine.assignee);
       
       if (!assigneeProfile) {
@@ -387,6 +382,8 @@ export function useRoutines() {
         frequency_details: {},
         assigned_to: assigneeProfile.user_id,
         priority: 'medium',
+        is_active: true,
+        created_by: assigneeProfile.user_id
       });
 
       const routine: Routine = {

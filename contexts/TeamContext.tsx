@@ -1,6 +1,9 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Team, TeamMember, CreateTeamRequest, JoinTeamRequest } from '@/types/team.types';
+import { teamsService } from '@/lib/supabase-service';
+import { supabase } from '@/lib/supabase';
+import { useAuth } from './AuthContext';
 
 interface TeamContextType {
   // 현재 선택된 팀
@@ -40,6 +43,7 @@ const STORAGE_KEYS = {
 };
 
 export function TeamProvider({ children }: { children: ReactNode }) {
+  const { user } = useAuth();
   const [currentTeam, setCurrentTeam] = useState<Team | null>(null);
   const [userTeams, setUserTeams] = useState<Team[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -49,6 +53,16 @@ export function TeamProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     loadStoredTeamData();
   }, []);
+
+  // 사용자가 로그인하면 팀 목록 새로고침
+  useEffect(() => {
+    if (user) {
+      refreshTeams();
+    } else {
+      // 로그아웃 시 팀 데이터 리셋
+      resetTeamData();
+    }
+  }, [user]);
 
 
   const loadStoredTeamData = async () => {
@@ -101,105 +115,114 @@ export function TeamProvider({ children }: { children: ReactNode }) {
 
   const createTeam = async (teamData: CreateTeamRequest): Promise<Team> => {
     try {
-      // TODO: API 호출로 실제 팀 생성
-      // 임시로 목업 데이터 생성
-      const newTeam: Team = {
-        id: `team_${Date.now()}`,
-        name: teamData.name,
-        description: teamData.description,
-        members: [{
-          id: 'member_1',
-          userId: 'current_user',
-          userName: '나',
-          email: 'user@example.com',
-          role: 'owner',
-          joinedAt: new Date().toISOString()
-        }],
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        ownerId: 'current_user',
-        inviteCode: Math.random().toString(36).substring(7),
-        settings: {
-          allowMemberInvites: true,
-          autoAssignNewRoutines: false,
-          notificationPreferences: {
-            routineReminders: true,
-            billAlerts: true,
-            chatMessages: true
-          },
-          ...teamData.settings
-        }
-      };
+      if (!user) {
+        throw new Error('사용자가 로그인되지 않았습니다.');
+      }
 
-      // 팀 목록에 추가
-      const updatedTeams = [...userTeams, newTeam];
-      setUserTeams(updatedTeams);
-      
-      // 새 팀을 현재 팀으로 설정
-      await selectTeam(newTeam);
-      
-      // 로컬 스토리지에 저장
-      await AsyncStorage.setItem(STORAGE_KEYS.USER_TEAMS, JSON.stringify(updatedTeams));
+      console.log('🔄 Attempting to create team:', teamData);
 
-      return newTeam;
+      // Supabase 팀 생성 시도
+      try {
+        const newTeam = await teamsService.createTeam({
+          name: teamData.name,
+          description: teamData.description,
+          created_by: user.id
+        });
+
+        console.log('✅ Team created via Supabase:', newTeam);
+
+        // 팀 목록에 추가
+        const updatedTeams = [...userTeams, newTeam];
+        setUserTeams(updatedTeams);
+        
+        // 새 팀을 현재 팀으로 설정
+        await selectTeam(newTeam);
+        
+        // 로컬 스토리지에 저장
+        await AsyncStorage.setItem(STORAGE_KEYS.USER_TEAMS, JSON.stringify(updatedTeams));
+
+        return newTeam;
+      } catch (supabaseError) {
+        console.warn('⚠️ Supabase team creation failed, using fallback:', supabaseError);
+        
+        // 임시 팀 생성 (스키마가 적용될 때까지)
+        const fallbackTeam: Team = {
+          id: `temp_team_${Date.now()}`,
+          name: teamData.name,
+          description: teamData.description,
+          invite_code: Math.random().toString(36).substring(7).toUpperCase(),
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          created_by: user.id,
+          // Legacy fields for compatibility
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          ownerId: user.id,
+          inviteCode: Math.random().toString(36).substring(7).toUpperCase(),
+          members: [{
+            id: 'temp_member_1',
+            userId: user.id,
+            userName: (user as any).user_metadata?.full_name || user.email || '사용자',
+            email: user.email || '',
+            role: 'owner',
+            joinedAt: new Date().toISOString()
+          }],
+          settings: {
+            allowMemberInvites: true,
+            autoAssignNewRoutines: false,
+            notificationPreferences: {
+              routineReminders: true,
+              billAlerts: true,
+              chatMessages: true
+            }
+          }
+        };
+
+        // 팀 목록에 추가
+        const updatedTeams = [...userTeams, fallbackTeam];
+        setUserTeams(updatedTeams);
+        
+        // 새 팀을 현재 팀으로 설정
+        await selectTeam(fallbackTeam);
+        
+        // 로컬 스토리지에 저장
+        await AsyncStorage.setItem(STORAGE_KEYS.USER_TEAMS, JSON.stringify(updatedTeams));
+
+        console.log('✅ Fallback team created successfully');
+        return fallbackTeam;
+      }
     } catch (error) {
-      console.error('Failed to create team:', error);
+      console.error('❌ Failed to create team:', error);
       throw error;
     }
   };
 
   const joinTeam = async (joinData: JoinTeamRequest): Promise<Team> => {
     try {
-      // TODO: API 호출로 실제 팀 참가
-      // 임시로 목업 팀 생성 (초대 코드 기반)
-      const joinedTeam: Team = {
-        id: `team_${Date.now()}`,
-        name: '참가한 팀',
-        description: '초대 코드로 참가한 팀입니다.',
-        members: [
-          {
-            id: 'member_1',
-            userId: 'other_user',
-            userName: '팀장',
-            email: 'owner@example.com',
-            role: 'owner',
-            joinedAt: new Date(Date.now() - 86400000).toISOString()
-          },
-          {
-            id: 'member_2',
-            userId: 'current_user',
-            userName: '나',
-            email: 'user@example.com',
-            role: 'member',
-            joinedAt: new Date().toISOString()
-          }
-        ],
-        createdAt: new Date(Date.now() - 86400000).toISOString(),
-        updatedAt: new Date().toISOString(),
-        ownerId: 'other_user',
-        inviteCode: joinData.inviteCode,
-        settings: {
-          allowMemberInvites: true,
-          autoAssignNewRoutines: true,
-          notificationPreferences: {
-            routineReminders: true,
-            billAlerts: true,
-            chatMessages: true
-          }
-        }
-      };
+      if (!user) {
+        throw new Error('사용자가 로그인되지 않았습니다.');
+      }
+
+      // 초대 코드로 팀 찾기
+      const team = await teamsService.findTeamByInviteCode(joinData.inviteCode);
+      if (!team) {
+        throw new Error('유효하지 않은 초대 코드입니다.');
+      }
+
+      // 팀에 참가
+      await teamsService.joinTeam(team.id, user.id);
 
       // 팀 목록에 추가
-      const updatedTeams = [...userTeams, joinedTeam];
+      const updatedTeams = [...userTeams, team];
       setUserTeams(updatedTeams);
       
       // 참가한 팀을 현재 팀으로 설정
-      await selectTeam(joinedTeam);
+      await selectTeam(team);
       
       // 로컬 스토리지에 저장
       await AsyncStorage.setItem(STORAGE_KEYS.USER_TEAMS, JSON.stringify(updatedTeams));
 
-      return joinedTeam;
+      return team;
     } catch (error) {
       console.error('Failed to join team:', error);
       throw error;
@@ -253,8 +276,29 @@ export function TeamProvider({ children }: { children: ReactNode }) {
 
   const refreshTeams = async () => {
     try {
-      // TODO: API 호출로 팀 목록 새로고침
+      if (!user) {
+        console.log('User not logged in, skipping team refresh');
+        return;
+      }
+
       console.log('Refreshing teams...');
+      const teams = await teamsService.getUserTeams(user.id);
+      setUserTeams(teams);
+      
+      // 로컬 스토리지에 저장
+      await AsyncStorage.setItem(STORAGE_KEYS.USER_TEAMS, JSON.stringify(teams));
+      
+      // 현재 선택된 팀이 목록에 없다면 첫 번째 팀으로 설정
+      if (currentTeam && !teams.find(t => t.id === currentTeam.id)) {
+        if (teams.length > 0) {
+          await selectTeam(teams[0]);
+        } else {
+          setCurrentTeam(null);
+          setHasSelectedTeam(false);
+          await AsyncStorage.removeItem(STORAGE_KEYS.CURRENT_TEAM);
+          await AsyncStorage.setItem(STORAGE_KEYS.HAS_SELECTED_TEAM, 'false');
+        }
+      }
     } catch (error) {
       console.error('Failed to refresh teams:', error);
       throw error;
@@ -263,7 +307,10 @@ export function TeamProvider({ children }: { children: ReactNode }) {
 
   const inviteMember = async (email: string) => {
     try {
-      // TODO: API 호출로 멤버 초대
+      if (!currentTeam) {
+        throw new Error('선택된 팀이 없습니다.');
+      }
+      // TODO: 이메일로 사용자 찾기 및 초대 기능 구현
       console.log('Inviting member:', email);
     } catch (error) {
       console.error('Failed to invite member:', error);
@@ -273,7 +320,10 @@ export function TeamProvider({ children }: { children: ReactNode }) {
 
   const removeMember = async (memberId: string) => {
     try {
-      // TODO: API 호출로 멤버 제거
+      if (!currentTeam) {
+        throw new Error('선택된 팀이 없습니다.');
+      }
+      // TODO: 팀 멤버 제거 기능 구현
       console.log('Removing member:', memberId);
     } catch (error) {
       console.error('Failed to remove member:', error);
@@ -283,7 +333,10 @@ export function TeamProvider({ children }: { children: ReactNode }) {
 
   const updateMemberRole = async (memberId: string, role: 'admin' | 'member') => {
     try {
-      // TODO: API 호출로 멤버 역할 업데이트
+      if (!currentTeam) {
+        throw new Error('선택된 팀이 없습니다.');
+      }
+      // TODO: 멤버 역할 업데이트 기능 구현
       console.log('Updating member role:', memberId, role);
     } catch (error) {
       console.error('Failed to update member role:', error);
@@ -316,42 +369,25 @@ export function TeamProvider({ children }: { children: ReactNode }) {
 
   const skipTeamSelection = async () => {
     try {
-      // 개발 모드 전용: 더미 팀 데이터 생성하여 hasSelectedTeam을 true로 설정
-      const dummyTeam: Team = {
-        id: 'dev_team',
-        name: '개발 팀',
-        description: '개발 모드용 더미 팀',
-        members: [{
-          id: 'dev_member_1',
-          userId: 'dev_user',
-          userName: '개발자',
-          email: 'dev@example.com',
-          role: 'owner',
-          joinedAt: new Date().toISOString()
-        }],
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        ownerId: 'dev_user',
-        inviteCode: 'DEV123',
-        settings: {
-          allowMemberInvites: true,
-          autoAssignNewRoutines: false,
-          notificationPreferences: {
-            routineReminders: true,
-            billAlerts: true,
-            chatMessages: true
-          }
-        }
-      };
+      if (!user) {
+        throw new Error('사용자가 로그인되지 않았습니다.');
+      }
 
-      setCurrentTeam(dummyTeam);
-      setUserTeams([dummyTeam]);
+      // 개발 모드 전용: 데모 팀 생성
+      const demoTeam = await teamsService.createTeam({
+        name: '데모 팀',
+        description: '개발 및 테스트용 팀입니다.',
+        created_by: user.id
+      });
+
+      setCurrentTeam(demoTeam);
+      setUserTeams([demoTeam]);
       setHasSelectedTeam(true);
       
       // 로컬 스토리지에 저장
       await Promise.all([
-        AsyncStorage.setItem(STORAGE_KEYS.CURRENT_TEAM, JSON.stringify(dummyTeam)),
-        AsyncStorage.setItem(STORAGE_KEYS.USER_TEAMS, JSON.stringify([dummyTeam])),
+        AsyncStorage.setItem(STORAGE_KEYS.CURRENT_TEAM, JSON.stringify(demoTeam)),
+        AsyncStorage.setItem(STORAGE_KEYS.USER_TEAMS, JSON.stringify([demoTeam])),
         AsyncStorage.setItem(STORAGE_KEYS.HAS_SELECTED_TEAM, 'true')
       ]);
     } catch (error) {

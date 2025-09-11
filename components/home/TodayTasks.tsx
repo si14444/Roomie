@@ -1,46 +1,129 @@
-import React from "react";
-import { StyleSheet, TouchableOpacity } from "react-native";
+import React, { useState, useEffect } from "react";
+import { StyleSheet, TouchableOpacity, ActivityIndicator } from "react-native";
 import { Text, View } from "@/components/Themed";
 import { Ionicons } from "@expo/vector-icons";
 import Colors from "@/constants/Colors";
+import { useTeam } from "@/contexts/TeamContext";
+import { routinesService, Routine } from "@/lib/supabase-service";
 
 interface Task {
-  id: number;
+  id: string;
   task: string;
   assignee: string;
   status: "pending" | "completed" | "overdue";
   time: string;
+  originalRoutine?: Routine;
 }
 
 interface TodayTasksProps {
   onAddTask?: () => void;
-  onTaskPress?: (taskId: number) => void;
+  onTaskPress?: (taskId: string) => void;
 }
 
 export function TodayTasks({ onAddTask, onTaskPress }: TodayTasksProps) {
-  const todayTasks: Task[] = [
-    {
-      id: 1,
-      task: "설거지",
-      assignee: "김철수",
-      status: "pending",
-      time: "오후 2시",
-    },
-    {
-      id: 2,
-      task: "거실 청소",
-      assignee: "이영희",
-      status: "completed",
-      time: "오전 10시",
-    },
-    {
-      id: 3,
-      task: "화장실 청소",
-      assignee: "박민수",
-      status: "overdue",
-      time: "어제",
-    },
-  ];
+  const { currentTeam } = useTeam();
+  const [todayTasks, setTodayTasks] = useState<Task[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Load today's routines from Supabase
+  const loadTodayTasks = async () => {
+    if (!currentTeam?.id) {
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      const routines = await routinesService.getTeamRoutines(currentTeam.id);
+      
+      // Get today's date
+      const today = new Date();
+      const todayStr = today.toISOString().split('T')[0];
+      
+      // Filter and transform routines for today
+      const todayRoutines = routines.filter(routine => {
+        // Check if routine is active and should show today
+        if (!routine.is_active) return false;
+        
+        // For recurring routines, check if today matches the schedule
+        if (routine.frequency === 'daily') {
+          return true; // Daily routines show every day
+        } else if (routine.frequency === 'weekly') {
+          // Weekly routines show on assigned days
+          const dayOfWeek = today.getDay(); // 0 = Sunday, 1 = Monday, etc.
+          const assignedDay = routine.assigned_day;
+          if (assignedDay === 'sunday' && dayOfWeek === 0) return true;
+          if (assignedDay === 'monday' && dayOfWeek === 1) return true;
+          if (assignedDay === 'tuesday' && dayOfWeek === 2) return true;
+          if (assignedDay === 'wednesday' && dayOfWeek === 3) return true;
+          if (assignedDay === 'thursday' && dayOfWeek === 4) return true;
+          if (assignedDay === 'friday' && dayOfWeek === 5) return true;
+          if (assignedDay === 'saturday' && dayOfWeek === 6) return true;
+        }
+        
+        return false;
+      });
+      
+      // Transform routines to tasks
+      const transformedTasks: Task[] = todayRoutines.map(routine => {
+        // Check if this routine was completed today
+        const completedToday = routine.completions?.some(completion => {
+          const completionDate = new Date(completion.completed_at).toISOString().split('T')[0];
+          return completionDate === todayStr;
+        }) || false;
+        
+        // Determine status
+        let status: "pending" | "completed" | "overdue" = "pending";
+        if (completedToday) {
+          status = "completed";
+        } else {
+          // Check if it's overdue (past assigned time)
+          const now = new Date();
+          if (routine.assigned_time) {
+            const [hour, minute] = routine.assigned_time.split(':').map(Number);
+            const assignedTime = new Date(today);
+            assignedTime.setHours(hour, minute, 0, 0);
+            
+            if (now > assignedTime) {
+              status = "overdue";
+            }
+          }
+        }
+        
+        // Format time
+        let timeText = "시간 미정";
+        if (routine.assigned_time) {
+          const [hour, minute] = routine.assigned_time.split(':').map(Number);
+          const period = hour >= 12 ? "오후" : "오전";
+          const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
+          timeText = `${period} ${displayHour}시${minute > 0 ? ` ${minute}분` : ''}`;
+        }
+        
+        return {
+          id: routine.id,
+          task: routine.title,
+          assignee: routine.assigned_user_name || "미배정",
+          status,
+          time: timeText,
+          originalRoutine: routine
+        };
+      });
+      
+      setTodayTasks(transformedTasks);
+    } catch (err) {
+      console.error('Error loading today tasks:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load today tasks');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadTodayTasks();
+  }, [currentTeam?.id]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -68,6 +151,50 @@ export function TodayTasks({ onAddTask, onTaskPress }: TodayTasksProps) {
     }
   };
 
+  if (isLoading) {
+    return (
+      <View style={styles.card}>
+        <View style={styles.cardHeader}>
+          <Text style={styles.cardTitle}>오늘 할 일</Text>
+          <ActivityIndicator size="small" color={Colors.light.primary} />
+        </View>
+        <View style={styles.loadingContainer}>
+          <Text style={styles.loadingText}>오늘 할 일을 불러오는 중...</Text>
+        </View>
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={styles.card}>
+        <View style={styles.cardHeader}>
+          <Text style={styles.cardTitle}>오늘 할 일</Text>
+          <TouchableOpacity onPress={loadTodayTasks}>
+            <Ionicons name="refresh" size={20} color={Colors.light.primary} />
+          </TouchableOpacity>
+        </View>
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>데이터를 불러올 수 없습니다</Text>
+          <Text style={styles.errorSubtext}>{error}</Text>
+        </View>
+      </View>
+    );
+  }
+
+  if (!currentTeam) {
+    return (
+      <View style={styles.card}>
+        <View style={styles.cardHeader}>
+          <Text style={styles.cardTitle}>오늘 할 일</Text>
+        </View>
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyText}>팀을 먼저 선택해주세요</Text>
+        </View>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.card}>
       <View style={styles.cardHeader}>
@@ -76,7 +203,13 @@ export function TodayTasks({ onAddTask, onTaskPress }: TodayTasksProps) {
           <Ionicons name="add" size={24} color={Colors.light.primary} />
         </TouchableOpacity>
       </View>
-      <View style={styles.tasksList}>
+      
+      {todayTasks.length === 0 ? (
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyText}>오늘 할 일이 없습니다</Text>
+        </View>
+      ) : (
+        <View style={styles.tasksList}>
         {todayTasks.map((task, index) => (
           <TouchableOpacity
             key={task.id}
@@ -104,7 +237,8 @@ export function TodayTasks({ onAddTask, onTaskPress }: TodayTasksProps) {
             </View>
           </TouchableOpacity>
         ))}
-      </View>
+        </View>
+      )}
     </View>
   );
 }
@@ -170,5 +304,35 @@ const styles = StyleSheet.create({
     color: "white",
     fontSize: 12,
     fontWeight: "600",
+  },
+  loadingContainer: {
+    padding: 20,
+    alignItems: "center",
+  },
+  loadingText: {
+    fontSize: 14,
+    color: Colors.light.mutedText,
+  },
+  errorContainer: {
+    padding: 20,
+    alignItems: "center",
+  },
+  errorText: {
+    fontSize: 14,
+    color: Colors.light.errorColor,
+    marginBottom: 4,
+  },
+  errorSubtext: {
+    fontSize: 12,
+    color: Colors.light.mutedText,
+    textAlign: "center",
+  },
+  emptyContainer: {
+    padding: 20,
+    alignItems: "center",
+  },
+  emptyText: {
+    fontSize: 14,
+    color: Colors.light.mutedText,
   },
 });

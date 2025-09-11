@@ -4,6 +4,8 @@ import { Text, View } from "@/components/Themed";
 import { Ionicons } from "@expo/vector-icons";
 import Colors from "@/constants/Colors";
 import { CalendarModal } from "./CalendarModal";
+import { useTeam } from "@/contexts/TeamContext";
+import { teamsService } from "@/lib/supabase-service";
 
 export interface CustomSplit {
   [roommateId: string]: number;
@@ -56,7 +58,31 @@ export function AddBillModal({
     }
   }, [newBill.bank]);
   
-  const roommates = ["김철수", "이영희", "박민수", "정지수"];
+  const { currentTeam } = useTeam();
+  const [roommates, setRoommates] = useState<string[]>([]);
+
+  // Load team members when modal is visible
+  useEffect(() => {
+    const loadRoommates = async () => {
+      if (!visible || !currentTeam?.id) {
+        return;
+      }
+
+      try {
+        const members = await teamsService.getTeamMembers(currentTeam.id);
+        const memberNames = members.map(member => 
+          member.user?.full_name || member.user?.email || 'Unknown User'
+        );
+        setRoommates(memberNames);
+      } catch (error) {
+        console.error('Error loading team members:', error);
+        // Fallback to empty array
+        setRoommates([]);
+      }
+    };
+
+    loadRoommates();
+  }, [visible, currentTeam?.id]);
   const banks = [
     "KB국민은행", "신한은행", "우리은행", "하나은행", 
     "IBK기업은행", "NH농협은행", "카카오뱅크", "토스뱅크", "기타"

@@ -1,65 +1,46 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   Notification,
   NotificationType,
   CreateNotificationParams,
   NotificationIcon,
 } from "@/types/notification.types";
+import { notificationsService } from "@/lib/supabase-service";
+import { useAuth } from "@/contexts/AuthContext";
+import { useTeam } from "@/contexts/TeamContext";
 import Colors from "@/constants/Colors";
 
 export function useNotifications() {
-  const [notifications, setNotifications] = useState<Notification[]>([
-    // 샘플 데이터
-    {
-      id: "1",
-      title: "루틴 완료",
-      message: "김철수가 설거지를 완료했습니다",
-      type: "routine_completed",
-      isRead: false,
-      createdAt: new Date(Date.now() - 30 * 60 * 1000).toISOString(), // 30분 전
-      relatedId: "routine_1",
-    },
-    {
-      id: "2",
-      title: "공과금 추가",
-      message: "전기요금 청구서가 등록되었습니다 (₩85,000)",
-      type: "bill_added",
-      isRead: false,
-      createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), // 2시간 전
-      relatedId: "bill_1",
-    },
-    {
-      id: "3",
-      title: "물품 요청",
-      message: "이영희가 휴지 구매를 요청했습니다",
-      type: "item_request",
-      isRead: true,
-      createdAt: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(), // 3시간 전
-      relatedId: "item_1",
-    },
-    {
-      id: "4",
-      title: "투표 생성",
-      message: "새로운 투표가 생성되었습니다: 오늘 저녁 뭐 시켜먹을까요?",
-      type: "poll_created",
-      isRead: true,
-      createdAt: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(), // 5시간 전
-      relatedId: "poll_1",
-    },
-    {
-      id: "5",
-      title: "루틴 지연",
-      message: "쓰레기 버리기 루틴이 지연되었습니다",
-      type: "routine_overdue",
-      isRead: false,
-      createdAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(), // 1일 전
-      relatedId: "routine_2",
-    },
-  ]);
+  const { user } = useAuth();
+  const { currentTeam } = useTeam();
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+
+  // 컴포넌트 마운트 시 알림 로드
+  useEffect(() => {
+    if (user) {
+      loadNotifications();
+    }
+  }, [user]);
+
+  // 알림 로드 함수
+  const loadNotifications = async () => {
+    if (!user) return;
+    
+    setIsLoading(true);
+    try {
+      const userNotifications = await notificationsService.getUserNotifications(user.id);
+      setNotifications(userNotifications);
+    } catch (error) {
+      console.error('Failed to load notifications:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   // 읽지 않은 알림 개수
   const unreadCount = useMemo(() => {
-    return notifications.filter((n) => !n.isRead).length;
+    return notifications.filter((n) => !n.is_read).length;
   }, [notifications]);
 
   // 알림 타입별 아이콘 정보
@@ -120,6 +101,12 @@ export function useNotifications() {
           color: Colors.light.primary,
           backgroundColor: "#F8FAFC",
         };
+      case "announcement":
+        return {
+          name: "megaphone",
+          color: Colors.light.warningColor,
+          backgroundColor: "#FEF7ED",
+        };
       case "system":
         return {
           name: "settings",
@@ -155,92 +142,147 @@ export function useNotifications() {
     }
   };
 
-  // 알림 생성
-  const createNotification = (params: CreateNotificationParams): void => {
-    const newNotification: Notification = {
-      id: Date.now().toString(),
-      title: params.title,
-      message: params.message,
-      type: params.type,
-      isRead: false,
-      createdAt: new Date().toISOString(),
-      relatedId: params.relatedId,
-      actionData: params.actionData,
-    };
+  // 새 알림 생성
+  const createNotification = async (params: CreateNotificationParams) => {
+    if (!user || !currentTeam) {
+      console.warn('Cannot create notification: user or team not available');
+      return;
+    }
 
-    setNotifications((prev) => [newNotification, ...prev]);
+    try {
+      if (params.type === 'announcement') {
+        // 팀 전체에 공지사항 알림 생성
+        await notificationsService.createTeamNotification(
+          currentTeam.id,
+          params.title,
+          params.message,
+          params.type,
+          params.relatedId,
+          params.actionData
+        );
+      } else {
+        // 개별 알림 생성
+        const newNotification = await notificationsService.createNotification({
+          team_id: currentTeam.id,
+          user_id: user.id,
+          title: params.title,
+          message: params.message,
+          type: params.type,
+          related_id: params.relatedId,
+          action_data: params.actionData,
+          is_read: false
+        });
+        
+        setNotifications((prev) => [newNotification, ...prev]);
+      }
+      
+      // 알림 생성 후 목록 새로고침
+      await loadNotifications();
+    } catch (error) {
+      console.error('Failed to create notification:', error);
+      throw error;
+    }
   };
 
-  // 알림 읽음 처리
-  const markAsRead = (notificationId: string): void => {
-    setNotifications((prev) =>
-      prev.map((notification) =>
-        notification.id === notificationId
-          ? { ...notification, isRead: true }
-          : notification
-      )
-    );
+  // 알림을 읽음으로 표시
+  const markAsRead = async (notificationId: string) => {
+    try {
+      await notificationsService.markAsRead(notificationId);
+      setNotifications((prev) =>
+        prev.map((notification) =>
+          notification.id === notificationId
+            ? { ...notification, is_read: true }
+            : notification
+        )
+      );
+    } catch (error) {
+      console.error('Failed to mark notification as read:', error);
+    }
   };
 
-  // 모든 알림 읽음 처리
-  const markAllAsRead = (): void => {
-    setNotifications((prev) =>
-      prev.map((notification) => ({ ...notification, isRead: true }))
-    );
+  // 모든 알림을 읽음으로 표시
+  const markAllAsRead = async () => {
+    if (!user) return;
+    
+    try {
+      await notificationsService.markAllAsRead(user.id);
+      setNotifications((prev) =>
+        prev.map((notification) => ({ ...notification, is_read: true }))
+      );
+    } catch (error) {
+      console.error('Failed to mark all notifications as read:', error);
+    }
   };
 
-  // 알림 삭제
-  const deleteNotification = (notificationId: string): void => {
+  // 알림 삭제 (로컬에서만)
+  const deleteNotification = (notificationId: string) => {
     setNotifications((prev) =>
       prev.filter((notification) => notification.id !== notificationId)
     );
   };
 
-  // 모든 알림 삭제
-  const clearAllNotifications = (): void => {
+  // 모든 알림 삭제 (로컬에서만)
+  const clearAllNotifications = () => {
     setNotifications([]);
   };
 
   // 읽은 알림만 삭제
-  const clearReadNotifications = (): void => {
-    setNotifications((prev) =>
-      prev.filter((notification) => !notification.isRead)
-    );
+  const clearReadNotifications = async () => {
+    if (!user) return;
+    
+    try {
+      await notificationsService.clearReadNotifications(user.id);
+      setNotifications((prev) => prev.filter((notification) => !notification.is_read));
+    } catch (error) {
+      console.error('Failed to clear read notifications:', error);
+    }
   };
 
-  // 알림 클릭 처리 (각 알림 타입에 따른 액션)
-  const handleNotificationClick = (notification: Notification): void => {
-    // 읽음 처리
-    markAsRead(notification.id);
+  // 알림 클릭 핸들러 (네비게이션 로직)
+  const handleNotificationClick = (notification: Notification) => {
+    // 알림을 읽음으로 표시
+    if (!notification.is_read) {
+      markAsRead(notification.id);
+    }
 
-    // 타입별 액션 처리 (필요에 따라 라우팅 등)
+    // 알림 타입에 따른 네비게이션 처리
     switch (notification.type) {
       case "routine_completed":
       case "routine_overdue":
-        console.log("Navigate to routines tab", notification.relatedId);
+        // 루틴 탭으로 이동
+        console.log("Navigate to routines tab");
         break;
       case "bill_added":
       case "bill_payment_due":
       case "payment_received":
-        console.log("Navigate to bills tab", notification.relatedId);
+        // 공과금 탭으로 이동
+        console.log("Navigate to bills tab");
         break;
       case "item_request":
       case "item_purchased":
-        console.log("Navigate to items tab", notification.relatedId);
+        // 물품 탭으로 이동
+        console.log("Navigate to items tab");
         break;
       case "poll_created":
       case "poll_ended":
       case "chat_message":
-        console.log("Navigate to chat tab", notification.relatedId);
+        // 채팅 탭으로 이동
+        console.log("Navigate to chat tab");
+        break;
+      case "announcement":
+        // 홈 탭으로 이동 (공지사항은 홈에 표시)
+        console.log("Navigate to home tab");
         break;
       default:
-        console.log("Handle notification:", notification.id);
+        // 기본적으로 홈으로 이동
+        console.log("Navigate to home tab");
     }
   };
 
   return {
     notifications,
     unreadCount,
+    isLoading,
     createNotification,
     markAsRead,
     markAllAsRead,
@@ -250,5 +292,6 @@ export function useNotifications() {
     handleNotificationClick,
     getNotificationIcon,
     getRelativeTime,
+    loadNotifications,
   };
 }

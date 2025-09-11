@@ -157,9 +157,9 @@ export const teamsService = {
       .from('teams')
       .select(`
         *,
-        team_members!inner(user_id)
+        team_memberships!inner(user_id)
       `)
-      .eq('team_members.user_id', userId)
+      .eq('team_memberships.user_id', userId)
       .order('created_at', { ascending: false });
 
     if (error) throw error;
@@ -168,26 +168,51 @@ export const teamsService = {
 
   // 팀 생성
   async createTeam(teamData: Omit<Team, 'id' | 'created_at' | 'updated_at' | 'invite_code'>): Promise<Team> {
-    const { data, error } = await supabase
-      .from('teams')
-      .insert([teamData])
-      .select()
-      .single();
+    console.log('🔄 Creating team with data:', teamData);
+    
+    try {
+      const { data, error } = await supabase
+        .from('teams')
+        .insert([{
+          name: teamData.name,
+          description: teamData.description,
+          created_by: teamData.created_by
+        }])
+        .select()
+        .single();
 
-    if (error) throw error;
+      if (error) {
+        console.error('❌ Team creation failed:', error);
+        throw error;
+      }
 
-    // 생성자를 관리자로 팀에 추가
-    if (teamData.created_by) {
-      await supabase
-        .from('team_members')
-        .insert({
-          team_id: data.id,
-          user_id: teamData.created_by,
-          role: 'admin'
-        });
+      console.log('✅ Team created successfully:', data);
+
+      // 생성자를 관리자로 팀에 추가
+      if (teamData.created_by) {
+        console.log('🔄 Adding creator as admin...');
+        const { error: memberError } = await supabase
+          .from('team_memberships')
+          .insert({
+            team_id: data.id,
+            user_id: teamData.created_by,
+            role: 'admin'
+          });
+
+        if (memberError) {
+          console.error('❌ Failed to add team member:', memberError);
+          // 팀은 생성되었지만 멤버 추가 실패 - 에러를 던지지 않고 경고만
+          console.warn('Team created but failed to add creator as member');
+        } else {
+          console.log('✅ Creator added as admin successfully');
+        }
+      }
+
+      return data;
+    } catch (error) {
+      console.error('❌ Team creation error:', error);
+      throw error;
     }
-
-    return data;
   },
 
   // 초대 코드로 팀 찾기
@@ -205,7 +230,7 @@ export const teamsService = {
   // 팀에 참여
   async joinTeam(teamId: string, userId: string): Promise<void> {
     const { error } = await supabase
-      .from('team_members')
+      .from('team_memberships')
       .insert({
         team_id: teamId,
         user_id: userId,
@@ -218,7 +243,7 @@ export const teamsService = {
   // 팀 멤버 목록 가져오기
   async getTeamMembers(teamId: string): Promise<TeamMember[]> {
     const { data, error } = await supabase
-      .from('team_members')
+      .from('team_memberships')
       .select(`
         *,
         profile:profiles(*)
@@ -600,7 +625,7 @@ export const notificationsService = {
   ): Promise<void> {
     // 팀 멤버들 가져오기
     const { data: teamMembers } = await supabase
-      .from('team_members')
+      .from('team_memberships')
       .select('user_id')
       .eq('team_id', teamId);
 

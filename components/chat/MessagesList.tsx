@@ -1,47 +1,120 @@
 import { Text, View } from "@/components/Themed";
 import Colors from "@/constants/Colors";
 import { Ionicons } from "@expo/vector-icons";
-import { StyleSheet } from "react-native";
+import { StyleSheet, ActivityIndicator, TouchableOpacity } from "react-native";
+import { useNotificationContext } from "@/contexts/NotificationContext";
+import { useState, useEffect } from "react";
+import { Notification } from "@/types/notification.types";
 
 interface Message {
-  id: number;
+  id: string;
   sender: string;
   text: string;
   time: string;
   type: "notification" | "request" | "message" | "system";
+  originalNotification?: Notification;
 }
 
 export function MessagesList() {
-  const messages: Message[] = [
-    {
-      id: 1,
-      sender: "김철수",
-      text: "설거지 완료했습니다!",
-      time: "14:30",
-      type: "notification",
-    },
-    {
-      id: 2,
-      sender: "이영희",
-      text: "휴지 떨어져가는데 누가 사올 수 있나요?",
-      time: "15:45",
-      type: "request",
-    },
-    {
-      id: 3,
-      sender: "박민수",
-      text: "제가 사올게요",
-      time: "15:47",
-      type: "message",
-    },
-    {
-      id: 4,
-      sender: "시스템",
-      text: "공과금 정산이 완료되었습니다.",
-      time: "16:00",
-      type: "system",
-    },
-  ];
+  const { notifications } = useNotificationContext();
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Transform notifications to messages
+  useEffect(() => {
+    try {
+      setIsLoading(true);
+      
+      // Get recent notifications (last 20)
+      const recentNotifications = notifications
+        .slice()
+        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+        .slice(0, 20);
+      
+      const transformedMessages: Message[] = recentNotifications.map(notification => {
+        // Format time
+        const createdAt = new Date(notification.created_at);
+        const timeString = createdAt.toLocaleTimeString('ko-KR', {
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: false
+        });
+        
+        // Determine message type and sender based on notification type
+        let messageType: "notification" | "request" | "message" | "system" = "notification";
+        let sender = "시스템";
+        
+        switch (notification.type) {
+          case 'routine_completed':
+          case 'task_completed':
+            messageType = "notification";
+            sender = "작업 알림";
+            break;
+          case 'bill_added':
+          case 'payment_received':
+            messageType = "system";
+            sender = "결제 시스템";
+            break;
+          case 'item_low_stock':
+          case 'purchase_request':
+            messageType = "request";
+            sender = "재고 관리";
+            break;
+          case 'team_announcement':
+            messageType = "message";
+            sender = "팀 공지";
+            break;
+          case 'feedback_request':
+            messageType = "request";
+            sender = "피드백 요청";
+            break;
+          default:
+            messageType = "notification";
+            sender = "알림";
+        }
+        
+        return {
+          id: notification.id,
+          sender,
+          text: notification.message,
+          time: timeString,
+          type: messageType,
+          originalNotification: notification
+        };
+      });
+      
+      setMessages(transformedMessages);
+    } catch (error) {
+      console.error('Error transforming notifications to messages:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [notifications]);
+
+  if (isLoading) {
+    return (
+      <View style={styles.messagesSection}>
+        <View style={styles.headerRow}>
+          <Text style={styles.sectionTitle}>최근 메시지</Text>
+          <ActivityIndicator size="small" color={Colors.light.primary} />
+        </View>
+        <View style={styles.loadingContainer}>
+          <Text style={styles.loadingText}>메시지를 불러오는 중...</Text>
+        </View>
+      </View>
+    );
+  }
+
+  if (messages.length === 0) {
+    return (
+      <View style={styles.messagesSection}>
+        <Text style={styles.sectionTitle}>최근 메시지</Text>
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyText}>아직 메시지가 없습니다</Text>
+        </View>
+      </View>
+    );
+  }
 
   const getMessageStyle = (type: string) => {
     switch (type) {
@@ -178,5 +251,27 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: Colors.light.text,
     lineHeight: 20,
+  },
+  headerRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  loadingContainer: {
+    padding: 20,
+    alignItems: "center",
+  },
+  loadingText: {
+    fontSize: 14,
+    color: Colors.light.mutedText,
+  },
+  emptyContainer: {
+    padding: 20,
+    alignItems: "center",
+  },
+  emptyText: {
+    fontSize: 14,
+    color: Colors.light.mutedText,
   },
 });

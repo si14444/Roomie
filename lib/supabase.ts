@@ -151,13 +151,25 @@ export const mapKakaoUserToProfile = (kakaoUser: any) => {
     ];
     
     possibleEmailPaths.forEach((email, index) => {
-      console.log(`Email path ${index + 1}:`, email, `(valid: ${email && typeof email === 'string' && email.includes('@')})`);
+      console.log(`Email path ${index + 1}:`, {
+        value: email,
+        type: typeof email,
+        hasAt: email && typeof email === 'string' && email.includes('@'),
+        length: email?.length,
+        charCodes: email && typeof email === 'string' ? email.split('').map(c => `${c}(${c.charCodeAt(0)})`).join(', ') : 'N/A'
+      });
     });
     
     for (const email of possibleEmailPaths) {
-      if (email && typeof email === 'string' && email.includes('@') && email.trim()) {
-        console.log('✅ Valid email found:', email.trim());
-        return email.trim();
+      if (email && typeof email === 'string' && email.includes('@')) {
+        // Trim and clean the email immediately
+        const trimmedEmail = email.trim();
+        console.log('✅ Valid email found (before cleaning):', {
+          original: email,
+          trimmed: trimmedEmail,
+          length: trimmedEmail.length
+        });
+        return trimmedEmail;
       }
     }
     
@@ -182,9 +194,38 @@ export const mapKakaoUserToProfile = (kakaoUser: any) => {
   console.log('=== FULL KAKAO OBJECT ===');
   console.log('Full structure:', JSON.stringify(kakaoUser, null, 2));
   
-  // 최종 이메일과 이름 결정 - 일관된 fallback 도메인 사용
-  const finalEmail = userEmail || `kakao_user_${providerId}@roomie.app`;
+  // 최종 이메일과 이름 결정
+  let finalEmail: string;
   const finalName = nickname || `카카오사용자${providerId.slice(-4)}`;
+  
+  if (userEmail) {
+    console.log('🧹 Sanitizing extracted email before final assignment...');
+    finalEmail = userEmail
+      .trim()
+      .replace(/[(){}[\]<>]/g, '') // Remove brackets/parentheses
+      .replace(/\s+/g, '') // Remove spaces
+      .replace(/[^\w@.-]/g, '') // Only allow alphanumeric, @, ., -, _
+      .replace(/\)+$/, '') // Remove trailing )
+      .replace(/\(+$/, '') // Remove trailing (
+      .replace(/[^a-z0-9@.-]/gi, '') // Final cleanup
+      .toLowerCase();
+      
+    console.log('🧹 Email sanitized:', {
+      original: userEmail,
+      sanitized: finalEmail,
+      changed: userEmail !== finalEmail
+    });
+    
+    // 최종 검증: 정리된 이메일이 유효하지 않으면 fallback 사용
+    const emailRegex = /^[a-z0-9][a-z0-9._-]*[a-z0-9]@[a-z0-9][a-z0-9.-]*[a-z0-9]\.[a-z]{2,}$/;
+    if (!emailRegex.test(finalEmail)) {
+      console.warn('⚠️ Sanitized email still invalid, using fallback:', finalEmail);
+      finalEmail = `${providerId}@kakao.roomie.app`; // 더 간결한 fallback
+    }
+  } else {
+    console.log('⚠️ No email extracted from Kakao, using fallback email');
+    finalEmail = `${providerId}@kakao.roomie.app`; // 더 간결한 fallback
+  }
   
   console.log('=== FINAL MAPPING RESULT ===');
   console.log('Final Email:', finalEmail, '(is real kakao email:', !!userEmail, ')');
@@ -221,6 +262,25 @@ export const signInWithKakaoUser = async (kakaoUser: any) => {
   });
   
   const profile = mapKakaoUserToProfile(kakaoUser);
+  
+  console.log('🔍 PROFILE MAPPING RESULT:', {
+    profileEmail: profile.email,
+    profileEmailLength: profile.email?.length,
+    profileEmailCharCodes: profile.email ? profile.email.split('').map(c => `${c}(${c.charCodeAt(0)})`).join(', ') : 'N/A',
+    profileName: profile.full_name,
+    providerId: profile.provider_id
+  });
+  
+  // Test our sanitization function with the actual email
+  if (profile.email) {
+    console.log('🧪 TESTING SANITIZATION with actual email:');
+    const testSanitized = sanitizeEmail(profile.email, profile.provider_id);
+    console.log('🧪 Test result:', {
+      original: profile.email,
+      sanitized: testSanitized,
+      works: testSanitized !== profile.email
+    });
+  }
   
   // Supabase 연결 상태 확인
   const isConnected = await checkSupabaseConnection();
@@ -369,44 +429,83 @@ const sanitizeEmail = (email: string, providerId: string): string => {
     return `kakao_user_${providerId}@roomie.app`;
   }
   
-  // 이메일 형식 검증
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRegex.test(email)) {
-    console.warn('Invalid email format, using fallback email:', email);
+  console.log('📧 Sanitizing email:', { 
+    original: email, 
+    length: email.length,
+    charCodes: email.split('').map(c => `${c}(${c.charCodeAt(0)})`).join(', ')
+  });
+  
+  // 문자열 정제: 불필요한 공백과 특수문자 제거
+  let cleanEmail = email.trim();
+  
+  // 흔히 발생하는 문제들 수정
+  cleanEmail = cleanEmail
+    .replace(/[(){}[\]<>]/g, '') // 괄호류 제거
+    .replace(/\s+/g, '') // 모든 공백 제거
+    .replace(/[^\w@.-]/g, '') // 알파벳, 숫자, @, ., -, _ 만 허용
+    .replace(/^\W+|\W+$/g, '') // 시작과 끝의 특수문자 제거
+    .toLowerCase();
+    
+  // 특별히 문제가 되는 패턴들 추가 정리
+  cleanEmail = cleanEmail
+    .replace(/\)+$/, '') // 끝에 있는 모든 ) 제거
+    .replace(/\(+$/, '') // 끝에 있는 모든 ( 제거
+    .replace(/[^a-z0-9@.-]/g, ''); // 한번 더 정리
+    
+  console.log('🧹 After cleaning:', cleanEmail);
+  
+  // 기본 이메일 형식 검증 (더 엄격)
+  const strictEmailRegex = /^[a-z0-9][a-z0-9._-]*[a-z0-9]@[a-z0-9][a-z0-9.-]*[a-z0-9]\.[a-z]{2,}$/;
+  if (!strictEmailRegex.test(cleanEmail)) {
+    console.warn('❌ Invalid email format after cleaning, using fallback email:', cleanEmail);
     return `kakao_user_${providerId}@roomie.app`;
   }
   
   // 이메일 길이 검증 (Supabase 제한: 보통 254자)
-  if (email.length > 250) {
-    console.warn('Email too long, using fallback email:', email.length);
+  if (cleanEmail.length > 250) {
+    console.warn('❌ Email too long, using fallback email:', cleanEmail.length);
     return `kakao_user_${providerId}@roomie.app`;
   }
   
-  // 특수문자 정제 (기본적인 이메일 문자만 허용)
-  const cleanEmail = email.toLowerCase().trim();
-  if (!/^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$/.test(cleanEmail)) {
-    console.warn('Email contains invalid characters, using fallback email:', email);
+  // 추가 검증: @ 개수 확인
+  const atCount = (cleanEmail.match(/@/g) || []).length;
+  if (atCount !== 1) {
+    console.warn('❌ Email has wrong number of @ symbols, using fallback email:', cleanEmail);
     return `kakao_user_${providerId}@roomie.app`;
   }
   
+  console.log('✅ Email sanitization successful:', cleanEmail);
   return cleanEmail;
 };
 
 // 새 Auth 사용자 생성 헬퍼 함수
 const createNewAuthUser = async (profile: any, email: string) => {
   const password = `KakaoUser_${profile.provider_id}`;
-  const sanitizedEmail = sanitizeEmail(email, profile.provider_id);
+  let sanitizedEmail = sanitizeEmail(email, profile.provider_id);
   
-  console.log('Email sanitization:', {
+  console.log('🔍 Email sanitization details:', {
     original: email,
+    originalLength: email?.length,
+    originalCharCodes: email ? email.split('').map(c => `${c}(${c.charCodeAt(0)})`).join(', ') : 'N/A',
     sanitized: sanitizedEmail,
+    sanitizedLength: sanitizedEmail?.length,
+    sanitizedCharCodes: sanitizedEmail ? sanitizedEmail.split('').map(c => `${c}(${c.charCodeAt(0)})`).join(', ') : 'N/A',
     changed: email !== sanitizedEmail
   });
   
   console.log('=== CREATING AUTH USER ===');
-  console.log('Email:', sanitizedEmail);
-  console.log('Profile name for Auth:', profile.full_name);
-  console.log('Creating user with metadata...');
+  console.log('✉️ Final email for Supabase:', sanitizedEmail);
+  console.log('👤 Profile name for Auth:', profile.full_name);
+  
+  // 최종 이메일 검증 (안전장치)
+  const finalEmailCheck = /^[a-z0-9][a-z0-9._-]*[a-z0-9]@[a-z0-9][a-z0-9.-]*[a-z0-9]\.[a-z]{2,}$/;
+  if (!finalEmailCheck.test(sanitizedEmail)) {
+    console.error('🚨 FINAL EMAIL CHECK FAILED:', sanitizedEmail);
+    console.error('🚨 Using emergency fallback email');
+    sanitizedEmail = `emergency_user_${profile.provider_id}_${Date.now()}@roomie.app`;
+  }
+  
+  console.log('🚀 Calling supabase.auth.signUp with email:', sanitizedEmail);
   
   const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
     email: sanitizedEmail,
@@ -446,7 +545,8 @@ const createNewAuthUser = async (profile: any, email: string) => {
     if (signUpError.message.includes('already registered') || 
         signUpError.message.includes('invalid') || 
         signUpError.message.includes('email')) {
-      const timestampEmail = `kakao_user_${profile.provider_id}_${Date.now()}@roomie.app`;
+      // 더 간결하고 읽기 쉬운 fallback 이메일 생성
+      const retryEmail = `${profile.provider_id}.${Date.now()}@kakao.roomie.app`;
       
       const { data: retryData, error: retryError } = await supabase.auth.signUp({
         email: timestampEmail,

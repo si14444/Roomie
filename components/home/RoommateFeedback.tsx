@@ -1,10 +1,13 @@
 import { Text, View } from "@/components/Themed";
 import Colors from "@/constants/Colors";
 import { useNotificationContext } from "@/contexts/NotificationContext";
+import { useTeam } from "@/contexts/TeamContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { Ionicons } from "@expo/vector-icons";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Alert,
+  FlatList,
   Modal,
   StyleSheet,
   TextInput,
@@ -19,90 +22,82 @@ interface Announcement {
   isImportant?: boolean;
 }
 
-const mockAnnouncements: Announcement[] = [
-  {
-    id: "1",
-    message: "주말에 전체 대청소 하려고 해요! 다들 참여 부탁드려요 🧹",
-    author: "김철수",
-    timestamp: "2시간 전",
-    isImportant: true,
-  },
-  {
-    id: "2",
-    message: "냉장고에 우유 떨어져 가는데 사오실 분 있나요?",
-    author: "이영희",
-    timestamp: "어제",
-  },
-  {
-    id: "3",
-    message: "오늘 저녁 집에서 파스타 해먹을 예정입니다! 함께 드실 분? 🍝",
-    author: "박민수",
-    timestamp: "3일 전",
-  },
-  {
-    id: "4",
-    message: "오늘 저녁 집에서 파스타 해먹을 예정입니다! 함께 드실 분? 🍝",
-    author: "박민수",
-    timestamp: "3일 전",
-  },
-  {
-    id: "5",
-    message: "오늘 저녁 집에서 파스타 해먹을 예정입니다! 함께 드실 분? 🍝",
-    author: "박민수",
-    timestamp: "3일 전",
-  },
-  {
-    id: "6",
-    message: "오늘 저녁 집에서 파스타 해먹을 예정입니다! 함께 드실 분? 🍝",
-    author: "박민수",
-    timestamp: "3일 전",
-  },
-];
+// Real announcements will be loaded from Supabase notifications
 
 export function RoommateFeedback() {
   const { createNotification } = useNotificationContext();
-  const [announcements, setAnnouncements] =
-    useState<Announcement[]>(mockAnnouncements);
+  const { currentTeam } = useTeam();
+  const { user } = useAuth();
+  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [newMessage, setNewMessage] = useState("");
   const [isImportant, setIsImportant] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const addAnnouncement = () => {
+  // Load announcements from notifications when component mounts
+  useEffect(() => {
+    loadAnnouncements();
+  }, [currentTeam]);
+
+  const loadAnnouncements = async () => {
+    if (!currentTeam || !user) return;
+    
+    setIsLoading(true);
+    try {
+      // TODO: Load actual announcement notifications from Supabase
+      // For now, show empty state
+      setAnnouncements([]);
+    } catch (error) {
+      console.error('Failed to load announcements:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const addAnnouncement = async () => {
     if (newMessage.trim().length === 0) {
       Alert.alert("알림", "공지사항을 입력해주세요.");
       return;
     }
 
-    const currentUser = "김철수"; // 현재 사용자
+    if (!user || !currentTeam) {
+      Alert.alert("오류", "로그인이 필요합니다.");
+      return;
+    }
 
-    const newAnnouncement: Announcement = {
-      id: Date.now().toString(),
-      message: newMessage.trim(),
-      author: currentUser,
-      timestamp: "방금 전",
-      isImportant,
-    };
+    try {
+      const newAnnouncement: Announcement = {
+        id: Date.now().toString(),
+        message: newMessage.trim(),
+        author: (user as any).user_metadata?.full_name || user.email || '사용자',
+        timestamp: "방금 전",
+        isImportant,
+      };
 
-    setAnnouncements((prev) => [newAnnouncement, ...prev]);
+      setAnnouncements((prev) => [newAnnouncement, ...prev]);
 
-    // 알림 생성
-    createNotification({
-      title: "새 공지사항",
-      message: `${currentUser}님이 새 공지사항을 등록했습니다`,
-      type: "system",
-      relatedId: newAnnouncement.id,
-    });
+      // 팀 전체에 알림 생성
+      await createNotification({
+        title: "새 공지사항",
+        message: `${newAnnouncement.author}님이 새 공지사항을 등록했습니다: ${newMessage.trim().substring(0, 50)}${newMessage.trim().length > 50 ? '...' : ''}`,
+        type: "announcement",
+        relatedId: newAnnouncement.id,
+      });
 
-    // 모달 닫기 및 초기화
-    setNewMessage("");
-    setIsImportant(false);
-    setModalVisible(false);
+      // 모달 닫기 및 초기화
+      setNewMessage("");
+      setIsImportant(false);
+      setModalVisible(false);
 
-    Alert.alert(
-      "공지사항 등록 완료! 📢",
-      "모든 룸메이트에게 공지사항이 전달되었습니다.",
-      [{ text: "확인", style: "default" }]
-    );
+      Alert.alert(
+        "공지사항 등록 완료! 📢",
+        "모든 룸메이트에게 공지사항이 전달되었습니다.",
+        [{ text: "확인", style: "default" }]
+      );
+    } catch (error) {
+      console.error('Failed to create announcement:', error);
+      Alert.alert("오류", "공지사항 등록에 실패했습니다.");
+    }
   };
 
   return (
@@ -126,39 +121,51 @@ export function RoommateFeedback() {
 
         {/* 공지사항 리스트 */}
         <View style={styles.announcementList}>
-          {announcements.slice(0, 4).map((item) => (
-            <View key={item.id} style={styles.announcementItem}>
-              <View style={styles.announcementHeader}>
-                <View style={styles.authorInfo}>
-                  <View
-                    style={[
-                      styles.authorAvatar,
-                      item.isImportant && styles.importantAvatar,
-                    ]}
-                  >
-                    <Text style={styles.authorInitial}>
-                      {item.author.charAt(0)}
-                    </Text>
-                    {item.isImportant && (
-                      <View style={styles.importantBadge}>
-                        <Ionicons name="megaphone" size={8} color="white" />
-                      </View>
-                    )}
-                  </View>
-                  <View>
-                    <Text style={styles.authorName}>{item.author}</Text>
-                    <Text style={styles.timestamp}>{item.timestamp}</Text>
-                  </View>
-                </View>
-                {item.isImportant && (
-                  <View style={styles.importantTag}>
-                    <Text style={styles.importantTagText}>중요</Text>
-                  </View>
-                )}
-              </View>
-              <Text style={styles.announcementMessage}>{item.message}</Text>
+          {isLoading ? (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyStateText}>공지사항을 불러오는 중...</Text>
             </View>
-          ))}
+          ) : announcements.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Ionicons name="megaphone-outline" size={48} color={Colors.light.mutedText} />
+              <Text style={styles.emptyStateText}>아직 공지사항이 없어요</Text>
+              <Text style={styles.emptyStateSubtext}>첫 공지사항을 작성해보세요!</Text>
+            </View>
+          ) : (
+            announcements.slice(0, 4).map((item) => (
+              <View key={item.id} style={styles.announcementItem}>
+                <View style={styles.announcementHeader}>
+                  <View style={styles.authorInfo}>
+                    <View
+                      style={[
+                        styles.authorAvatar,
+                        item.isImportant && styles.importantAvatar,
+                      ]}
+                    >
+                      <Text style={styles.authorInitial}>
+                        {item.author.charAt(0)}
+                      </Text>
+                      {item.isImportant && (
+                        <View style={styles.importantBadge}>
+                          <Ionicons name="megaphone" size={8} color="white" />
+                        </View>
+                      )}
+                    </View>
+                    <View>
+                      <Text style={styles.authorName}>{item.author}</Text>
+                      <Text style={styles.timestamp}>{item.timestamp}</Text>
+                    </View>
+                  </View>
+                  {item.isImportant && (
+                    <View style={styles.importantTag}>
+                      <Text style={styles.importantTagText}>중요</Text>
+                    </View>
+                  )}
+                </View>
+                <Text style={styles.announcementMessage}>{item.message}</Text>
+              </View>
+            ))
+          )}
         </View>
       </View>
 
@@ -347,6 +354,23 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: Colors.light.text,
     lineHeight: 20,
+  },
+  emptyState: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 40,
+    gap: 8,
+  },
+  emptyStateText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: Colors.light.mutedText,
+    textAlign: "center",
+  },
+  emptyStateSubtext: {
+    fontSize: 14,
+    color: Colors.light.mutedText,
+    textAlign: "center",
   },
   modalOverlay: {
     flex: 1,

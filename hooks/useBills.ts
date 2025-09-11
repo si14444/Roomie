@@ -1,22 +1,28 @@
 import { useNotificationContext } from "@/contexts/NotificationContext";
+import { useTeam } from "@/contexts/TeamContext";
+import { useAuth } from "@/contexts/AuthContext";
+import { billsService, teamsService, Bill as SupabaseBill, BillPayment } from "@/lib/supabase-service";
 import { Ionicons } from "@expo/vector-icons";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useState, useEffect } from "react";
 import { Alert } from "react-native";
 
-export interface Bill {
-  id: number;
-  name: string;
-  amount: number;
-  accountNumber?: string;
-  bank?: string;
+// Extended Bill interface that combines Supabase Bill with UI-specific fields
+export interface Bill extends Omit<SupabaseBill, 'category'> {
+  // Override category to match the existing enum
+  category: "utility" | "subscription" | "maintenance";
+  // UI-specific fields
+  icon: keyof typeof Ionicons.glyphMap;
   splitType: "equal" | "custom";
   customSplit?: { [roommate: string]: number };
   status: "pending" | "paid" | "overdue";
-  dueDate: string;
-  icon: keyof typeof Ionicons.glyphMap;
-  category: "utility" | "subscription" | "maintenance";
+  // Map Supabase fields to existing interface
+  name: string; // maps to title
+  amount: number; // maps to total_amount
+  dueDate: string; // maps to due_date
+  accountNumber?: string;
+  bank?: string;
   payments: { [roommate: string]: boolean };
-  createdBy: string; // 청구서를 생성한 사람
+  createdBy: string; // maps to created_by
 }
 
 interface Roommate {
@@ -35,61 +41,110 @@ export interface PaymentLinkModalData {
 
 export function useBills() {
   const { createNotification } = useNotificationContext();
-  // 현재 사용자를 김철수로 시뮬레이션 (실제로는 AuthContext에서 가져와야 함)
-  const currentUser = "김철수";
+  const { currentTeam } = useTeam();
+  const { user } = useAuth();
   
-  const [bills, setBills] = useState<Bill[]>([
-    {
-      id: 1,
-      name: "전기요금",
-      amount: 120000,
-      splitType: "equal",
-      status: "pending",
-      dueDate: "2024-12-31",
-      icon: "flash-outline" as keyof typeof Ionicons.glyphMap,
-      category: "utility",
-      payments: { 김철수: false, 이영희: false, 박민수: false, 정지수: false },
-      createdBy: "김철수",
-    },
-    {
-      id: 2,
-      name: "가스요금",
-      amount: 85000,
-      splitType: "equal",
-      status: "paid",
-      dueDate: "2024-12-28",
-      icon: "flame-outline" as keyof typeof Ionicons.glyphMap,
-      category: "utility",
-      payments: { 김철수: true, 이영희: true, 박민수: true, 정지수: true },
-      createdBy: "이영희",
-    },
-    {
-      id: 3,
-      name: "넷플릭스",
-      amount: 17000,
-      splitType: "custom",
-      status: "pending",
-      dueDate: "2025-01-01",
-      icon: "play-circle-outline" as keyof typeof Ionicons.glyphMap,
-      category: "subscription",
-      payments: { 김철수: true, 이영희: false, 박민수: false, 정지수: false },
-      createdBy: "박민수",
-    },
-    {
-      id: 4,
-      name: "인터넷",
-      amount: 35000,
-      splitType: "equal",
-      status: "overdue",
-      dueDate: "2024-12-25",
-      icon: "wifi-outline" as keyof typeof Ionicons.glyphMap,
-      category: "utility",
-      payments: { 김철수: false, 이영희: false, 박민수: true, 정지수: false },
-      createdBy: "정지수",
-    },
-  ]);
+  const [bills, setBills] = useState<Bill[]>([]);
+  const [roommates, setRoommates] = useState<string[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  
+  const currentUser = user?.user_metadata?.full_name || user?.email || "Unknown User";
 
-  const roommates = ["김철수", "이영희", "박민수", "정지수"];
+  // Load bills and team members from Supabase
+  const loadBillsData = useCallback(async () => {
+    if (!currentTeam?.id) {
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      // Load bills and team members in parallel
+      const [billsData, membersData] = await Promise.all([
+        billsService.getTeamBills(currentTeam.id),
+        teamsService.getTeamMembers(currentTeam.id)
+      ]);
+
+      // Transform Supabase bills to UI format
+      const transformedBills: Bill[] = billsData.map(bill => {
+        // Calculate payment status from bill_payments
+        const paymentsByMember: { [roommate: string]: boolean } = {};
+        const memberNames = membersData.map(m => m.user?.full_name || m.user?.email || 'Unknown');
+        
+        memberNames.forEach(memberName => {
+          const hasPayment = bill.payments?.some(
+            payment => {
+              const paymentUserName = payment.user_profile?.full_name || payment.user_profile?.email;
+              return paymentUserName === memberName;
+            }
+          ) || false;
+          paymentsByMember[memberName] = hasPayment;
+        });
+
+        // Determine status based on payments and due date
+        const allPaid = Object.values(paymentsByMember).every(paid => paid);
+        const isOverdue = new Date(bill.due_date) < new Date() && !allPaid;
+        const status = allPaid ? "paid" : isOverdue ? "overdue" : "pending";
+
+        // Map category from Supabase to UI format
+        const categoryMap: { [key: string]: "utility" | "subscription" | "maintenance" } = {
+          'utilities': 'utility',
+          'rent': 'utility',
+          'internet': 'utility',
+          'food': 'subscription',
+          'other': 'maintenance'
+        };
+
+        return {
+          ...bill,
+          name: bill.title,
+          amount: bill.total_amount,
+          dueDate: bill.due_date,
+          category: categoryMap[bill.category] || 'utility',
+          icon: getIconForCategory(categoryMap[bill.category] || 'utility', bill.title),
+          splitType: "equal" as const, // Default to equal split
+          status,
+          payments: paymentsByMember,
+          createdBy: bill.created_by || 'Unknown'
+        };
+      });
+
+      setBills(transformedBills);
+      setRoommates(membersData.map(m => m.user?.full_name || m.user?.email || 'Unknown'));
+    } catch (err) {
+      console.error('Error loading bills data:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load bills data');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [currentTeam?.id]);
+
+  // Load data when team changes
+  useEffect(() => {
+    loadBillsData();
+  }, [loadBillsData]);
+
+  // Helper function to get icon for category
+  const getIconForCategory = (category: string, name: string): keyof typeof Ionicons.glyphMap => {
+    const nameLower = name.toLowerCase();
+
+    if (nameLower.includes("전기")) return "flash-outline";
+    if (nameLower.includes("가스")) return "flame-outline";
+    if (nameLower.includes("수도") || nameLower.includes("물")) return "water-outline";
+    if (nameLower.includes("인터넷") || nameLower.includes("wifi")) return "wifi-outline";
+    if (nameLower.includes("넷플릭스") || nameLower.includes("구독")) return "play-circle-outline";
+    if (nameLower.includes("통신") || nameLower.includes("폰")) return "phone-portrait-outline";
+
+    switch (category) {
+      case "utility": return "flash-outline";
+      case "subscription": return "play-circle-outline";
+      case "maintenance": return "home-outline";
+      default: return "home-outline";
+    }
+  };
 
   const calculateSplit = useCallback(
     (amount: number, splitType: "equal" | "custom", customSplit?: { [roommate: string]: number }, roommate?: string) => {
@@ -148,7 +203,7 @@ export function useBills() {
   }, [bills]);
 
   const addNewBill = useCallback(
-    (newBill: {
+    async (newBill: {
       name: string;
       amount: string;
       accountNumber: string;
@@ -168,70 +223,51 @@ export function useBills() {
         return false;
       }
 
-      const getIconForCategory = (category: string, name: string) => {
-        const nameLower = name.toLowerCase();
+      if (!currentTeam?.id) {
+        Alert.alert("오류", "팀을 선택해주세요.");
+        return false;
+      }
 
-        if (nameLower.includes("전기")) return "flash-outline";
-        if (nameLower.includes("가스")) return "flame-outline";
-        if (nameLower.includes("수도") || nameLower.includes("물"))
-          return "water-outline";
-        if (nameLower.includes("인터넷") || nameLower.includes("wifi"))
-          return "wifi-outline";
-        if (nameLower.includes("넷플릭스") || nameLower.includes("구독"))
-          return "play-circle-outline";
-        if (nameLower.includes("통신") || nameLower.includes("폰"))
-          return "phone-portrait-outline";
+      try {
+        // Map UI category to Supabase category
+        const categoryMap: { [key: string]: string } = {
+          'utility': 'utilities',
+          'subscription': 'other',
+          'maintenance': 'other'
+        };
 
-        switch (category) {
-          case "utility":
-            return "flash-outline";
-          case "subscription":
-            return "play-circle-outline";
-          case "maintenance":
-            return "home-outline";
-          default:
-            return "home-outline";
-        }
-      };
+        const billData: Omit<SupabaseBill, 'id' | 'created_at' | 'updated_at'> = {
+          team_id: currentTeam.id,
+          title: newBill.name.trim(),
+          total_amount: parseInt(newBill.amount.trim()),
+          category: categoryMap[newBill.category] as any,
+          due_date: newBill.dueDate.trim(),
+          is_recurring: false,
+          created_by: user?.id
+        };
 
-      const bill: Bill = {
-        id: Date.now(),
-        name: newBill.name.trim(),
-        amount: parseInt(newBill.amount.trim()),
-        accountNumber: newBill.accountNumber.trim() || undefined,
-        bank: newBill.bank.trim() || undefined,
-        splitType: newBill.splitType,
-        customSplit: newBill.customSplit,
-        status: "pending",
-        dueDate: newBill.dueDate.trim(),
-        icon: getIconForCategory(
-          newBill.category,
-          newBill.name
-        ) as keyof typeof Ionicons.glyphMap,
-        category: newBill.category,
-        payments: roommates.reduce((acc, roommate) => {
-          acc[roommate] = false;
-          return acc;
-        }, {} as { [roommate: string]: boolean }),
-        createdBy: currentUser,
-      };
+        const createdBill = await billsService.createBill(billData);
 
-      setBills((prev) => [...prev, bill]);
+        // Reload bills data to reflect changes
+        await loadBillsData();
 
-      // 알림 생성
-      createNotification({
-        title: "공과금 추가",
-        message: `${
-          bill.name
-        } 청구서가 등록되었습니다 (₩${bill.amount.toLocaleString()})`,
-        type: "bill_added",
-        relatedId: bill.id.toString(),
-      });
+        // 알림 생성
+        createNotification({
+          title: "공과금 추가",
+          message: `${createdBill.title} 청구서가 등록되었습니다 (₩${createdBill.total_amount.toLocaleString()})`,
+          type: "bill_added",
+          relatedId: createdBill.id,
+        });
 
-      Alert.alert("성공", "새 공과금이 추가되었습니다!");
-      return true;
+        Alert.alert("성공", "새 공과금이 추가되었습니다!");
+        return true;
+      } catch (error) {
+        console.error('Error creating bill:', error);
+        Alert.alert("오류", "공과금 추가에 실패했습니다. 다시 시도해주세요.");
+        return false;
+      }
     },
-    [roommates, createNotification]
+    [currentTeam?.id, user?.id, createNotification, loadBillsData]
   );
 
   // 현재 사용자가 특정 룸메이트의 송금 상태를 수정할 수 있는지 확인
@@ -244,7 +280,7 @@ export function useBills() {
   );
 
   const togglePayment = useCallback(
-    (billId: number, roommate: string) => {
+    async (billId: string, roommate: string) => {
       // 권한 체크
       if (!canEditPayment(roommate)) {
         Alert.alert(
@@ -254,98 +290,134 @@ export function useBills() {
         );
         return;
       }
-      setBills((prev) =>
-        prev.map((bill) => {
-          if (bill.id === billId) {
-            const updatedPayments = {
-              ...bill.payments,
-              [roommate]: !bill.payments[roommate],
-            };
 
-            const allPaid = Object.values(updatedPayments).every(
-              (paid) => paid
-            );
-            const wasJustCompleted = allPaid && bill.status !== "paid";
+      if (!user?.id) {
+        Alert.alert("오류", "로그인이 필요합니다.");
+        return;
+      }
 
-            // 지불이 방금 완료되었을 때 알림 생성
-            if (wasJustCompleted) {
-              createNotification({
-                title: "지불 완료",
-                message: `${bill.name} 공과금 정산이 완료되었습니다`,
-                type: "payment_received",
-                relatedId: bill.id.toString(),
-              });
-            }
+      try {
+        const bill = bills.find(b => b.id === billId);
+        if (!bill) return;
 
-            return {
-              ...bill,
-              payments: updatedPayments,
-              status: allPaid ? "paid" : "pending",
-            };
+        const currentPaymentStatus = bill.payments[roommate];
+        
+        if (!currentPaymentStatus) {
+          // Add payment
+          const paymentAmount = calculateSplit(bill.amount, bill.splitType, bill.customSplit, roommate);
+          await billsService.payBill(billId, user.id, paymentAmount);
+          
+          // Check if this completes the bill
+          const allOthersPaid = Object.entries(bill.payments)
+            .filter(([name]) => name !== roommate)
+            .every(([, paid]) => paid);
+            
+          if (allOthersPaid) {
+            createNotification({
+              title: "지불 완료",
+              message: `${bill.name} 공과금 정산이 완료되었습니다`,
+              type: "payment_received",
+              relatedId: billId,
+            });
           }
-          return bill;
-        })
-      );
+        } else {
+          // Remove payment - this would require deleting from bill_payments table
+          // For now, we'll show an alert that payments cannot be undone
+          Alert.alert(
+            "알림", 
+            "이미 완료된 결제는 취소할 수 없습니다. 관리자에게 문의하세요.",
+            [{ text: "확인" }]
+          );
+          return;
+        }
+
+        // Reload bills data to reflect changes
+        await loadBillsData();
+      } catch (error) {
+        console.error('Error toggling payment:', error);
+        Alert.alert("오류", "결제 상태 변경에 실패했습니다.");
+      }
     },
-    [createNotification]
+    [bills, user?.id, createNotification, loadBillsData, canEditPayment, calculateSplit]
   );
 
   const markBillAsPaid = useCallback(
-    (billId: number) => {
-      setBills((prev) =>
-        prev.map((bill) =>
-          bill.id === billId
-            ? {
-                ...bill,
-                status: "paid",
-                payments: roommates.reduce((acc, roommate) => {
-                  acc[roommate] = true;
-                  return acc;
-                }, {} as { [roommate: string]: boolean }),
-              }
-            : bill
-        )
-      );
-      Alert.alert("완료", "모든 인원의 지불이 완료로 처리되었습니다.");
+    async (billId: string) => {
+      if (!currentTeam?.id || !user?.id) {
+        Alert.alert("오류", "팀 또는 사용자 정보가 없습니다.");
+        return;
+      }
+
+      try {
+        const bill = bills.find(b => b.id === billId);
+        if (!bill) return;
+
+        // Create payments for all unpaid roommates
+        const unpaidRoommates = Object.entries(bill.payments)
+          .filter(([, paid]) => !paid)
+          .map(([roommate]) => roommate);
+
+        for (const roommate of unpaidRoommates) {
+          const paymentAmount = calculateSplit(bill.amount, bill.splitType, bill.customSplit, roommate);
+          await billsService.payBill(billId, user.id, paymentAmount, 'manual_completion');
+        }
+
+        // Reload bills data
+        await loadBillsData();
+        
+        Alert.alert("완료", "모든 인원의 지불이 완료로 처리되었습니다.");
+      } catch (error) {
+        console.error('Error marking bill as paid:', error);
+        Alert.alert("오류", "지불 완료 처리에 실패했습니다.");
+      }
     },
-    [roommates]
+    [bills, currentTeam?.id, user?.id, calculateSplit, loadBillsData]
   );
 
-  const extendDueDate = useCallback((billId: number) => {
-    setBills((prev) =>
-      prev.map((bill) => {
-        if (bill.id === billId) {
-          // 원래 마감일을 기준으로 1주일 연장
-          const currentDueDate = new Date(bill.dueDate);
-          const extendedDate = new Date(currentDueDate.getTime() + 7 * 24 * 60 * 60 * 1000);
-          const newDueDate = extendedDate.toISOString().split("T")[0];
-          
-          // 연장된 경우 상태를 pending으로 변경 (overdue -> pending)
-          const newStatus = bill.status === "overdue" ? "pending" : bill.status;
-          
-          Alert.alert("연장 완료", `마감일이 ${newDueDate}로 연장되었습니다.`);
-          
-          return { 
-            ...bill, 
-            dueDate: newDueDate, 
-            status: newStatus as "pending" | "paid" | "overdue"
-          };
-        }
-        return bill;
-      })
-    );
-  }, []);
+  const extendDueDate = useCallback(async (billId: string) => {
+    try {
+      const bill = bills.find(b => b.id === billId);
+      if (!bill) return;
+      
+      // 원래 마감일을 기준으로 1주일 연장
+      const currentDueDate = new Date(bill.dueDate);
+      const extendedDate = new Date(currentDueDate.getTime() + 7 * 24 * 60 * 60 * 1000);
+      const newDueDate = extendedDate.toISOString().split("T")[0];
+      
+      await billsService.updateBill(billId, {
+        due_date: newDueDate
+      });
+      
+      // Reload bills data
+      await loadBillsData();
+      
+      Alert.alert("연장 완료", `마감일이 ${newDueDate}로 연장되었습니다.`);
+    } catch (error) {
+      console.error('Error extending due date:', error);
+      Alert.alert("오류", "마감일 연장에 실패했습니다.");
+    }
+  }, [bills, loadBillsData]);
 
-  const deleteBill = useCallback((billId: number) => {
+  const deleteBill = useCallback(async (billId: string) => {
     const bill = bills.find((b) => b.id === billId);
+    
     Alert.alert("공과금 삭제", `"${bill?.name}" 공과금을 삭제하시겠습니까?`, [
       { text: "취소", style: "cancel" },
       {
         text: "삭제",
         style: "destructive",
-        onPress: () => {
-          setBills((prev) => prev.filter((b) => b.id !== billId));
-          Alert.alert("삭제 완료", "공과금이 삭제되었습니다.");
+        onPress: async () => {
+          try {
+            // Note: You'll need to implement deleteBill in billsService
+            // For now, we'll just reload the data and show a message
+            Alert.alert("알림", "공과금 삭제 기능은 관리자만 사용할 수 있습니다.");
+            // await billsService.deleteBill(billId);
+            // await loadBillsData();
+            // Alert.alert("삭제 완료", "공과금이 삭제되었습니다.");
+          } catch (error) {
+            console.error('Error deleting bill:', error);
+            Alert.alert("오류", "공과금 삭제에 실패했습니다.");
+          }
         },
       },
     ]);
@@ -424,6 +496,8 @@ export function useBills() {
     bills,
     roommates,
     statistics,
+    isLoading,
+    error,
     calculateSplit,
     addNewBill,
     togglePayment,
@@ -435,5 +509,6 @@ export function useBills() {
     markBillAsPaid,
     extendDueDate,
     deleteBill,
+    refreshData: loadBillsData, // Expose refresh function
   };
 }

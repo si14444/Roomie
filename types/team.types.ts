@@ -2,12 +2,20 @@ export interface Team {
   id: string;
   name: string;
   description?: string;
-  members: TeamMember[];
-  createdAt: string;
-  updatedAt: string;
-  ownerId: string;
+  
+  // Supabase fields
+  invite_code?: string;
+  created_at?: string;
+  updated_at?: string;
+  created_by?: string;
+  
+  // Legacy fields (for backward compatibility)
+  members?: TeamMember[];
+  createdAt?: string;
+  updatedAt?: string;
+  ownerId?: string;
   inviteCode?: string;
-  settings: TeamSettings;
+  settings?: TeamSettings;
 }
 
 export interface TeamMember {
