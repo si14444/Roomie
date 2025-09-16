@@ -131,6 +131,28 @@ Components are organized by feature domains:
 - **React Native**: New architecture enabled
 - **Expo SDK**: Version 53 with typed routes experimental feature
 
+## Database Schema
+
+The app follows a comprehensive ERD design documented in [`docs/ERD.md`](docs/ERD.md). Key database entities include:
+
+### Core Entities
+- **User**: Authentication and profile management
+- **Team**: Roommate groups with invite-based joining
+- **TeamMember**: User-team relationships with roles
+
+### Feature Entities
+- **Routine/RoutineCompletion**: Task management with completion tracking
+- **Bill/BillPayment**: Expense management with payment tracking
+- **Item/PurchaseRequest**: Shared inventory with approval workflow
+- **Notification**: Real-time notifications with 9 distinct types
+- **Feedback**: Monthly team feedback system
+
+### Design Principles
+- UUID-based primary keys for all entities
+- Team-based data isolation (Row Level Security)
+- Complete audit trails with created_by/updated_by tracking
+- Soft delete patterns where appropriate
+
 # Using Gemini CLI for Large Codebase Analysis
 
 When analyzing large codebases or multiple files that might exceed context limits, use the Gemini CLI with its massive
