@@ -47,67 +47,68 @@ export default function HomeScreen() {
   // Modal states
   const [inviteModalVisible, setInviteModalVisible] = useState(false);
 
-  const handleAddTask = () => {
-    Alert.prompt(
-      "📝 새 할 일 추가",
-      "오늘 할 일을 입력해주세요:",
-      [
-        { text: "취소", style: "cancel" },
-        {
-          text: "추가하기",
-          onPress: (taskName) => {
-            if (taskName && taskName.trim()) {
-              // 현재 사용자
-              const currentUser = user?.user_metadata?.full_name || user?.email || "Unknown User";
+  // const handleAddTask = () => {
+  //   Alert.prompt(
+  //     "📝 새 할 일 추가",
+  //     "오늘 할 일을 입력해주세요:",
+  //     [
+  //       { text: "취소", style: "cancel" },
+  //       {
+  //         text: "추가하기",
+  //         onPress: (taskName) => {
+  //           if (taskName && taskName.trim()) {
+  //             // 현재 사용자
+  //             const currentUser =
+  //               user?.user_metadata?.full_name || user?.email || "Unknown User";
 
-              // 새 루틴 추가 (일회성 작업으로)
-              addNewRoutine({
-                task: taskName.trim(),
-                assignee: currentUser,
-                frequency: "daily",
-              });
+  //             // 새 루틴 추가 (일회성 작업으로)
+  //             addNewRoutine({
+  //               task: taskName.trim(),
+  //               assignee: currentUser,
+  //               frequency: "daily",
+  //             });
 
-              createNotification({
-                title: "새 할 일 추가",
-                message: `"${taskName.trim()}" 작업이 오늘 할 일에 추가되었습니다`,
-                type: "system",
-                relatedId: Date.now().toString(),
-              });
+  //             createNotification({
+  //               title: "새 할 일 추가",
+  //               message: `"${taskName.trim()}" 작업이 오늘 할 일에 추가되었습니다`,
+  //               type: "system",
+  //               relatedId: Date.now().toString(),
+  //             });
 
-              Alert.alert(
-                "✅ 추가 완료",
-                `"${taskName.trim()}"이 오늘 할 일에 추가되었습니다!`
-              );
-            }
-          },
-        },
-      ],
-      "plain-text"
-    );
-  };
+  //             Alert.alert(
+  //               "✅ 추가 완료",
+  //               `"${taskName.trim()}"이 오늘 할 일에 추가되었습니다!`
+  //             );
+  //           }
+  //         },
+  //       },
+  //     ],
+  //     "plain-text"
+  //   );
+  // };
 
-  const handleTaskPress = (taskId: number) => {
-    Alert.alert("작업 관리", "이 작업을 어떻게 처리하시겠습니까?", [
-      { text: "취소", style: "cancel" },
-      {
-        text: "✅ 완료 처리",
-        onPress: () => {
-          // 해당 루틴 완료 처리
-          const routine = routines.find((r) => r.id === taskId);
-          if (routine) {
-            completeRoutine(taskId);
-            Alert.alert("완료", `"${routine.task}"가 완료되었습니다!`);
-          }
-        },
-      },
-      {
-        text: "⏰ 내일로 미루기",
-        onPress: () => {
-          Alert.alert("미루기", "작업이 내일로 연기되었습니다.");
-        },
-      },
-    ]);
-  };
+  // const handleTaskPress = (taskId: number) => {
+  //   Alert.alert("작업 관리", "이 작업을 어떻게 처리하시겠습니까?", [
+  //     { text: "취소", style: "cancel" },
+  //     {
+  //       text: "✅ 완료 처리",
+  //       onPress: () => {
+  //         // 해당 루틴 완료 처리
+  //         const routine = routines.find((r) => r.id === taskId);
+  //         if (routine) {
+  //           completeRoutine(taskId);
+  //           Alert.alert("완료", `"${routine.task}"가 완료되었습니다!`);
+  //         }
+  //       },
+  //     },
+  //     {
+  //       text: "⏰ 내일로 미루기",
+  //       onPress: () => {
+  //         Alert.alert("미루기", "작업이 내일로 연기되었습니다.");
+  //       },
+  //     },
+  //   ]);
+  // };
 
   // 초대 링크 (임시)
   const inviteLink = "https://roomie.app/invite?code=ABC123";
