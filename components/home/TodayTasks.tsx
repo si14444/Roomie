@@ -4,7 +4,7 @@ import { Text, View } from "@/components/Themed";
 import { Ionicons } from "@expo/vector-icons";
 import Colors from "@/constants/Colors";
 import { useTeam } from "@/contexts/TeamContext";
-import { routinesService, Routine } from "@/lib/supabase-service";
+import { routinesService, Routine } from "@/lib/api-service";
 
 interface Task {
   id: string;
@@ -26,7 +26,7 @@ export function TodayTasks({ onAddTask, onTaskPress }: TodayTasksProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Load today's routines from Supabase
+  // Load today's routines from API
   const loadTodayTasks = async () => {
     if (!currentTeam?.id) {
       setIsLoading(false);

@@ -5,7 +5,6 @@ import {
   CreateNotificationParams,
   NotificationIcon,
 } from "@/types/notification.types";
-import { notificationsService } from "@/lib/supabase-service";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTeam } from "@/contexts/TeamContext";
 import Colors from "@/constants/Colors";
@@ -26,11 +25,13 @@ export function useNotifications() {
   // 알림 로드 함수
   const loadNotifications = async () => {
     if (!user) return;
-    
+
     setIsLoading(true);
     try {
-      const userNotifications = await notificationsService.getUserNotifications(user.id);
-      setNotifications(userNotifications);
+      // TODO: 새로운 백엔드 API 연동 필요
+      // const userNotifications = await api.getNotifications(user.id);
+      // setNotifications(userNotifications);
+      setNotifications([]);
     } catch (error) {
       console.error('Failed to load notifications:', error);
     } finally {
@@ -150,34 +151,21 @@ export function useNotifications() {
     }
 
     try {
-      if (params.type === 'announcement') {
-        // 팀 전체에 공지사항 알림 생성
-        await notificationsService.createTeamNotification(
-          currentTeam.id,
-          params.title,
-          params.message,
-          params.type,
-          params.relatedId,
-          params.actionData
-        );
-      } else {
-        // 개별 알림 생성
-        const newNotification = await notificationsService.createNotification({
-          team_id: currentTeam.id,
-          user_id: user.id,
-          title: params.title,
-          message: params.message,
-          type: params.type,
-          related_id: params.relatedId,
-          action_data: params.actionData,
-          is_read: false
-        });
-        
-        setNotifications((prev) => [newNotification, ...prev]);
-      }
-      
-      // 알림 생성 후 목록 새로고침
-      await loadNotifications();
+      // TODO: 새로운 백엔드 API 연동 필요
+      const newNotification: Notification = {
+        id: Date.now().toString(),
+        team_id: currentTeam.id,
+        user_id: user.id,
+        title: params.title,
+        message: params.message,
+        type: params.type,
+        related_id: params.relatedId,
+        action_data: params.actionData,
+        is_read: false,
+        created_at: new Date().toISOString(),
+      };
+
+      setNotifications((prev) => [newNotification, ...prev]);
     } catch (error) {
       console.error('Failed to create notification:', error);
       throw error;
@@ -187,7 +175,7 @@ export function useNotifications() {
   // 알림을 읽음으로 표시
   const markAsRead = async (notificationId: string) => {
     try {
-      await notificationsService.markAsRead(notificationId);
+      // TODO: 새로운 백엔드 API 연동 필요
       setNotifications((prev) =>
         prev.map((notification) =>
           notification.id === notificationId
@@ -203,9 +191,9 @@ export function useNotifications() {
   // 모든 알림을 읽음으로 표시
   const markAllAsRead = async () => {
     if (!user) return;
-    
+
     try {
-      await notificationsService.markAllAsRead(user.id);
+      // TODO: 새로운 백엔드 API 연동 필요
       setNotifications((prev) =>
         prev.map((notification) => ({ ...notification, is_read: true }))
       );
@@ -214,14 +202,14 @@ export function useNotifications() {
     }
   };
 
-  // 알림 삭제 (로컬에서만)
+  // 알림 삭제
   const deleteNotification = (notificationId: string) => {
     setNotifications((prev) =>
       prev.filter((notification) => notification.id !== notificationId)
     );
   };
 
-  // 모든 알림 삭제 (로컬에서만)
+  // 모든 알림 삭제
   const clearAllNotifications = () => {
     setNotifications([]);
   };
@@ -229,9 +217,9 @@ export function useNotifications() {
   // 읽은 알림만 삭제
   const clearReadNotifications = async () => {
     if (!user) return;
-    
+
     try {
-      await notificationsService.clearReadNotifications(user.id);
+      // TODO: 새로운 백엔드 API 연동 필요
       setNotifications((prev) => prev.filter((notification) => !notification.is_read));
     } catch (error) {
       console.error('Failed to clear read notifications:', error);

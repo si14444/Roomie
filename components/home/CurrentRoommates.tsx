@@ -4,7 +4,7 @@ import { Text } from "@/components/Themed";
 import { Ionicons } from "@expo/vector-icons";
 import Colors from "@/constants/Colors";
 import { useTeam } from "@/contexts/TeamContext";
-import { teamsService, TeamMember } from "@/lib/supabase-service";
+import { teamsService, TeamMember } from "@/lib/api-service";
 
 interface Roommate {
   id: string;
@@ -26,7 +26,7 @@ export function CurrentRoommates({ onAddRoommate }: CurrentRoommatesProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Load team members from Supabase
+  // Load team members from API
   const loadTeamMembers = async () => {
     if (!currentTeam?.id) {
       setIsLoading(false);

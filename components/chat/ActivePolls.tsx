@@ -26,7 +26,7 @@ export function ActivePolls({ onVote, onCreatePoll }: ActivePollsProps) {
   const { currentTeam } = useTeam();
 
   // Note: Polls feature requires backend implementation
-  // This would integrate with a polls table in Supabase
+  // This would integrate with a polls table in the backend API
   const activePolls: Poll[] = [];
 
   if (!currentTeam) {

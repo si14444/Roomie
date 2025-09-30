@@ -13,7 +13,7 @@ import { Ionicons } from "@expo/vector-icons";
 import Colors from "@/constants/Colors";
 import { InventoryItem, InventoryStatus, StatusUpdate } from "@/types/item.types";
 import { AddInventoryItemModal } from "./AddInventoryItemModal";
-import { itemsService, Item } from "@/lib/supabase-service";
+import { itemsService, Item } from "@/lib/api-service";
 import { useTeam } from "@/contexts/TeamContext";
 
 interface ItemInventoryProps {

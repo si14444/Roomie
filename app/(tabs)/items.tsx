@@ -4,7 +4,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import Colors from "@/constants/Colors";
 import { useNotificationContext } from "@/contexts/NotificationContext";
 import { NewItemInput, StatusUpdate, InventoryItem } from "@/types/item.types";
-import { itemsService } from "@/lib/supabase-service";
+// TODO: Implement items service in api-service.ts
+// import { itemsService } from "@/lib/api-service";
 import { useTeam } from "@/contexts/TeamContext";
 
 // Import items components

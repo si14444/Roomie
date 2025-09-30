@@ -5,7 +5,7 @@ import { Ionicons } from "@expo/vector-icons";
 import Colors from "@/constants/Colors";
 import { CalendarModal } from "./CalendarModal";
 import { useTeam } from "@/contexts/TeamContext";
-import { teamsService } from "@/lib/supabase-service";
+import { teamsService } from "@/lib/api-service";
 
 export interface CustomSplit {
   [roommateId: string]: number;

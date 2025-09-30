@@ -3,7 +3,7 @@ import { StyleSheet, TouchableOpacity } from "react-native";
 import { Text, View } from "@/components/Themed";
 import { Ionicons } from "@expo/vector-icons";
 import Colors from "@/constants/Colors";
-import { itemsService, PurchaseRequest } from "@/lib/supabase-service";
+import { itemsService, PurchaseRequest } from "@/lib/api-service";
 import { useTeam } from "@/contexts/TeamContext";
 
 interface PurchaseRequestsProps {
@@ -55,7 +55,7 @@ export function PurchaseRequests({
 
   const handleIgnoreRequest = async (requestId: string) => {
     try {
-      // Supabase에서 요청 거절 처리
+      // API에서 요청 거절 처리
       await itemsService.rejectPurchaseRequest(requestId);
       
       // 부모 컴포넌트의 핸들러 호출

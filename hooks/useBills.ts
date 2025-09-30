@@ -1,13 +1,13 @@
 import { useNotificationContext } from "@/contexts/NotificationContext";
 import { useTeam } from "@/contexts/TeamContext";
 import { useAuth } from "@/contexts/AuthContext";
-import { billsService, teamsService, Bill as SupabaseBill, BillPayment } from "@/lib/supabase-service";
+import { billsService, teamsService, Bill as ApiBill, BillPayment } from "@/lib/api-service";
 import { Ionicons } from "@expo/vector-icons";
 import { useCallback, useMemo, useState, useEffect } from "react";
 import { Alert } from "react-native";
 
-// Extended Bill interface that combines Supabase Bill with UI-specific fields
-export interface Bill extends Omit<SupabaseBill, 'category'> {
+// Extended Bill interface that combines API Bill with UI-specific fields
+export interface Bill extends Omit<ApiBill, 'category'> {
   // Override category to match the existing enum
   category: "utility" | "subscription" | "maintenance";
   // UI-specific fields
@@ -236,7 +236,7 @@ export function useBills() {
           'maintenance': 'other'
         };
 
-        const billData: Omit<SupabaseBill, 'id' | 'created_at' | 'updated_at'> = {
+        const billData: Omit<ApiBill, 'id' | 'created_at' | 'updated_at'> = {
           team_id: currentTeam.id,
           title: newBill.name.trim(),
           total_amount: parseInt(newBill.amount.trim()),

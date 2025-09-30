@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { Alert, AppState } from "react-native";
 import { useNotificationContext } from "@/contexts/NotificationContext";
-import { routinesService, teamsService, Routine as SupabaseRoutine, RoutineCompletion } from "@/lib/supabase-service";
+import { routinesService, teamsService, Routine as ApiRoutine, RoutineCompletion } from "@/lib/api-service";
 import { useTeam } from "@/contexts/TeamContext";
 
 interface Routine {
@@ -46,7 +46,7 @@ export function useRoutines() {
     try {
       setLoading(true);
       const data = await routinesService.getTeamRoutines(currentTeam.id);
-      const routinesWithStatus = data.map(mapSupabaseRoutineToLocal);
+      const routinesWithStatus = data.map(mapApiRoutineToLocal);
       setRoutines(routinesWithStatus);
     } catch (error) {
       console.error('Error loading routines:', error);
@@ -67,7 +67,7 @@ export function useRoutines() {
     }
   };
 
-  const mapSupabaseRoutineToLocal = (supabaseRoutine: SupabaseRoutine): Routine => {
+  const mapApiRoutineToLocal = (apiRoutine: ApiRoutine): Routine => {
     // Check for recent completion to determine status
     const today = new Date();
     const todayString = today.toISOString().split('T')[0];
@@ -76,14 +76,14 @@ export function useRoutines() {
     const status = "pending"; // Would need completion checking logic
     
     return {
-      id: supabaseRoutine.id,
-      task: supabaseRoutine.title,
-      assignee: supabaseRoutine.assigned_profile?.full_name || 'Unassigned',
+      id: apiRoutine.id,
+      task: apiRoutine.title,
+      assignee: apiRoutine.assigned_profile?.full_name || 'Unassigned',
       nextDate: todayString, // Would calculate based on frequency
       status: status as "pending" | "completed" | "overdue",
-      icon: getIconForTask(supabaseRoutine.title),
-      frequency: supabaseRoutine.frequency as "daily" | "weekly" | "monthly",
-      assigned_profile: supabaseRoutine.assigned_profile,
+      icon: getIconForTask(apiRoutine.title),
+      frequency: apiRoutine.frequency as "daily" | "weekly" | "monthly",
+      assigned_profile: apiRoutine.assigned_profile,
     };
   };
 
@@ -373,7 +373,7 @@ export function useRoutines() {
         return;
       }
 
-      const supabaseRoutine = await routinesService.createRoutine({
+      const apiRoutine = await routinesService.createRoutine({
         team_id: currentTeam.id,
         title: newRoutine.task.trim(),
         description: '',
@@ -387,7 +387,7 @@ export function useRoutines() {
       });
 
       const routine: Routine = {
-        id: supabaseRoutine.id,
+        id: apiRoutine.id,
         task: newRoutine.task.trim(),
         assignee: newRoutine.assignee,
         nextDate: new Date().toISOString().split("T")[0],
