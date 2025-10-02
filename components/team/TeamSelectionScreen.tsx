@@ -22,15 +22,15 @@ interface TeamSelectionScreenProps {
 }
 
 export default function TeamSelectionScreen({ onTeamSelected }: TeamSelectionScreenProps) {
-  const { userTeams, isLoading, createTeam, joinTeam, skipTeamSelection } = useTeam();
+  const { userTeams, isLoading, createTeam, joinTeam } = useTeam();
   const [selectedMode, setSelectedMode] = useState<'create' | 'join' | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [isJoining, setIsJoining] = useState(false);
-  
+
   // 팀 생성 폼 상태
   const [newTeamName, setNewTeamName] = useState('');
   const [newTeamDescription, setNewTeamDescription] = useState('');
-  
+
   // 팀 참가 폼 상태
   const [inviteCode, setInviteCode] = useState('');
 
@@ -90,20 +90,6 @@ export default function TeamSelectionScreen({ onTeamSelected }: TeamSelectionScr
     setInviteCode('');
   };
 
-  const handleSkipForDev = async () => {
-    try {
-      await skipTeamSelection();
-      Alert.alert('개발 모드', '개발 팀으로 설정되었습니다!', [
-        {
-          text: '확인',
-          onPress: () => onTeamSelected?.(),
-        },
-      ]);
-    } catch (error) {
-      Alert.alert('오류', '개발 모드 설정에 실패했습니다.');
-    }
-  };
-
   if (isLoading) {
     return (
       <LinearGradient
@@ -128,18 +114,6 @@ export default function TeamSelectionScreen({ onTeamSelected }: TeamSelectionScr
         <View style={styles.header}>
           <Text style={styles.title}>Roomie</Text>
           <Text style={styles.subtitle}>룸메이트와 함께하는 즐거운 생활</Text>
-          
-          {/* 개발 모드 버튼 */}
-          {__DEV__ && (
-            <TouchableOpacity
-              style={styles.devButton}
-              onPress={handleSkipForDev}
-              activeOpacity={0.7}
-            >
-              <Ionicons name="build" size={16} color="white" />
-              <Text style={styles.devButtonText}>개발 모드로 진입</Text>
-            </TouchableOpacity>
-          )}
         </View>
 
         {/* 메인 콘텐츠 */}
@@ -515,22 +489,5 @@ const styles = StyleSheet.create({
   disabledButton: {
     opacity: 0.6,
     shadowOpacity: 0.1,
-  },
-  devButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    marginTop: 20,
-    gap: 6,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
-  },
-  devButtonText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: 'white',
   },
 });

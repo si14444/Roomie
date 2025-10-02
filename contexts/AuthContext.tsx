@@ -1,5 +1,6 @@
 import React, { createContext, ReactNode, useContext, useState, useEffect } from "react";
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as authService from '@/services/authService';
 
 interface User {
   id: string;
@@ -12,7 +13,8 @@ interface AuthContextProps {
   isAuthenticated: boolean;
   user: User | null;
   isLoading: boolean;
-  login: (user: User) => Promise<void>;
+  login: (email: string, password: string) => Promise<void>;
+  signup: (name: string, email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   // 기존 호환성을 위한 deprecated 메서드들
   setAuthenticated: (auth: boolean) => void;
@@ -31,51 +33,46 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // 앱 시작 시 저장된 인증 정보 로드
+  // 앱 시작 시 Firebase 인증 상태 확인
   useEffect(() => {
-    initializeAuth();
+    const unsubscribe = authService.onAuthStateChanged(async (firebaseUser) => {
+      if (firebaseUser) {
+        setIsAuthenticated(true);
+        setUser(firebaseUser);
+        // AsyncStorage에 저장
+        await AsyncStorage.setItem(STORAGE_KEYS.IS_AUTHENTICATED, 'true');
+        await AsyncStorage.setItem(STORAGE_KEYS.USER_DATA, JSON.stringify(firebaseUser));
+      } else {
+        setIsAuthenticated(false);
+        setUser(null);
+        // AsyncStorage에서 제거
+        await AsyncStorage.removeItem(STORAGE_KEYS.IS_AUTHENTICATED);
+        await AsyncStorage.removeItem(STORAGE_KEYS.USER_DATA);
+      }
+      setIsLoading(false);
+    });
+
+    return () => unsubscribe();
   }, []);
 
-  const initializeAuth = async () => {
+  const login = async (email: string, password: string) => {
     try {
       setIsLoading(true);
-      await loadStoredAuthData();
+      const userData = await authService.login({ email, password });
+      // Firebase onAuthStateChanged가 상태를 자동으로 업데이트합니다
     } catch (error) {
-      console.error('Failed to initialize auth:', error);
-    } finally {
       setIsLoading(false);
+      throw error;
     }
   };
 
-  const loadStoredAuthData = async () => {
+  const signup = async (name: string, email: string, password: string) => {
     try {
-      const [storedAuth, storedUser] = await Promise.all([
-        AsyncStorage.getItem(STORAGE_KEYS.IS_AUTHENTICATED),
-        AsyncStorage.getItem(STORAGE_KEYS.USER_DATA)
-      ]);
-
-      if (storedAuth === 'true' && storedUser) {
-        const userData = JSON.parse(storedUser);
-        setIsAuthenticated(true);
-        setUser(userData);
-      }
+      setIsLoading(true);
+      const userData = await authService.signup({ name, email, password });
+      // Firebase onAuthStateChanged가 상태를 자동으로 업데이트합니다
     } catch (error) {
-      console.error('Failed to load stored auth data:', error);
-    }
-  };
-
-  const login = async (userData: User) => {
-    try {
-      setIsAuthenticated(true);
-      setUser(userData);
-
-      // AsyncStorage에 저장
-      await Promise.all([
-        AsyncStorage.setItem(STORAGE_KEYS.IS_AUTHENTICATED, 'true'),
-        AsyncStorage.setItem(STORAGE_KEYS.USER_DATA, JSON.stringify(userData))
-      ]);
-    } catch (error) {
-      console.error('Failed to save auth data:', error);
+      setIsLoading(false);
       throw error;
     }
   };
@@ -83,21 +80,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = async () => {
     try {
       setIsLoading(true);
-
-      // 로컬 상태 초기화
-      setIsAuthenticated(false);
-      setUser(null);
-
-      // AsyncStorage에서 제거
-      await Promise.all([
-        AsyncStorage.removeItem(STORAGE_KEYS.IS_AUTHENTICATED),
-        AsyncStorage.removeItem(STORAGE_KEYS.USER_DATA)
-      ]);
+      await authService.logout();
+      // Firebase onAuthStateChanged가 상태를 자동으로 업데이트합니다
     } catch (error) {
-      console.error('Failed to logout:', error);
-      throw error;
-    } finally {
       setIsLoading(false);
+      throw error;
     }
   };
 
@@ -117,6 +104,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     user,
     isLoading,
     login,
+    signup,
     logout,
     // 기존 호환성
     setAuthenticated,

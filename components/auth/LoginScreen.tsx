@@ -15,6 +15,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface LoginScreenProps {
   onLoginSuccess?: () => void;
@@ -22,6 +23,7 @@ interface LoginScreenProps {
 
 export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
   const router = useRouter();
+  const { login } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -34,11 +36,13 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
 
     try {
       setIsLoading(true);
-      // TODO: 실제 로그인 로직 구현
-      Alert.alert("준비중", "이메일 로그인 기능은 곧 추가될 예정입니다.");
-    } catch (error) {
+      await login(email.trim(), password);
+
+      // 로그인 성공
+      onLoginSuccess?.();
+    } catch (error: any) {
       console.error("Login failed:", error);
-      Alert.alert("오류", "로그인에 실패했습니다.");
+      Alert.alert("로그인 실패", error.message || "로그인에 실패했습니다.");
     } finally {
       setIsLoading(false);
     }
@@ -84,6 +88,8 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
                   keyboardType="email-address"
                   autoCapitalize="none"
                   editable={!isLoading}
+                  textContentType="username"
+                  autoComplete="email"
                 />
               </View>
 
@@ -103,6 +109,8 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
                   onChangeText={setPassword}
                   secureTextEntry
                   editable={!isLoading}
+                  textContentType="password"
+                  autoComplete="password"
                 />
               </View>
 
@@ -220,6 +228,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     borderWidth: 1,
     borderColor: Colors.light.borderColor,
+    height: 50,
   },
   inputIconContainer: {
     paddingLeft: 16,
@@ -231,6 +240,7 @@ const styles = StyleSheet.create({
     paddingRight: 16,
     fontSize: 16,
     color: Colors.light.text,
+    height: 50,
   },
   loginButton: {
     backgroundColor: Colors.light.primary,

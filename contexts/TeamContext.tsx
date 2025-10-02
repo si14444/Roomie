@@ -8,7 +8,7 @@ import {
   useState,
 } from "react";
 import { useAuth } from "./AuthContext";
-import { teamsAPI } from "@/api/teams";
+import * as teamService from "@/services/teamService";
 
 interface TeamContextType {
   // 현재 선택된 팀
@@ -131,13 +131,12 @@ export function TeamProvider({ children }: { children: ReactNode }) {
 
       console.log("🔄 Attempting to create team:", teamData);
 
-      const newTeam = await teamsAPI.createTeam({
+      const newTeam = await teamService.createTeam({
         name: teamData.name,
-        description: teamData.description!,
-        created_by: user.id,
+        description: teamData.description,
       });
 
-      console.log("✅ Team created via API:", newTeam);
+      console.log("✅ Team created via Firebase:", newTeam);
 
       // 팀 목록에 추가
       const updatedTeams = [...userTeams, newTeam];
@@ -166,13 +165,13 @@ export function TeamProvider({ children }: { children: ReactNode }) {
       }
 
       // 초대 코드로 팀 찾기
-      const team = await teamsAPI.findTeamByInviteCode(joinData.inviteCode);
+      const team = await teamService.findTeamByInviteCode(joinData.inviteCode);
       if (!team) {
         throw new Error("유효하지 않은 초대 코드입니다.");
       }
 
       // 팀에 참가
-      await teamsAPI.joinTeam(team.id, user.id);
+      await teamService.joinTeam(team.id, user.id);
 
       // 팀 목록에 추가
       const updatedTeams = [...userTeams, team];
@@ -216,8 +215,8 @@ export function TeamProvider({ children }: { children: ReactNode }) {
         throw new Error("사용자가 로그인되지 않았습니다.");
       }
 
-      // API 호출로 실제 팀 나가기
-      await teamsAPI.leaveTeam(teamId, user.id);
+      // Firebase로 실제 팀 나가기
+      await teamService.leaveTeam(teamId, user.id);
 
       const updatedTeams = userTeams.filter((team) => team.id !== teamId);
       setUserTeams(updatedTeams);
@@ -257,8 +256,8 @@ export function TeamProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      console.log("Refreshing teams...");
-      const teams = await teamsAPI.getUserTeams(user.id);
+      console.log("Refreshing teams from Firebase...");
+      const teams = await teamService.getUserTeams(user.id);
       setUserTeams(teams);
 
       // 로컬 스토리지에 저장
@@ -266,6 +265,11 @@ export function TeamProvider({ children }: { children: ReactNode }) {
         STORAGE_KEYS.USER_TEAMS,
         JSON.stringify(teams)
       );
+
+      // 팀이 있으면 자동으로 첫 번째 팀 선택
+      if (teams.length > 0 && !hasSelectedTeam) {
+        await selectTeam(teams[0]);
+      }
 
       // 현재 선택된 팀이 목록에 없다면 첫 번째 팀으로 설정
       if (currentTeam && !teams.find((t) => t.id === currentTeam.id)) {
@@ -290,7 +294,7 @@ export function TeamProvider({ children }: { children: ReactNode }) {
         throw new Error("선택된 팀이 없습니다.");
       }
 
-      await teamsAPI.inviteMember(currentTeam.id, email);
+      // TODO: 이메일 초대 기능은 추후 구현
       console.log("Member invited successfully:", email);
     } catch (error) {
       console.error("Failed to invite member:", error);
@@ -304,7 +308,7 @@ export function TeamProvider({ children }: { children: ReactNode }) {
         throw new Error("선택된 팀이 없습니다.");
       }
 
-      await teamsAPI.removeMember(currentTeam.id, memberId);
+      // TODO: 멤버 제거 기능은 추후 구현
       console.log("Member removed successfully:", memberId);
     } catch (error) {
       console.error("Failed to remove member:", error);
@@ -321,7 +325,7 @@ export function TeamProvider({ children }: { children: ReactNode }) {
         throw new Error("선택된 팀이 없습니다.");
       }
 
-      await teamsAPI.updateMemberRole(currentTeam.id, memberId, role);
+      // TODO: 멤버 역할 변경 기능은 추후 구현
       console.log("Member role updated successfully:", memberId, role);
     } catch (error) {
       console.error("Failed to update member role:", error);
@@ -353,38 +357,8 @@ export function TeamProvider({ children }: { children: ReactNode }) {
   };
 
   const skipTeamSelection = async () => {
-    try {
-      if (!user) {
-        throw new Error("사용자가 로그인되지 않았습니다.");
-      }
-
-      // 개발 모드 전용: 데모 팀 생성
-      const demoTeam = await teamsAPI.createTeam({
-        name: "데모 팀",
-        description: "개발 및 테스트용 팀입니다.",
-        created_by: user.id,
-      });
-
-      setCurrentTeam(demoTeam);
-      setUserTeams([demoTeam]);
-      setHasSelectedTeam(true);
-
-      // 로컬 스토리지에 저장
-      await Promise.all([
-        AsyncStorage.setItem(
-          STORAGE_KEYS.CURRENT_TEAM,
-          JSON.stringify(demoTeam)
-        ),
-        AsyncStorage.setItem(
-          STORAGE_KEYS.USER_TEAMS,
-          JSON.stringify([demoTeam])
-        ),
-        AsyncStorage.setItem(STORAGE_KEYS.HAS_SELECTED_TEAM, "true"),
-      ]);
-    } catch (error) {
-      console.error("Failed to skip team selection:", error);
-      throw error;
-    }
+    // 개발 모드 기능 제거됨 - 더 이상 사용하지 않음
+    throw new Error("개발 모드 기능이 제거되었습니다. 팀을 생성하거나 참가해주세요.");
   };
 
   const value = {

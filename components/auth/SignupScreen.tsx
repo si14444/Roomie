@@ -16,6 +16,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface SignupScreenProps {
   onSignupSuccess?: () => void;
@@ -23,6 +24,7 @@ interface SignupScreenProps {
 
 export default function SignupScreen({ onSignupSuccess }: SignupScreenProps) {
   const router = useRouter();
+  const { signup } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -73,12 +75,7 @@ export default function SignupScreen({ onSignupSuccess }: SignupScreenProps) {
 
     try {
       setIsLoading(true);
-
-      // TODO: 실제 회원가입 API 호출
-      // const response = await authService.signup({ name, email, password });
-
-      // 임시: 성공 시뮬레이션
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await signup(name.trim(), email.trim(), password);
 
       Alert.alert(
         "회원가입 성공",
@@ -93,9 +90,9 @@ export default function SignupScreen({ onSignupSuccess }: SignupScreenProps) {
           },
         ]
       );
-    } catch (error) {
+    } catch (error: any) {
       console.error("Signup failed:", error);
-      Alert.alert("오류", "회원가입에 실패했습니다. 다시 시도해주세요.");
+      Alert.alert("회원가입 실패", error.message || "회원가입에 실패했습니다. 다시 시도해주세요.");
     } finally {
       setIsLoading(false);
     }
@@ -151,6 +148,8 @@ export default function SignupScreen({ onSignupSuccess }: SignupScreenProps) {
                   onChangeText={setName}
                   autoCapitalize="words"
                   editable={!isLoading}
+                  textContentType="none"
+                  autoComplete="off"
                 />
               </View>
 
@@ -172,6 +171,8 @@ export default function SignupScreen({ onSignupSuccess }: SignupScreenProps) {
                   keyboardType="email-address"
                   autoCapitalize="none"
                   editable={!isLoading}
+                  textContentType="none"
+                  autoComplete="off"
                 />
               </View>
 
@@ -192,6 +193,8 @@ export default function SignupScreen({ onSignupSuccess }: SignupScreenProps) {
                   onChangeText={setPassword}
                   secureTextEntry
                   editable={!isLoading}
+                  textContentType="newPassword"
+                  autoComplete="password-new"
                 />
               </View>
 
@@ -212,6 +215,8 @@ export default function SignupScreen({ onSignupSuccess }: SignupScreenProps) {
                   onChangeText={setConfirmPassword}
                   secureTextEntry
                   editable={!isLoading}
+                  textContentType="newPassword"
+                  autoComplete="password-new"
                 />
               </View>
 
@@ -324,6 +329,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     borderWidth: 1,
     borderColor: Colors.light.borderColor,
+    height: 50,
   },
   inputIconContainer: {
     paddingLeft: 16,
@@ -335,6 +341,7 @@ const styles = StyleSheet.create({
     paddingRight: 16,
     fontSize: 16,
     color: Colors.light.text,
+    height: 50,
   },
   signupButton: {
     flexDirection: "row",

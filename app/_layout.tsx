@@ -86,7 +86,7 @@ function RootLayoutNav() {
                   />
                   <Stack.Screen
                     name="team-selection"
-                    options={{ headerShown: false }}
+                    options={{ headerShown: false, gestureEnabled: false }}
                   />
                 </Stack>
               </ThemeProvider>
