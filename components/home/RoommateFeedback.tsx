@@ -4,7 +4,7 @@ import { useNotificationContext } from "@/contexts/NotificationContext";
 import { useTeam } from "@/contexts/TeamContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { Ionicons } from "@expo/vector-icons";
-import { useState, useEffect } from "react";
+import { useState, useMemo } from "react";
 import {
   Alert,
   FlatList,
@@ -13,6 +13,7 @@ import {
   TextInput,
   TouchableOpacity,
 } from "react-native";
+import { useAnnouncements, useCreateAnnouncement } from "@/hooks/useAnnouncements";
 
 interface Announcement {
   id: string;
@@ -22,36 +23,43 @@ interface Announcement {
   isImportant?: boolean;
 }
 
-// Real announcements will be loaded from Supabase notifications
-
 export function RoommateFeedback() {
   const { createNotification } = useNotificationContext();
   const { currentTeam } = useTeam();
   const { user } = useAuth();
-  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [newMessage, setNewMessage] = useState("");
   const [isImportant, setIsImportant] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
 
-  // Load announcements from notifications when component mounts
-  useEffect(() => {
-    loadAnnouncements();
-  }, [currentTeam]);
+  // TanStack Query hooks
+  const { data: announcementsData, isLoading } = useAnnouncements(currentTeam?.id);
+  const createAnnouncementMutation = useCreateAnnouncement();
 
-  const loadAnnouncements = async () => {
-    if (!currentTeam || !user) return;
-    
-    setIsLoading(true);
-    try {
-      // TODO: Load actual announcement notifications from Supabase
-      // For now, show empty state
-      setAnnouncements([]);
-    } catch (error) {
-      console.error('Failed to load announcements:', error);
-    } finally {
-      setIsLoading(false);
-    }
+  // Transform announcements data for display
+  const announcements = useMemo(() => {
+    if (!announcementsData) return [];
+
+    return announcementsData.map(item => ({
+      id: item.id,
+      message: item.message,
+      author: item.author_name,
+      timestamp: getRelativeTime(item.created_at),
+      isImportant: item.is_important,
+    }));
+  }, [announcementsData]);
+
+  // 상대 시간 계산 함수
+  const getRelativeTime = (dateString: string): string => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+    if (diffInSeconds < 60) return '방금 전';
+    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}분 전`;
+    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}시간 전`;
+    if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)}일 전`;
+
+    return date.toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' });
   };
 
   const addAnnouncement = async () => {
@@ -66,22 +74,21 @@ export function RoommateFeedback() {
     }
 
     try {
-      const newAnnouncement: Announcement = {
-        id: Date.now().toString(),
+      // TanStack Query mutation으로 공지사항 생성 (자동으로 refetch됨)
+      const announcement = await createAnnouncementMutation.mutateAsync({
+        team_id: currentTeam.id,
+        author_id: user.id,
+        author_name: user.name || user.email || '사용자',
         message: newMessage.trim(),
-        author: (user as any).user_metadata?.full_name || user.email || '사용자',
-        timestamp: "방금 전",
-        isImportant,
-      };
-
-      setAnnouncements((prev) => [newAnnouncement, ...prev]);
+        is_important: isImportant,
+      });
 
       // 팀 전체에 알림 생성
       await createNotification({
         title: "새 공지사항",
-        message: `${newAnnouncement.author}님이 새 공지사항을 등록했습니다: ${newMessage.trim().substring(0, 50)}${newMessage.trim().length > 50 ? '...' : ''}`,
+        message: `${announcement.author_name}님이 새 공지사항을 등록했습니다: ${newMessage.trim().substring(0, 50)}${newMessage.trim().length > 50 ? '...' : ''}`,
         type: "announcement",
-        relatedId: newAnnouncement.id,
+        relatedId: announcement.id,
       });
 
       // 모달 닫기 및 초기화
@@ -95,7 +102,6 @@ export function RoommateFeedback() {
         [{ text: "확인", style: "default" }]
       );
     } catch (error) {
-      console.error('Failed to create announcement:', error);
       Alert.alert("오류", "공지사항 등록에 실패했습니다.");
     }
   };

@@ -9,7 +9,18 @@ import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
 import { SafeAreaProvider } from "react-native-safe-area-context";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 // import { initializeKakaoSDK } from "@react-native-kakao/core";
+
+// Create a client
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 60 * 5, // 5 minutes
+      retry: 1,
+    },
+  },
+});
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -67,11 +78,12 @@ function RootLayoutNav() {
   // 항상 라이트 테마를 사용하도록 고정
   return (
     <SafeAreaProvider>
-      <AuthProvider>
-        <TeamProvider>
-          <NotificationProvider>
-            <AppNavigator>
-              <ThemeProvider value={DefaultTheme}>
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          <TeamProvider>
+            <NotificationProvider>
+              <AppNavigator>
+                <ThemeProvider value={DefaultTheme}>
                 <Stack>
                   <Stack.Screen
                     name="(tabs)"
@@ -93,6 +105,7 @@ function RootLayoutNav() {
           </NotificationProvider>
         </TeamProvider>
       </AuthProvider>
+      </QueryClientProvider>
     </SafeAreaProvider>
   );
 }
