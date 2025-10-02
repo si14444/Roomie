@@ -13,8 +13,8 @@ import {
 import Colors from "@/constants/Colors";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 interface LoginScreenProps {
   onLoginSuccess?: () => void;
@@ -54,7 +54,6 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
           {/* 로고 및 헤더 */}
           <View style={styles.header}>
             <View style={styles.logoContainer}>
-              <Ionicons name="home" size={80} color="white" />
               <Text style={styles.title}>Roomie</Text>
               <Text style={styles.subtitle}>
                 룸메이트와 함께하는 즐거운 생활
@@ -66,9 +65,7 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
           <View style={styles.loginSection}>
             <View style={styles.loginCard}>
               <Text style={styles.loginTitle}>로그인</Text>
-              <Text style={styles.loginSubtitle}>
-                이메일로 로그인하세요
-              </Text>
+              <Text style={styles.loginSubtitle}>이메일로 로그인하세요</Text>
 
               <View style={styles.inputContainer}>
                 <View style={styles.inputIconContainer}>
@@ -136,13 +133,15 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
                 }}
               >
                 <Text style={styles.signupLinkText}>
-                  계정이 없으신가요? <Text style={styles.signupLinkBold}>회원가입</Text>
+                  계정이 없으신가요?{" "}
+                  <Text style={styles.signupLinkBold}>회원가입</Text>
                 </Text>
               </TouchableOpacity>
 
               <View style={styles.infoSection}>
                 <Text style={styles.infoText}>
-                  로그인하면 서비스 이용약관 및{"\n"}개인정보처리방침에 동의하게 됩니다.
+                  로그인하면 서비스 이용약관 및{"\n"}개인정보처리방침에 동의하게
+                  됩니다.
                 </Text>
               </View>
             </View>
