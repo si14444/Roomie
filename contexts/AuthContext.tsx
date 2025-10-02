@@ -13,7 +13,6 @@ interface AuthContextProps {
   user: User | null;
   isLoading: boolean;
   login: (user: User) => Promise<void>;
-  loginWithKakao: (kakaoUser: any) => Promise<void>;
   logout: () => Promise<void>;
   // 기존 호환성을 위한 deprecated 메서드들
   setAuthenticated: (auth: boolean) => void;
@@ -81,67 +80,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const loginWithKakao = async (kakaoUser: any) => {
-    try {
-      setIsLoading(true);
-
-      console.log('🚀 Starting Kakao login process');
-
-      // 입력 데이터 검증
-      if (!kakaoUser) {
-        console.error('❌ No Kakao user data provided');
-        throw new Error('카카오 로그인 정보가 비어있습니다.');
-      }
-
-      // 카카오 사용자 정보 추출
-      const kakaoId = kakaoUser.id || kakaoUser.userId;
-      const kakaoAccount = kakaoUser.kakaoAccount || {};
-      const profile = kakaoAccount.profile || {};
-
-      if (!kakaoId) {
-        console.error('❌ No valid Kakao ID found');
-        throw new Error('카카오 사용자 식별 정보를 찾을 수 없습니다.');
-      }
-
-      console.log('✅ Kakao user data validation passed');
-
-      // 사용자 프로필 생성
-      const userData: User = {
-        id: `kakao_${kakaoId}`,
-        email: kakaoAccount.email || `kakao_${kakaoId}@kakao.user`,
-        name: profile.nickname || kakaoAccount.name || '카카오 사용자',
-        avatar: profile.profile_image_url || profile.thumbnail_image_url || undefined,
-      };
-
-      // 로컬 상태 업데이트
-      setUser(userData);
-      setIsAuthenticated(true);
-
-      // AsyncStorage에 저장
-      await Promise.all([
-        AsyncStorage.setItem(STORAGE_KEYS.IS_AUTHENTICATED, 'true'),
-        AsyncStorage.setItem(STORAGE_KEYS.USER_DATA, JSON.stringify(userData))
-      ]);
-
-      console.log('✅ Kakao login successful:', {
-        userId: userData.id,
-        email: userData.email,
-        name: userData.name
-      });
-
-    } catch (error) {
-      console.error('Failed to login with Kakao:', error);
-
-      // 상태 초기화
-      setIsAuthenticated(false);
-      setUser(null);
-
-      throw error;
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   const logout = async () => {
     try {
       setIsLoading(true);
@@ -179,7 +117,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     user,
     isLoading,
     login,
-    loginWithKakao,
     logout,
     // 기존 호환성
     setAuthenticated,

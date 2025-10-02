@@ -9,7 +9,7 @@ import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
 import { SafeAreaProvider } from "react-native-safe-area-context";
-import { initializeKakaoSDK } from "@react-native-kakao/core";
+// import { initializeKakaoSDK } from "@react-native-kakao/core";
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -30,7 +30,8 @@ export default function RootLayout() {
     ...FontAwesome.font,
   });
 
-  // 카카오 SDK 초기화를 useEffect 내부로 이동
+  // 카카오 SDK 초기화 주석처리
+  /*
   useEffect(() => {
     const initKakao = async () => {
       try {
@@ -40,9 +41,10 @@ export default function RootLayout() {
         console.error("Failed to initialize Kakao SDK:", error);
       }
     };
-    
+
     initKakao();
   }, []);
+  */
 
   // Expo Router uses Error Boundaries to catch errors in the navigation tree.
   useEffect(() => {
@@ -77,6 +79,7 @@ function RootLayoutNav() {
                     options={{ headerShown: false }}
                   />
                   <Stack.Screen name="login" options={{ headerShown: false }} />
+                  <Stack.Screen name="signup" options={{ headerShown: false }} />
                   <Stack.Screen
                     name="modal"
                     options={{ presentation: "modal" }}

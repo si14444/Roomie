@@ -18,7 +18,7 @@ export default function AppNavigator({ children }: { children: React.ReactNode }
       return;
     }
 
-    const inAuthGroup = segments[0] === 'login';
+    const inAuthGroup = segments[0] === 'login' || segments[0] === 'signup';
     const inTeamSelection = segments[0] === 'team-selection';
     const inMainApp = segments[0] === '(tabs)';
 

@@ -15,7 +15,7 @@
     },
     "assetBundlePatterns": ["**/*"],
     "ios": {
-      "supportsTablet": true,
+      "supportsTablet": false,
       "bundleIdentifier": "com.si14444.Roomie",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
