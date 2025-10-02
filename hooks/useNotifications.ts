@@ -238,32 +238,27 @@ export function useNotifications() {
       case "routine_completed":
       case "routine_overdue":
         // 루틴 탭으로 이동
-        console.log("Navigate to routines tab");
         break;
       case "bill_added":
       case "bill_payment_due":
       case "payment_received":
         // 공과금 탭으로 이동
-        console.log("Navigate to bills tab");
         break;
       case "item_request":
       case "item_purchased":
         // 물품 탭으로 이동
-        console.log("Navigate to items tab");
         break;
       case "poll_created":
       case "poll_ended":
       case "chat_message":
         // 채팅 탭으로 이동
-        console.log("Navigate to chat tab");
         break;
       case "announcement":
         // 홈 탭으로 이동 (공지사항은 홈에 표시)
-        console.log("Navigate to home tab");
         break;
       default:
         // 기본적으로 홈으로 이동
-        console.log("Navigate to home tab");
+        break;
     }
   };
 

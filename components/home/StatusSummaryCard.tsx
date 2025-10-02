@@ -1,10 +1,36 @@
-import React from "react";
-import { StyleSheet } from "react-native";
+import React, { useState, useEffect } from "react";
+import { StyleSheet, ActivityIndicator } from "react-native";
 import { Text, View } from "@/components/Themed";
 import { Ionicons } from "@expo/vector-icons";
 import Colors from "@/constants/Colors";
+import { useTeam } from "@/contexts/TeamContext";
+import * as teamService from "@/services/teamService";
 
 export function StatusSummaryCard() {
+  const { currentTeam } = useTeam();
+  const [roommateCount, setRoommateCount] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const loadRoommateCount = async () => {
+      if (!currentTeam?.id) {
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        const members = await teamService.getTeamMembers(currentTeam.id);
+        setRoommateCount(members.length);
+      } catch (error) {
+        setRoommateCount(0);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadRoommateCount();
+  }, [currentTeam?.id]);
+
   return (
     <View style={styles.summaryCard}>
       <Text style={styles.cardTitle}>오늘의 현황</Text>
@@ -13,7 +39,11 @@ export function StatusSummaryCard() {
           <View style={styles.summaryIcon}>
             <Ionicons name="people" size={20} color={Colors.light.primary} />
           </View>
-          <Text style={styles.summaryNumber}>4명</Text>
+          {isLoading ? (
+            <ActivityIndicator size="small" color={Colors.light.primary} />
+          ) : (
+            <Text style={styles.summaryNumber}>{roommateCount}명</Text>
+          )}
           <Text style={styles.summaryLabel}>룸메이트</Text>
         </View>
         <View style={styles.summaryItem}>

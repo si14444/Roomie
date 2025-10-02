@@ -36,7 +36,6 @@ export default function RootLayout() {
     const initKakao = async () => {
       try {
         await initializeKakaoSDK("5fdc09b5ccda187fc82936305ec8308c");
-        console.log("Kakao SDK initialized successfully");
       } catch (error) {
         console.error("Failed to initialize Kakao SDK:", error);
       }

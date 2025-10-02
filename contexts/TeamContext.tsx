@@ -83,12 +83,6 @@ export function TeamProvider({ children }: { children: ReactNode }) {
           AsyncStorage.getItem(STORAGE_KEYS.HAS_SELECTED_TEAM),
         ]);
 
-      console.log("Loading team data:", {
-        storedCurrentTeam: storedCurrentTeam ? "exists" : "null",
-        storedUserTeams: storedUserTeams ? "exists" : "null",
-        storedHasSelected,
-      });
-
       if (storedCurrentTeam) {
         setCurrentTeam(JSON.parse(storedCurrentTeam));
       } else {
@@ -104,16 +98,7 @@ export function TeamProvider({ children }: { children: ReactNode }) {
       // hasSelectedTeam은 명시적으로 'true'일 때만 true로 설정
       const hasSelected = storedHasSelected === "true";
       setHasSelectedTeam(hasSelected);
-
-      console.log("Team data loaded:", {
-        hasSelectedTeam: hasSelected,
-        currentTeam: storedCurrentTeam ? "exists" : "null",
-        userTeamsCount: storedUserTeams
-          ? JSON.parse(storedUserTeams).length
-          : 0,
-      });
     } catch (error) {
-      console.error("Failed to load team data:", error);
       // 오류 발생 시 안전한 기본값으로 설정
       setCurrentTeam(null);
       setUserTeams([]);
@@ -129,14 +114,10 @@ export function TeamProvider({ children }: { children: ReactNode }) {
         throw new Error("사용자가 로그인되지 않았습니다.");
       }
 
-      console.log("🔄 Attempting to create team:", teamData);
-
       const newTeam = await teamService.createTeam({
         name: teamData.name,
         description: teamData.description,
       });
-
-      console.log("✅ Team created via Firebase:", newTeam);
 
       // 팀 목록에 추가
       const updatedTeams = [...userTeams, newTeam];
@@ -153,7 +134,6 @@ export function TeamProvider({ children }: { children: ReactNode }) {
 
       return newTeam;
     } catch (error) {
-      console.error("❌ Failed to create team:", error);
       throw error;
     }
   };
@@ -188,7 +168,6 @@ export function TeamProvider({ children }: { children: ReactNode }) {
 
       return team;
     } catch (error) {
-      console.error("Failed to join team:", error);
       throw error;
     }
   };
@@ -204,7 +183,6 @@ export function TeamProvider({ children }: { children: ReactNode }) {
         AsyncStorage.setItem(STORAGE_KEYS.HAS_SELECTED_TEAM, "true"),
       ]);
     } catch (error) {
-      console.error("Failed to select team:", error);
       throw error;
     }
   };
@@ -244,7 +222,6 @@ export function TeamProvider({ children }: { children: ReactNode }) {
         JSON.stringify(updatedTeams)
       );
     } catch (error) {
-      console.error("Failed to leave team:", error);
       throw error;
     }
   };
@@ -252,11 +229,9 @@ export function TeamProvider({ children }: { children: ReactNode }) {
   const refreshTeams = async () => {
     try {
       if (!user) {
-        console.log("User not logged in, skipping team refresh");
         return;
       }
 
-      console.log("Refreshing teams from Firebase...");
       const teams = await teamService.getUserTeams(user.id);
       setUserTeams(teams);
 
@@ -283,7 +258,6 @@ export function TeamProvider({ children }: { children: ReactNode }) {
         }
       }
     } catch (error) {
-      console.error("Failed to refresh teams:", error);
       throw error;
     }
   };
@@ -295,9 +269,7 @@ export function TeamProvider({ children }: { children: ReactNode }) {
       }
 
       // TODO: 이메일 초대 기능은 추후 구현
-      console.log("Member invited successfully:", email);
     } catch (error) {
-      console.error("Failed to invite member:", error);
       throw error;
     }
   };
@@ -309,9 +281,7 @@ export function TeamProvider({ children }: { children: ReactNode }) {
       }
 
       // TODO: 멤버 제거 기능은 추후 구현
-      console.log("Member removed successfully:", memberId);
     } catch (error) {
-      console.error("Failed to remove member:", error);
       throw error;
     }
   };
@@ -326,17 +296,13 @@ export function TeamProvider({ children }: { children: ReactNode }) {
       }
 
       // TODO: 멤버 역할 변경 기능은 추후 구현
-      console.log("Member role updated successfully:", memberId, role);
     } catch (error) {
-      console.error("Failed to update member role:", error);
       throw error;
     }
   };
 
   const resetTeamData = async () => {
     try {
-      console.log("Resetting team data...");
-
       // 상태 초기화
       setCurrentTeam(null);
       setUserTeams([]);
@@ -348,10 +314,7 @@ export function TeamProvider({ children }: { children: ReactNode }) {
         AsyncStorage.removeItem(STORAGE_KEYS.USER_TEAMS),
         AsyncStorage.removeItem(STORAGE_KEYS.HAS_SELECTED_TEAM),
       ]);
-
-      console.log("Team data reset complete");
     } catch (error) {
-      console.error("Failed to reset team data:", error);
       throw error;
     }
   };

@@ -41,7 +41,6 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
       // 로그인 성공
       onLoginSuccess?.();
     } catch (error: any) {
-      console.error("Login failed:", error);
       Alert.alert("로그인 실패", error.message || "로그인에 실패했습니다.");
     } finally {
       setIsLoading(false);
@@ -136,7 +135,6 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
               <TouchableOpacity
                 style={styles.signupLink}
                 onPress={() => {
-                  console.log("Navigating to signup page...");
                   router.push("/signup");
                 }}
               >

@@ -111,7 +111,6 @@ export default function ItemsScreen() {
   const handleIgnoreRequest = async (requestId: string) => {
     try {
       await itemsService.rejectPurchaseRequest(requestId);
-      console.log("Request rejected:", requestId);
     } catch (error) {
       console.error('Error rejecting request:', error);
       Alert.alert("오류", "구매 요청 거절 중 오류가 발생했습니다.");
@@ -121,15 +120,13 @@ export default function ItemsScreen() {
   const handleStatusUpdate = (update: StatusUpdate) => {
     // 상태 업데이트 시 알림 생성
     const message = `상태가 ${update.newStatus}(으)로 변경되었습니다`;
-    
+
     createNotification({
       title: "물품 상태 변경",
       message: message,
       type: "item_update",
       relatedId: update.itemId,
     });
-
-    console.log("Status updated:", update);
   };
 
   const handleAddInventoryItem = (item: InventoryItem) => {
@@ -140,8 +137,6 @@ export default function ItemsScreen() {
       type: "system",
       relatedId: item.id,
     });
-
-    console.log("New inventory item added:", item);
   };
 
 

@@ -275,3 +275,38 @@ export const deleteTeam = async (teamId: string): Promise<void> => {
     throw new Error(error.message || '팀 삭제에 실패했습니다.');
   }
 };
+
+/**
+ * 팀 멤버 목록 조회
+ */
+export interface TeamMemberData {
+  id: string;
+  team_id: string;
+  user_id: string;
+  role: 'admin' | 'member';
+  joined_at: string;
+}
+
+export const getTeamMembers = async (teamId: string): Promise<TeamMemberData[]> => {
+  try {
+    const membersRef = collection(db, 'team_members');
+    const q = query(membersRef, where('team_id', '==', teamId));
+    const memberSnapshot = await getDocs(q);
+
+    const members: TeamMemberData[] = memberSnapshot.docs.map(doc => {
+      const data = doc.data();
+      return {
+        id: doc.id,
+        team_id: data.team_id,
+        user_id: data.user_id,
+        role: data.role,
+        joined_at: timestampToDate(data.joined_at).toISOString(),
+      };
+    });
+
+    return members;
+  } catch (error: any) {
+    console.error('Failed to get team members:', error);
+    throw new Error(error.message || '팀 멤버 조회에 실패했습니다.');
+  }
+};

@@ -4,7 +4,9 @@ import { Text } from "@/components/Themed";
 import { Ionicons } from "@expo/vector-icons";
 import Colors from "@/constants/Colors";
 import { useTeam } from "@/contexts/TeamContext";
-import { teamsService, TeamMember } from "@/lib/api-service";
+import { useAuth } from "@/contexts/AuthContext";
+import * as teamService from "@/services/teamService";
+import * as authService from "@/services/authService";
 
 interface Roommate {
   id: string;
@@ -22,11 +24,12 @@ interface CurrentRoommatesProps {
 
 export function CurrentRoommates({ onAddRoommate }: CurrentRoommatesProps) {
   const { currentTeam } = useTeam();
+  const { user } = useAuth();
   const [roommates, setRoommates] = useState<Roommate[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Load team members from API
+  // Load team members from Firebase
   const loadTeamMembers = async () => {
     if (!currentTeam?.id) {
       setIsLoading(false);
@@ -36,23 +39,44 @@ export function CurrentRoommates({ onAddRoommate }: CurrentRoommatesProps) {
     try {
       setIsLoading(true);
       setError(null);
-      
-      const members = await teamsService.getTeamMembers(currentTeam.id);
-      
-      // Transform team members to roommate format
-      const transformedRoommates: Roommate[] = members.map(member => ({
-        id: member.user_id || member.id,
-        name: member.user?.full_name || member.user?.email || 'Unknown User',
-        email: member.user?.email,
-        profileImage: member.user?.avatar_url || undefined,
-        status: 'offline' as const, // Default to offline since we don't have real-time status
-        role: member.role === 'admin' ? '방장' : undefined,
-        joinedDate: member.joined_at || new Date().toISOString(),
-      }));
-      
+
+      const members = await teamService.getTeamMembers(currentTeam.id);
+
+      // Transform team members to roommate format - fetch real user names from Firestore
+      const transformedRoommates: Roommate[] = await Promise.all(
+        members.map(async (member) => {
+          const isCurrentUser = member.user_id === user?.id;
+
+          // 현재 유저인 경우 AuthContext의 정보 사용
+          if (isCurrentUser) {
+            return {
+              id: member.user_id,
+              name: user?.name || user?.email || 'You',
+              email: user?.email,
+              profileImage: user?.avatar,
+              status: 'offline' as const,
+              role: member.role === 'admin' ? '방장' : undefined,
+              joinedDate: member.joined_at,
+            };
+          }
+
+          // 다른 팀원의 경우 Firestore에서 정보 가져오기
+          const userData = await authService.getUserFromFirestore(member.user_id);
+
+          return {
+            id: member.user_id,
+            name: userData?.name || userData?.email || '알 수 없음',
+            email: userData?.email,
+            profileImage: userData?.avatar,
+            status: 'offline' as const,
+            role: member.role === 'admin' ? '방장' : undefined,
+            joinedDate: member.joined_at,
+          };
+        })
+      );
+
       setRoommates(transformedRoommates);
     } catch (err) {
-      console.error('Error loading team members:', err);
       setError(err instanceof Error ? err.message : 'Failed to load team members');
     } finally {
       setIsLoading(false);

@@ -77,21 +77,9 @@ export default function SignupScreen({ onSignupSuccess }: SignupScreenProps) {
       setIsLoading(true);
       await signup(name.trim(), email.trim(), password);
 
-      Alert.alert(
-        "회원가입 성공",
-        "회원가입이 완료되었습니다. 로그인해주세요.",
-        [
-          {
-            text: "확인",
-            onPress: () => {
-              onSignupSuccess?.();
-              router.back();
-            },
-          },
-        ]
-      );
+      // 회원가입 성공 시 자동으로 로그인되고 AuthContext가 홈으로 리다이렉트
+      onSignupSuccess?.();
     } catch (error: any) {
-      console.error("Signup failed:", error);
       Alert.alert("회원가입 실패", error.message || "회원가입에 실패했습니다. 다시 시도해주세요.");
     } finally {
       setIsLoading(false);

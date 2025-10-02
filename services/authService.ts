@@ -7,7 +7,8 @@ import {
   sendPasswordResetEmail,
   AuthError,
 } from 'firebase/auth';
-import { auth } from '@/config/firebaseConfig';
+import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
+import { auth, db } from '@/config/firebaseConfig';
 
 export interface User {
   id: string;
@@ -28,9 +29,39 @@ export interface LoginData {
 }
 
 /**
+ * Firestore에서 사용자 정보 가져오기
+ */
+export const getUserFromFirestore = async (uid: string): Promise<User | null> => {
+  try {
+    const userDoc = await getDoc(doc(db, 'users', uid));
+    if (userDoc.exists()) {
+      const data = userDoc.data();
+      return {
+        id: uid,
+        email: data.email,
+        name: data.name,
+        avatar: data.avatar,
+      };
+    }
+    return null;
+  } catch (error) {
+    console.error('Failed to get user from Firestore:', error);
+    return null;
+  }
+};
+
+/**
  * Firebase User를 앱의 User 타입으로 변환
  */
-const mapFirebaseUser = (firebaseUser: FirebaseUser): User => {
+const mapFirebaseUser = async (firebaseUser: FirebaseUser): Promise<User> => {
+  // Firestore에서 사용자 정보 가져오기
+  const firestoreUser = await getUserFromFirestore(firebaseUser.uid);
+
+  if (firestoreUser) {
+    return firestoreUser;
+  }
+
+  // Firestore에 정보가 없으면 Firebase Auth 정보 사용
   return {
     id: firebaseUser.uid,
     email: firebaseUser.email || '',
@@ -74,23 +105,35 @@ const getAuthErrorMessage = (error: AuthError): string => {
  */
 export const signup = async (data: SignupData): Promise<User> => {
   try {
-    // Firebase에 사용자 생성
+    // Firebase Authentication에 사용자 생성
     const userCredential = await createUserWithEmailAndPassword(
       auth,
       data.email,
       data.password
     );
 
-    // 사용자 프로필 업데이트 (이름 설정)
+    const uid = userCredential.user.uid;
+
+    // Firestore에 사용자 정보 저장
+    await setDoc(doc(db, 'users', uid), {
+      name: data.name,
+      email: data.email,
+      avatar: null,
+      created_at: serverTimestamp(),
+      updated_at: serverTimestamp(),
+    });
+
+    // Firebase Auth 프로필도 업데이트 (선택사항)
     await updateProfile(userCredential.user, {
       displayName: data.name,
     });
 
-    // 업데이트된 사용자 정보 반환
-    const user = mapFirebaseUser({
-      ...userCredential.user,
-      displayName: data.name,
-    } as FirebaseUser);
+    const user: User = {
+      id: uid,
+      email: data.email,
+      name: data.name,
+      avatar: undefined,
+    };
 
     return user;
   } catch (error) {
@@ -110,7 +153,7 @@ export const login = async (data: LoginData): Promise<User> => {
       data.password
     );
 
-    return mapFirebaseUser(userCredential.user);
+    return await mapFirebaseUser(userCredential.user);
   } catch (error) {
     const authError = error as AuthError;
     throw new Error(getAuthErrorMessage(authError));
@@ -144,17 +187,17 @@ export const resetPassword = async (email: string): Promise<void> => {
 /**
  * 현재 로그인한 사용자 가져오기
  */
-export const getCurrentUser = (): User | null => {
+export const getCurrentUser = async (): Promise<User | null> => {
   const firebaseUser = auth.currentUser;
-  return firebaseUser ? mapFirebaseUser(firebaseUser) : null;
+  return firebaseUser ? await mapFirebaseUser(firebaseUser) : null;
 };
 
 /**
  * 인증 상태 변경 리스너
  */
 export const onAuthStateChanged = (callback: (user: User | null) => void) => {
-  return auth.onAuthStateChanged((firebaseUser) => {
-    const user = firebaseUser ? mapFirebaseUser(firebaseUser) : null;
+  return auth.onAuthStateChanged(async (firebaseUser) => {
+    const user = firebaseUser ? await mapFirebaseUser(firebaseUser) : null;
     callback(user);
   });
 };
