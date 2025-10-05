@@ -6,7 +6,7 @@ import { useState } from "react";
 import { StyleSheet, TouchableOpacity } from "react-native";
 
 interface Routine {
-  id: number;
+  id: string;
   task: string;
   assignee: string;
   nextDate: string;
@@ -18,8 +18,8 @@ interface Routine {
 
 interface RoutineCardProps {
   routine: Routine;
-  onComplete?: (routineId: number) => void;
-  onPostpone?: (routineId: number) => void;
+  onComplete?: (routineId: string) => void;
+  onPostpone?: (routineId: string) => void;
   onOptions?: (routine: Routine) => void;
   onChangeAssignee?: (routine: Routine) => void;
 }

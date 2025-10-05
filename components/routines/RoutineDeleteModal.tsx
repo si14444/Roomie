@@ -4,7 +4,7 @@ import React from "react";
 import { Modal, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 interface Routine {
-  id: number;
+  id: string;
   task: string;
   assignee: string;
   nextDate: string;
@@ -18,7 +18,7 @@ interface RoutineDeleteModalProps {
   visible: boolean;
   routine: Routine | null;
   onClose: () => void;
-  onConfirmDelete: (routineId: number) => void;
+  onConfirmDelete: (routineId: string) => void;
 }
 
 export function RoutineDeleteModal({

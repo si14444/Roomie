@@ -4,7 +4,7 @@ import React from "react";
 import { Modal, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 interface Routine {
-  id: number;
+  id: string;
   task: string;
   assignee: string;
   nextDate: string;
@@ -19,7 +19,7 @@ interface AssigneeSelectModalProps {
   routine: Routine | null;
   roommates: string[];
   onClose: () => void;
-  onSelectAssignee: (routineId: number, assignee: string) => void;
+  onSelectAssignee: (routineId: string, assignee: string) => void;
 }
 
 export function AssigneeSelectModal({

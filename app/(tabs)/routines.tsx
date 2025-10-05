@@ -1,22 +1,22 @@
-import React, { useState } from "react";
-import { StyleSheet, ScrollView, TouchableOpacity } from "react-native";
 import { Text, View } from "@/components/Themed";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { Ionicons } from "@expo/vector-icons";
 import Colors from "@/constants/Colors";
+import { Ionicons } from "@expo/vector-icons";
+import { useState } from "react";
+import { ScrollView, StyleSheet, TouchableOpacity } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 // Import routines components and hook
-import { RoutinesSummary } from "@/components/routines/RoutinesSummary";
-import { RoutineCard } from "@/components/routines/RoutineCard";
 import { AddRoutineModal } from "@/components/routines/AddRoutineModal";
-import { RoutineOptionsModal } from "@/components/routines/RoutineOptionsModal";
 import { AssigneeSelectModal } from "@/components/routines/AssigneeSelectModal";
 import { FrequencySelectModal } from "@/components/routines/FrequencySelectModal";
+import { RoutineCard } from "@/components/routines/RoutineCard";
 import { RoutineDeleteModal } from "@/components/routines/RoutineDeleteModal";
-import { useRoutines } from "@/hooks/useRoutines";
+import { RoutineOptionsModal } from "@/components/routines/RoutineOptionsModal";
+import { RoutinesSummary } from "@/components/routines/RoutinesSummary";
+import { useRoutinesFirebase as useRoutines } from "@/hooks/useRoutinesFirebase";
 
 interface Routine {
-  id: number;
+  id: string;
   task: string;
   assignee: string;
   nextDate: string;
@@ -31,9 +31,10 @@ export default function RoutinesScreen() {
   const [selectedRoutine, setSelectedRoutine] = useState<Routine | null>(null);
   const [showRoutineOptionsModal, setShowRoutineOptionsModal] = useState(false);
   const [showAssigneeSelectModal, setShowAssigneeSelectModal] = useState(false);
-  const [showFrequencySelectModal, setShowFrequencySelectModal] = useState(false);
+  const [showFrequencySelectModal, setShowFrequencySelectModal] =
+    useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  
+
   const {
     routines,
     statistics,
@@ -124,7 +125,7 @@ export default function RoutinesScreen() {
         onAdd={handleAddRoutine}
         roommates={roommates}
       />
-      
+
       <RoutineOptionsModal
         visible={showRoutineOptionsModal}
         routine={selectedRoutine}
@@ -133,7 +134,7 @@ export default function RoutinesScreen() {
         onChangeFrequency={handleChangeFrequency}
         onDeleteRoutine={handleDeleteRoutine}
       />
-      
+
       <AssigneeSelectModal
         visible={showAssigneeSelectModal}
         routine={selectedRoutine}
@@ -143,7 +144,7 @@ export default function RoutinesScreen() {
           changeAssignee(routineId, assignee);
         }}
       />
-      
+
       <FrequencySelectModal
         visible={showFrequencySelectModal}
         routine={selectedRoutine}
@@ -152,7 +153,7 @@ export default function RoutinesScreen() {
           changeFrequency(routineId, frequency);
         }}
       />
-      
+
       <RoutineDeleteModal
         visible={showDeleteModal}
         routine={selectedRoutine}

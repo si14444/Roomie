@@ -13,6 +13,56 @@
           "order": "DESCENDING"
         }
       ]
+    },
+    {
+      "collectionGroup": "routines",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "is_active",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "team_id",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "created_at",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "routine_completions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "routine_id",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "completed_at",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "routine_completions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "routine_id",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "completed_by",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "completed_at",
+          "order": "DESCENDING"
+        }
+      ]
     }
   ],
   "fieldOverrides": []

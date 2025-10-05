@@ -4,7 +4,7 @@ import React from "react";
 import { Modal, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 interface Routine {
-  id: number;
+  id: string;
   task: string;
   assignee: string;
   nextDate: string;
@@ -25,7 +25,7 @@ interface FrequencySelectModalProps {
   visible: boolean;
   routine: Routine | null;
   onClose: () => void;
-  onSelectFrequency: (routineId: number, frequency: "daily" | "weekly" | "monthly") => void;
+  onSelectFrequency: (routineId: string, frequency: "daily" | "weekly" | "monthly") => void;
 }
 
 export function FrequencySelectModal({
