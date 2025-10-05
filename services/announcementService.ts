@@ -8,6 +8,8 @@ import {
   serverTimestamp,
   Timestamp,
   onSnapshot,
+  deleteDoc,
+  doc,
 } from 'firebase/firestore';
 import { db } from '@/config/firebaseConfig';
 
@@ -144,4 +146,15 @@ export const subscribeToTeamAnnouncements = (
   );
 
   return unsubscribe;
+};
+
+/**
+ * 공지사항 삭제
+ */
+export const deleteAnnouncement = async (announcementId: string): Promise<void> => {
+  try {
+    await deleteDoc(doc(db, 'announcements', announcementId));
+  } catch (error: any) {
+    throw new Error(error.message || '공지사항 삭제에 실패했습니다.');
+  }
 };

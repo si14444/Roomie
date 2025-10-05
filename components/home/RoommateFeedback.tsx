@@ -13,12 +13,13 @@ import {
   TextInput,
   TouchableOpacity,
 } from "react-native";
-import { useAnnouncements, useCreateAnnouncement } from "@/hooks/useAnnouncements";
+import { useAnnouncements, useCreateAnnouncement, useDeleteAnnouncement } from "@/hooks/useAnnouncements";
 
 interface Announcement {
   id: string;
   message: string;
   author: string;
+  author_id: string;
   timestamp: string;
   isImportant?: boolean;
 }
@@ -30,10 +31,12 @@ export function RoommateFeedback() {
   const [modalVisible, setModalVisible] = useState(false);
   const [newMessage, setNewMessage] = useState("");
   const [isImportant, setIsImportant] = useState(false);
+  const [showAll, setShowAll] = useState(false);
 
   // TanStack Query hooks
   const { data: announcementsData, isLoading } = useAnnouncements(currentTeam?.id);
   const createAnnouncementMutation = useCreateAnnouncement();
+  const deleteAnnouncementMutation = useDeleteAnnouncement();
 
   // 상대 시간 계산 함수
   const getRelativeTime = (dateString: string): string => {
@@ -57,6 +60,7 @@ export function RoommateFeedback() {
       id: item.id,
       message: item.message,
       author: item.author_name,
+      author_id: item.author_id,
       timestamp: getRelativeTime(item.created_at),
       isImportant: item.is_important,
     }));
@@ -106,6 +110,53 @@ export function RoommateFeedback() {
     }
   };
 
+  const handleDeleteAnnouncement = (announcementId: string) => {
+    Alert.alert(
+      "공지사항 삭제",
+      "이 공지사항을 삭제하시겠습니까?",
+      [
+        {
+          text: "취소",
+          style: "cancel"
+        },
+        {
+          text: "삭제",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await deleteAnnouncementMutation.mutateAsync(announcementId);
+              Alert.alert("삭제 완료", "공지사항이 삭제되었습니다.");
+            } catch (error) {
+              Alert.alert("오류", "공지사항 삭제에 실패했습니다.");
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  // 삭제 권한 확인 (본인이 쓴 글 또는 방장)
+  const canDeleteAnnouncement = (authorId: string) => {
+    if (!user || !currentTeam) return false;
+
+    // 디버깅
+    console.log('=== 삭제 권한 확인 ===');
+    console.log('user.id:', user.id);
+    console.log('authorId:', authorId);
+    console.log('currentTeam.created_by:', currentTeam.created_by);
+    console.log('currentTeam.ownerId:', currentTeam.ownerId);
+    console.log('currentTeam:', currentTeam);
+
+    // created_by 또는 ownerId 사용
+    const ownerId = currentTeam.created_by || currentTeam.ownerId;
+    const canDelete = user.id === authorId || user.id === ownerId;
+
+    console.log('ownerId:', ownerId);
+    console.log('canDelete:', canDelete);
+
+    return canDelete;
+  };
+
   return (
     <>
       <View style={styles.container}>
@@ -138,39 +189,72 @@ export function RoommateFeedback() {
               <Text style={styles.emptyStateSubtext}>첫 공지사항을 작성해보세요!</Text>
             </View>
           ) : (
-            announcements.slice(0, 4).map((item) => (
-              <View key={item.id} style={styles.announcementItem}>
-                <View style={styles.announcementHeader}>
-                  <View style={styles.authorInfo}>
-                    <View
-                      style={[
-                        styles.authorAvatar,
-                        item.isImportant && styles.importantAvatar,
-                      ]}
-                    >
-                      <Text style={styles.authorInitial}>
-                        {item.author.charAt(0)}
-                      </Text>
+            <>
+              {(showAll ? announcements : announcements.slice(0, 4)).map((item) => (
+                <View key={item.id} style={styles.announcementItem}>
+                  <View style={styles.announcementHeader}>
+                    <View style={styles.authorInfo}>
+                      <View
+                        style={[
+                          styles.authorAvatar,
+                          item.isImportant && styles.importantAvatar,
+                        ]}
+                      >
+                        <Text style={styles.authorInitial}>
+                          {item.author.charAt(0)}
+                        </Text>
+                        {item.isImportant && (
+                          <View style={styles.importantBadge}>
+                            <Ionicons name="megaphone" size={8} color="white" />
+                          </View>
+                        )}
+                      </View>
+                      <View>
+                        <Text style={styles.authorName}>{item.author}</Text>
+                        <Text style={styles.timestamp}>{item.timestamp}</Text>
+                      </View>
+                    </View>
+                    <View style={styles.announcementActions}>
                       {item.isImportant && (
-                        <View style={styles.importantBadge}>
-                          <Ionicons name="megaphone" size={8} color="white" />
+                        <View style={styles.importantTag}>
+                          <Text style={styles.importantTagText}>중요</Text>
                         </View>
                       )}
-                    </View>
-                    <View>
-                      <Text style={styles.authorName}>{item.author}</Text>
-                      <Text style={styles.timestamp}>{item.timestamp}</Text>
+                      {canDeleteAnnouncement(item.author_id) && (
+                        <TouchableOpacity
+                          onPress={() => handleDeleteAnnouncement(item.id)}
+                          style={styles.deleteButton}
+                        >
+                          <Ionicons
+                            name="trash-outline"
+                            size={18}
+                            color={Colors.light.errorColor}
+                          />
+                        </TouchableOpacity>
+                      )}
                     </View>
                   </View>
-                  {item.isImportant && (
-                    <View style={styles.importantTag}>
-                      <Text style={styles.importantTagText}>중요</Text>
-                    </View>
-                  )}
+                  <Text style={styles.announcementMessage}>{item.message}</Text>
                 </View>
-                <Text style={styles.announcementMessage}>{item.message}</Text>
-              </View>
-            ))
+              ))}
+
+              {/* 더보기/접기 버튼 */}
+              {announcements.length > 4 && (
+                <TouchableOpacity
+                  style={styles.showMoreButton}
+                  onPress={() => setShowAll(!showAll)}
+                >
+                  <Text style={styles.showMoreText}>
+                    {showAll ? '접기' : '더보기'}
+                  </Text>
+                  <Ionicons
+                    name={showAll ? 'chevron-up' : 'chevron-down'}
+                    size={16}
+                    color={Colors.light.primary}
+                  />
+                </TouchableOpacity>
+              )}
+            </>
           )}
         </View>
       </View>
@@ -307,6 +391,15 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
+    flex: 1,
+  },
+  announcementActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  deleteButton: {
+    padding: 4,
   },
   authorAvatar: {
     width: 32,
@@ -377,6 +470,19 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: Colors.light.mutedText,
     textAlign: "center",
+  },
+  showMoreButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 12,
+    gap: 6,
+    marginTop: 8,
+  },
+  showMoreText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: Colors.light.primary,
   },
   modalOverlay: {
     flex: 1,

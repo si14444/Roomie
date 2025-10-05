@@ -58,3 +58,18 @@ export const useCreateAnnouncement = () => {
     },
   });
 };
+
+/**
+ * 공지사항 삭제 mutation 훅
+ */
+export const useDeleteAnnouncement = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: announcementService.deleteAnnouncement,
+    onSuccess: () => {
+      // 모든 공지사항 목록 refetch
+      queryClient.invalidateQueries({ queryKey: ['announcements'] });
+    },
+  });
+};
