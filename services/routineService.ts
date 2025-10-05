@@ -26,6 +26,7 @@ export interface Routine {
   assigned_name: string;
   priority: 'low' | 'medium' | 'high';
   is_active: boolean;
+  postpone_until?: string; // 미루기 날짜
   created_by: string;
   created_at: string;
   updated_at?: string;
@@ -144,6 +145,7 @@ export const getTeamRoutines = async (teamId: string): Promise<Routine[]> => {
         assigned_name: data.assigned_name,
         priority: data.priority,
         is_active: data.is_active,
+        postpone_until: data.postpone_until,
         created_by: data.created_by,
         created_at: timestampToDate(data.created_at).toISOString(),
         updated_at: data.updated_at ? timestampToDate(data.updated_at).toISOString() : undefined,
@@ -188,6 +190,7 @@ export const subscribeToTeamRoutines = (
           assigned_name: data.assigned_name,
           priority: data.priority,
           is_active: data.is_active,
+          postpone_until: data.postpone_until,
           created_by: data.created_by,
           created_at: timestampToDate(data.created_at).toISOString(),
           updated_at: data.updated_at ? timestampToDate(data.updated_at).toISOString() : undefined,
@@ -344,5 +347,48 @@ export const getTodayCompletion = async (
     return null;
   } catch (error: any) {
     throw new Error(error.message || '오늘의 완료 기록 조회에 실패했습니다.');
+  }
+};
+
+/**
+ * 특정 루틴의 오늘 완료 여부 확인
+ */
+export const checkTodayCompletion = async (routineId: string): Promise<RoutineCompletion | null> => {
+  try {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const q = query(
+      collection(db, 'routine_completions'),
+      where('routine_id', '==', routineId),
+      orderBy('completed_at', 'desc')
+    );
+
+    const querySnapshot = await getDocs(q);
+
+    if (querySnapshot.empty) {
+      return null;
+    }
+
+    // Get the most recent completion
+    const mostRecent = querySnapshot.docs[0];
+    const data = mostRecent.data();
+    const completedAt = timestampToDate(data.completed_at);
+
+    // Check if it's from today
+    if (completedAt >= today) {
+      return {
+        id: mostRecent.id,
+        routine_id: data.routine_id,
+        completed_by: data.completed_by,
+        completed_by_name: data.completed_by_name,
+        completed_at: completedAt.toISOString(),
+        notes: data.notes,
+      };
+    }
+
+    return null;
+  } catch (error: any) {
+    throw new Error(error.message || '완료 기록 조회에 실패했습니다.');
   }
 };

@@ -92,7 +92,6 @@ export default function RoutinesScreen() {
           pending={statistics.pending}
           overdue={statistics.overdue}
           completionRate={statistics.completionRate}
-          participationRate={statistics.participationRate}
         />
 
         <View style={styles.routinesSection}>
@@ -105,16 +104,32 @@ export default function RoutinesScreen() {
           </View>
 
           <View style={styles.routinesList}>
-            {routines.map((routine) => (
-              <RoutineCard
-                key={routine.id}
-                routine={routine}
-                onComplete={completeRoutine}
-                onPostpone={postponeRoutine}
-                onOptions={handleShowRoutineOptions}
-                onChangeAssignee={showAssigneeOptions}
-              />
-            ))}
+            {routines.length === 0 ? (
+              <View style={styles.emptyState}>
+                <Ionicons
+                  name="calendar-outline"
+                  size={64}
+                  color={Colors.light.mutedText}
+                />
+                <Text style={styles.emptyStateText}>
+                  아직 등록된 루틴이 없습니다
+                </Text>
+                <Text style={styles.emptyStateSubText}>
+                  새 루틴 버튼을 눌러 첫 루틴을 만들어보세요
+                </Text>
+              </View>
+            ) : (
+              routines.map((routine) => (
+                <RoutineCard
+                  key={routine.id}
+                  routine={routine}
+                  onComplete={completeRoutine}
+                  onPostpone={postponeRoutine}
+                  onOptions={handleShowRoutineOptions}
+                  onChangeAssignee={showAssigneeOptions}
+                />
+              ))
+            )}
           </View>
         </View>
       </ScrollView>
@@ -205,5 +220,25 @@ const styles = StyleSheet.create({
   },
   routinesList: {
     gap: 12,
+  },
+  emptyState: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 60,
+    paddingHorizontal: 40,
+  },
+  emptyStateText: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: Colors.light.text,
+    marginTop: 16,
+    textAlign: "center",
+  },
+  emptyStateSubText: {
+    fontSize: 14,
+    color: Colors.light.mutedText,
+    marginTop: 8,
+    textAlign: "center",
+    lineHeight: 20,
   },
 });

@@ -9,7 +9,6 @@ interface RoutinesSummaryProps {
   pending: number;
   overdue: number;
   completionRate: number;
-  participationRate: number;
 }
 
 export function RoutinesSummary({
@@ -17,7 +16,6 @@ export function RoutinesSummary({
   pending,
   overdue,
   completionRate,
-  participationRate,
 }: RoutinesSummaryProps) {
   return (
     <View style={styles.summarySection}>
@@ -73,24 +71,6 @@ export function RoutinesSummary({
                 {
                   width: `${completionRate}%`,
                   backgroundColor: Colors.light.successColor,
-                },
-              ]}
-            />
-          </View>
-        </View>
-
-        <View style={styles.progressItem}>
-          <View style={styles.progressHeader}>
-            <Text style={styles.progressLabel}>참여율</Text>
-            <Text style={styles.progressValue}>{participationRate}%</Text>
-          </View>
-          <View style={styles.progressBar}>
-            <View
-              style={[
-                styles.progressFill,
-                {
-                  width: `${participationRate}%`,
-                  backgroundColor: Colors.light.primary,
                 },
               ]}
             />

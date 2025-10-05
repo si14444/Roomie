@@ -12,6 +12,7 @@ import {
   useCompleteRoutine,
 } from "./useRoutinesQuery";
 import type { Routine as FirebaseRoutine } from "@/services/routineService";
+import * as routineService from "@/services/routineService";
 
 interface Routine {
   id: string;
@@ -37,6 +38,7 @@ export function useRoutinesFirebase() {
   const { currentTeam } = useTeam();
   const { user } = useAuth();
   const [roommates, setRoommates] = useState<string[]>([]);
+  const [completionMap, setCompletionMap] = useState<Record<string, routineService.RoutineCompletion>>({});
 
   // TanStack Query hooks for Firebase
   const { data: firebaseRoutines = [], isLoading } = useRoutinesQuery(currentTeam?.id);
@@ -75,6 +77,32 @@ export function useRoutinesFirebase() {
     }
   }, [currentTeam?.id]);
 
+  // Load completion status for all routines
+  useEffect(() => {
+    const loadCompletions = async () => {
+      if (firebaseRoutines.length === 0) return;
+
+      const completions: Record<string, routineService.RoutineCompletion> = {};
+
+      await Promise.all(
+        firebaseRoutines.map(async (routine) => {
+          try {
+            const completion = await routineService.checkTodayCompletion(routine.id);
+            if (completion) {
+              completions[routine.id] = completion;
+            }
+          } catch (error) {
+            console.error(`Error checking completion for routine ${routine.id}:`, error);
+          }
+        })
+      );
+
+      setCompletionMap(completions);
+    };
+
+    loadCompletions();
+  }, [firebaseRoutines]);
+
   // 작업명에 따라 적절한 아이콘 자동 선택
   const getIconForTask = (task: string) => {
     const taskLower = task.toLowerCase();
@@ -107,14 +135,32 @@ export function useRoutinesFirebase() {
     const today = new Date();
     const todayString = today.toISOString().split("T")[0];
 
+    // Check completion status
+    const completion = completionMap[fbRoutine.id];
+    const isCompleted = !!completion;
+
+    // Check if postponed
+    const postponeDate = fbRoutine.postpone_until ? new Date(fbRoutine.postpone_until) : null;
+    const isPostponed = postponeDate ? postponeDate > today : false;
+
+    // Determine status
+    let status: "pending" | "completed" | "overdue" = "pending";
+    if (isCompleted) {
+      status = "completed";
+    } else if (!isPostponed) {
+      // Could check if overdue based on frequency, but for now just pending
+      status = "pending";
+    }
+
     return {
       id: fbRoutine.id,
       task: fbRoutine.title,
       assignee: fbRoutine.assigned_name,
-      nextDate: todayString,
-      status: "pending", // TODO: Check completion status
+      nextDate: isPostponed && postponeDate ? postponeDate.toISOString().split("T")[0] : todayString,
+      status,
       icon: getIconForTask(fbRoutine.title),
       frequency: fbRoutine.frequency,
+      completedAt: completion?.completed_at,
       assigned_to: fbRoutine.assigned_to,
       assigned_name: fbRoutine.assigned_name,
     };
@@ -123,7 +169,7 @@ export function useRoutinesFirebase() {
   // Transform Firebase routines to local format
   const routines: Routine[] = useMemo(() => {
     return firebaseRoutines.map((fbRoutine) => mapFirebaseToLocal(fbRoutine));
-  }, [firebaseRoutines]);
+  }, [firebaseRoutines, completionMap]);
 
   // 동적 통계 계산
   const statistics = useMemo(() => {
@@ -137,7 +183,6 @@ export function useRoutinesFirebase() {
       pending,
       overdue,
       completionRate: total > 0 ? Math.round((completed / total) * 100) : 0,
-      participationRate: 95,
     };
   }, [routines]);
 
@@ -166,6 +211,12 @@ export function useRoutinesFirebase() {
       });
 
       Alert.alert("완료", "루틴을 완료했습니다.");
+
+      // Reload completion status
+      const completion = await routineService.checkTodayCompletion(routineId);
+      if (completion) {
+        setCompletionMap((prev) => ({ ...prev, [routineId]: completion }));
+      }
     } catch (error) {
       console.error("Error completing routine:", error);
       Alert.alert("오류", "루틴 완료 처리 중 오류가 발생했습니다.");
@@ -174,8 +225,25 @@ export function useRoutinesFirebase() {
 
   // 루틴 미루기 처리
   const postponeRoutine = async (routineId: string) => {
-    // 미루기는 로컬 상태만 변경 (Firebase에는 저장하지 않음)
-    Alert.alert("알림", "루틴을 내일로 미뤘습니다.");
+    try {
+      // Calculate tomorrow's date
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      tomorrow.setHours(0, 0, 0, 0);
+
+      // Update routine with postpone_until date
+      await updateRoutineMutation.mutateAsync({
+        routineId,
+        updates: {
+          postpone_until: tomorrow.toISOString(),
+        },
+      });
+
+      Alert.alert("완료", "루틴을 내일로 미뤘습니다.");
+    } catch (error) {
+      console.error("Error postponing routine:", error);
+      Alert.alert("오류", "루틴 미루기 중 오류가 발생했습니다.");
+    }
   };
 
   // 담당자 변경

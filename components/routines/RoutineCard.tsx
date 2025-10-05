@@ -70,6 +70,26 @@ export function RoutineCard({
     }
   };
 
+  const formatCompletionTime = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+
+    if (diffMins < 1) {
+      return "방금 전";
+    } else if (diffMins < 60) {
+      return `${diffMins}분 전`;
+    } else if (diffHours < 24) {
+      return `${diffHours}시간 전`;
+    } else {
+      const hours = date.getHours();
+      const minutes = date.getMinutes();
+      return `오늘 ${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}`;
+    }
+  };
+
   const [showCompleteModal, setShowCompleteModal] = useState(false);
 
   const handleComplete = () => {
@@ -95,7 +115,9 @@ export function RoutineCard({
             {getFrequencyText(routine.frequency)} • {routine.nextDate}
           </Text>
           {routine.completedAt && (
-            <Text style={styles.completedAt}>완료: {routine.completedAt}</Text>
+            <Text style={styles.completedAt}>
+              ✓ {formatCompletionTime(routine.completedAt)}
+            </Text>
           )}
         </View>
         <View style={styles.routineStatus}>
@@ -130,6 +152,13 @@ export function RoutineCard({
           >
             <Ionicons name="checkmark" size={16} color="white" />
             <Text style={styles.completeButtonText}>완료</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.postponeButton}
+            onPress={() => onPostpone?.(routine.id)}
+          >
+            <Ionicons name="time-outline" size={16} color={Colors.light.mutedText} />
+            <Text style={styles.postponeButtonText}>미루기</Text>
           </TouchableOpacity>
         </View>
       )}
