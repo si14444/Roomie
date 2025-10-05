@@ -7,6 +7,7 @@ import {
   orderBy,
   serverTimestamp,
   Timestamp,
+  onSnapshot,
 } from 'firebase/firestore';
 import { db } from '@/config/firebaseConfig';
 
@@ -101,4 +102,46 @@ export const getTeamAnnouncements = async (teamId: string): Promise<Announcement
   } catch (error: any) {
     throw new Error(error.message || '공지사항 조회에 실패했습니다.');
   }
+};
+
+/**
+ * 팀의 공지사항 실시간 리스너 구독
+ */
+export const subscribeToTeamAnnouncements = (
+  teamId: string,
+  onUpdate: (announcements: Announcement[]) => void,
+  onError?: (error: Error) => void
+) => {
+  const q = query(
+    collection(db, 'announcements'),
+    where('team_id', '==', teamId),
+    orderBy('created_at', 'desc')
+  );
+
+  const unsubscribe = onSnapshot(
+    q,
+    (querySnapshot) => {
+      const announcements: Announcement[] = querySnapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          team_id: data.team_id,
+          author_id: data.author_id,
+          author_name: data.author_name,
+          message: data.message,
+          is_important: data.is_important,
+          created_at: timestampToDate(data.created_at).toISOString(),
+        };
+      });
+      onUpdate(announcements);
+    },
+    (error) => {
+      console.error('Announcement subscription error:', error);
+      if (onError) {
+        onError(new Error(error.message || '공지사항 실시간 업데이트에 실패했습니다.'));
+      }
+    }
+  );
+
+  return unsubscribe;
 };

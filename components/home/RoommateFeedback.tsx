@@ -35,19 +35,6 @@ export function RoommateFeedback() {
   const { data: announcementsData, isLoading } = useAnnouncements(currentTeam?.id);
   const createAnnouncementMutation = useCreateAnnouncement();
 
-  // Transform announcements data for display
-  const announcements = useMemo(() => {
-    if (!announcementsData) return [];
-
-    return announcementsData.map(item => ({
-      id: item.id,
-      message: item.message,
-      author: item.author_name,
-      timestamp: getRelativeTime(item.created_at),
-      isImportant: item.is_important,
-    }));
-  }, [announcementsData]);
-
   // 상대 시간 계산 함수
   const getRelativeTime = (dateString: string): string => {
     const date = new Date(dateString);
@@ -61,6 +48,19 @@ export function RoommateFeedback() {
 
     return date.toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' });
   };
+
+  // Transform announcements data for display
+  const announcements = useMemo(() => {
+    if (!announcementsData) return [];
+
+    return announcementsData.map(item => ({
+      id: item.id,
+      message: item.message,
+      author: item.author_name,
+      timestamp: getRelativeTime(item.created_at),
+      isImportant: item.is_important,
+    }));
+  }, [announcementsData]);
 
   const addAnnouncement = async () => {
     if (newMessage.trim().length === 0) {
