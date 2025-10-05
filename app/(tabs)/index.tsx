@@ -1,6 +1,7 @@
 import Colors from "@/constants/Colors";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNotificationContext } from "@/contexts/NotificationContext";
+import { useTeam } from "@/contexts/TeamContext";
 import * as Clipboard from "expo-clipboard";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
@@ -27,12 +28,13 @@ import { CurrentRoommates } from "@/components/home/CurrentRoommates";
 import { RoommateFeedback } from "@/components/home/RoommateFeedback";
 import { StatusSummaryCard } from "@/components/home/StatusSummaryCard";
 
-// Import modals for direct functionality
-import { FontAwesome } from "@expo/vector-icons";
+// Import icons
+import { Ionicons } from "@expo/vector-icons";
 
 export default function HomeScreen() {
   const { createNotification } = useNotificationContext();
   const { isAuthenticated, user } = useAuth();
+  const { currentTeam } = useTeam();
   const router = useRouter();
 
   useEffect(() => {
@@ -110,27 +112,27 @@ export default function HomeScreen() {
   //   ]);
   // };
 
-  // 초대 링크 (임시)
-  const inviteLink = "https://roomie.app/invite?code=ABC123";
-
   const handleInvite = () => {
+    if (!currentTeam) {
+      Alert.alert("오류", "팀을 먼저 선택해주세요.");
+      return;
+    }
     setInviteModalVisible(true);
   };
 
-  const handleCopy = async () => {
-    await Clipboard.setStringAsync(inviteLink);
-    if (Platform.OS === "android") {
-      ToastAndroid.show("초대 링크가 복사되었습니다!", ToastAndroid.SHORT);
-    } else {
-      Alert.alert("복사 완료", "초대 링크가 복사되었습니다!");
+  const handleCopyInviteCode = async () => {
+    if (!currentTeam?.invite_code && !currentTeam?.inviteCode) {
+      Alert.alert("오류", "초대 코드를 찾을 수 없습니다.");
+      return;
     }
-  };
 
-  const handleShare = async () => {
-    try {
-      await Share.share({ message: inviteLink });
-    } catch (error) {
-      Alert.alert("공유 실패", "초대 링크를 공유하는 데 실패했습니다.");
+    const inviteCode = currentTeam.invite_code || currentTeam.inviteCode;
+    await Clipboard.setStringAsync(inviteCode);
+
+    if (Platform.OS === "android") {
+      ToastAndroid.show("초대 코드가 복사되었습니다!", ToastAndroid.SHORT);
+    } else {
+      Alert.alert("복사 완료", "초대 코드가 복사되었습니다!");
     }
   };
 
@@ -157,19 +159,28 @@ export default function HomeScreen() {
           <View style={styles.dragBar} />
           <Text style={styles.modalTitle}>룸메이트 초대</Text>
           <Text style={styles.modalDesc}>
-            아래 버튼을 눌러 카카오톡으로 초대 링크를 공유하세요!
+            아래 초대 코드를 복사해서 친구에게 공유하세요!
           </Text>
-          <View style={styles.modalButtonRow}>
-            <TouchableOpacity style={styles.kakaoButton} onPress={handleShare}>
-              <FontAwesome
-                name="comment"
-                size={20}
-                color="#3C1E1E"
-                style={{ marginRight: 8 }}
-              />
-              <Text style={styles.kakaoButtonText}>카카오톡으로 공유</Text>
-            </TouchableOpacity>
+
+          {/* 초대 코드 표시 */}
+          <View style={styles.inviteCodeContainer}>
+            <View style={styles.inviteCodeBox}>
+              <Ionicons name="key" size={20} color={Colors.light.primary} />
+              <Text style={styles.inviteCodeText}>
+                {currentTeam?.invite_code || currentTeam?.inviteCode || "코드 없음"}
+              </Text>
+            </View>
           </View>
+
+          {/* 복사 버튼 */}
+          <TouchableOpacity
+            style={styles.copyButton}
+            onPress={handleCopyInviteCode}
+          >
+            <Ionicons name="copy-outline" size={20} color="#fff" />
+            <Text style={styles.copyButtonText}>초대 코드 복사</Text>
+          </TouchableOpacity>
+
           <TouchableOpacity
             style={styles.closeButton}
             onPress={() => setInviteModalVisible(false)}
@@ -291,20 +302,43 @@ const styles = StyleSheet.create({
     marginTop: 4,
     opacity: 0.5,
   },
-  kakaoButton: {
-    flex: 1,
+  inviteCodeContainer: {
+    width: "100%",
+    marginVertical: 20,
+  },
+  inviteCodeBox: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#FEE500", // 카카오 공식 색상
-    borderRadius: 8,
-    paddingVertical: 14,
-    marginBottom: 8,
-    marginTop: 8,
-    minHeight: 48,
+    backgroundColor: Colors.light.surface,
+    borderRadius: 12,
+    paddingVertical: 20,
+    paddingHorizontal: 16,
+    borderWidth: 2,
+    borderColor: Colors.light.primary,
+    borderStyle: "dashed",
+    gap: 12,
   },
-  kakaoButtonText: {
-    color: "#3C1E1E", // 카카오 공식 텍스트 색상
+  inviteCodeText: {
+    fontSize: 24,
+    fontWeight: "bold",
+    color: Colors.light.primary,
+    letterSpacing: 2,
+  },
+  copyButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: Colors.light.primary,
+    borderRadius: 12,
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    gap: 8,
+    width: "100%",
+    marginBottom: 12,
+  },
+  copyButtonText: {
+    color: "#fff",
     fontSize: 16,
     fontWeight: "bold",
   },
