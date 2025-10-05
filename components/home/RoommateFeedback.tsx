@@ -139,22 +139,9 @@ export function RoommateFeedback() {
   const canDeleteAnnouncement = (authorId: string) => {
     if (!user || !currentTeam) return false;
 
-    // 디버깅
-    console.log('=== 삭제 권한 확인 ===');
-    console.log('user.id:', user.id);
-    console.log('authorId:', authorId);
-    console.log('currentTeam.created_by:', currentTeam.created_by);
-    console.log('currentTeam.ownerId:', currentTeam.ownerId);
-    console.log('currentTeam:', currentTeam);
-
     // created_by 또는 ownerId 사용
     const ownerId = currentTeam.created_by || currentTeam.ownerId;
-    const canDelete = user.id === authorId || user.id === ownerId;
-
-    console.log('ownerId:', ownerId);
-    console.log('canDelete:', canDelete);
-
-    return canDelete;
+    return user.id === authorId || user.id === ownerId;
   };
 
   return (

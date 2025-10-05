@@ -1,6 +1,5 @@
 import Colors from "@/constants/Colors";
 import { useAuth } from "@/contexts/AuthContext";
-import { useNotificationContext } from "@/contexts/NotificationContext";
 import { useTeam } from "@/contexts/TeamContext";
 import * as Clipboard from "expo-clipboard";
 import { useRouter } from "expo-router";
@@ -11,7 +10,6 @@ import {
   Platform,
   Pressable,
   ScrollView,
-  Share,
   StyleSheet,
   Text,
   ToastAndroid,
@@ -19,98 +17,24 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-
-// Import hooks for actual data integration
-import { useRoutines } from "@/hooks/useRoutines";
+import { Ionicons } from "@expo/vector-icons";
 
 // Import home components
 import { CurrentRoommates } from "@/components/home/CurrentRoommates";
 import { RoommateFeedback } from "@/components/home/RoommateFeedback";
 import { StatusSummaryCard } from "@/components/home/StatusSummaryCard";
 
-// Import icons
-import { Ionicons } from "@expo/vector-icons";
-
 export default function HomeScreen() {
-  const { createNotification } = useNotificationContext();
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated } = useAuth();
   const { currentTeam } = useTeam();
   const router = useRouter();
+  const [inviteModalVisible, setInviteModalVisible] = useState(false);
 
   useEffect(() => {
     if (!isAuthenticated) {
       router.replace("/login");
     }
   }, [isAuthenticated]);
-
-  // Connect to actual data hooks
-  const { completeRoutine, routines, addNewRoutine } = useRoutines();
-
-  // Modal states
-  const [inviteModalVisible, setInviteModalVisible] = useState(false);
-
-  // const handleAddTask = () => {
-  //   Alert.prompt(
-  //     "📝 새 할 일 추가",
-  //     "오늘 할 일을 입력해주세요:",
-  //     [
-  //       { text: "취소", style: "cancel" },
-  //       {
-  //         text: "추가하기",
-  //         onPress: (taskName) => {
-  //           if (taskName && taskName.trim()) {
-  //             // 현재 사용자
-  //             const currentUser =
-  //               user?.user_metadata?.full_name || user?.email || "Unknown User";
-
-  //             // 새 루틴 추가 (일회성 작업으로)
-  //             addNewRoutine({
-  //               task: taskName.trim(),
-  //               assignee: currentUser,
-  //               frequency: "daily",
-  //             });
-
-  //             createNotification({
-  //               title: "새 할 일 추가",
-  //               message: `"${taskName.trim()}" 작업이 오늘 할 일에 추가되었습니다`,
-  //               type: "system",
-  //               relatedId: Date.now().toString(),
-  //             });
-
-  //             Alert.alert(
-  //               "✅ 추가 완료",
-  //               `"${taskName.trim()}"이 오늘 할 일에 추가되었습니다!`
-  //             );
-  //           }
-  //         },
-  //       },
-  //     ],
-  //     "plain-text"
-  //   );
-  // };
-
-  // const handleTaskPress = (taskId: number) => {
-  //   Alert.alert("작업 관리", "이 작업을 어떻게 처리하시겠습니까?", [
-  //     { text: "취소", style: "cancel" },
-  //     {
-  //       text: "✅ 완료 처리",
-  //       onPress: () => {
-  //         // 해당 루틴 완료 처리
-  //         const routine = routines.find((r) => r.id === taskId);
-  //         if (routine) {
-  //           completeRoutine(taskId);
-  //           Alert.alert("완료", `"${routine.task}"가 완료되었습니다!`);
-  //         }
-  //       },
-  //     },
-  //     {
-  //       text: "⏰ 내일로 미루기",
-  //       onPress: () => {
-  //         Alert.alert("미루기", "작업이 내일로 연기되었습니다.");
-  //       },
-  //     },
-  //   ]);
-  // };
 
   const handleInvite = () => {
     if (!currentTeam) {
@@ -126,7 +50,7 @@ export default function HomeScreen() {
       return;
     }
 
-    const inviteCode = currentTeam.invite_code || currentTeam.inviteCode;
+    const inviteCode = currentTeam.invite_code || currentTeam.inviteCode || "";
     await Clipboard.setStringAsync(inviteCode);
 
     if (Platform.OS === "android") {
@@ -142,7 +66,6 @@ export default function HomeScreen() {
         <StatusSummaryCard />
         <RoommateFeedback />
         <CurrentRoommates onAddRoommate={handleInvite} />
-        {/* <TodayTasks onAddTask={handleAddTask} onTaskPress={handleTaskPress} /> */}
       </ScrollView>
       {/* 초대 모달 */}
       <Modal
