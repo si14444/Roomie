@@ -13,8 +13,8 @@ import { QuickActions } from "@/components/bills/QuickActions";
 import { SummaryCard } from "@/components/bills/SummaryCard";
 
 // Import custom hook
-import type { Bill } from "@/hooks/useBills";
-import { PaymentLinkModalData, useBills } from "@/hooks/useBills";
+import type { Bill } from "@/hooks/useBillsFirebase";
+import { PaymentLinkModalData, useBillsFirebase as useBills } from "@/hooks/useBillsFirebase";
 
 export default function BillsScreen() {
   const {

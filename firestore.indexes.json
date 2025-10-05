@@ -77,6 +77,48 @@
           "order": "DESCENDING"
         }
       ]
+    },
+    {
+      "collectionGroup": "bills",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "team_id",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "due_date",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "bill_payments",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "bill_id",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "paid_at",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "bill_payments",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "bill_id",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "paid_by",
+          "order": "ASCENDING"
+        }
+      ]
     }
   ],
   "fieldOverrides": []
