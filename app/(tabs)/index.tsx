@@ -6,9 +6,7 @@ import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
   Alert,
-  Modal,
   Platform,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -18,6 +16,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
+import { BottomSheetModal } from "@/components/common/BottomSheetModal";
 
 // Import home components
 import { CurrentRoommates } from "@/components/home/CurrentRoommates";
@@ -67,51 +66,44 @@ export default function HomeScreen() {
         <RoommateFeedback />
         <CurrentRoommates onAddRoommate={handleInvite} />
       </ScrollView>
+
       {/* 초대 모달 */}
-      <Modal
+      <BottomSheetModal
         visible={inviteModalVisible}
-        animationType="slide"
-        transparent
-        onRequestClose={() => setInviteModalVisible(false)}
+        onClose={() => setInviteModalVisible(false)}
+        title="룸메이트 초대"
+        showCloseButton={false}
       >
-        <Pressable
-          style={styles.modalOverlay}
-          onPress={() => setInviteModalVisible(false)}
-        />
-        <View style={styles.inviteModal}>
-          <View style={styles.dragBar} />
-          <Text style={styles.modalTitle}>룸메이트 초대</Text>
-          <Text style={styles.modalDesc}>
-            아래 초대 코드를 복사해서 친구에게 공유하세요!
-          </Text>
+        <Text style={styles.modalDesc}>
+          아래 초대 코드를 복사해서 친구에게 공유하세요!
+        </Text>
 
-          {/* 초대 코드 표시 */}
-          <View style={styles.inviteCodeContainer}>
-            <View style={styles.inviteCodeBox}>
-              <Ionicons name="key" size={20} color={Colors.light.primary} />
-              <Text style={styles.inviteCodeText}>
-                {currentTeam?.invite_code || currentTeam?.inviteCode || "코드 없음"}
-              </Text>
-            </View>
+        {/* 초대 코드 표시 */}
+        <View style={styles.inviteCodeContainer}>
+          <View style={styles.inviteCodeBox}>
+            <Ionicons name="key" size={20} color={Colors.light.primary} />
+            <Text style={styles.inviteCodeText}>
+              {currentTeam?.invite_code || currentTeam?.inviteCode || "코드 없음"}
+            </Text>
           </View>
-
-          {/* 복사 버튼 */}
-          <TouchableOpacity
-            style={styles.copyButton}
-            onPress={handleCopyInviteCode}
-          >
-            <Ionicons name="copy-outline" size={20} color="#fff" />
-            <Text style={styles.copyButtonText}>초대 코드 복사</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.closeButton}
-            onPress={() => setInviteModalVisible(false)}
-          >
-            <Text style={styles.closeButtonText}>닫기</Text>
-          </TouchableOpacity>
         </View>
-      </Modal>
+
+        {/* 복사 버튼 */}
+        <TouchableOpacity
+          style={styles.copyButton}
+          onPress={handleCopyInviteCode}
+        >
+          <Ionicons name="copy-outline" size={20} color="#fff" />
+          <Text style={styles.copyButtonText}>초대 코드 복사</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.closeButton}
+          onPress={() => setInviteModalVisible(false)}
+        >
+          <Text style={styles.closeButtonText}>닫기</Text>
+        </TouchableOpacity>
+      </BottomSheetModal>
     </SafeAreaView>
   );
 }
@@ -138,30 +130,6 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 16,
     fontWeight: "bold",
-  },
-  inviteModal: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: "#fff",
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    paddingHorizontal: 24,
-    paddingTop: 16,
-    paddingBottom: 32,
-    alignItems: "center",
-    // marginBottom 제거
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.3)",
-  },
-  modalTitle: {
-    fontSize: 22,
-    fontWeight: "bold",
-    color: Colors.light.primary,
-    marginBottom: 8,
   },
   modalDesc: {
     fontSize: 15,
@@ -214,16 +182,6 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     textAlign: "center",
     width: "100%",
-  },
-  dragBar: {
-    width: 40,
-    height: 5,
-    borderRadius: 2.5,
-    backgroundColor: "#FFE6E4",
-    alignSelf: "center",
-    marginBottom: 12,
-    marginTop: 4,
-    opacity: 0.5,
   },
   inviteCodeContainer: {
     width: "100%",

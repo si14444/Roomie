@@ -14,6 +14,9 @@ import {
   TouchableOpacity,
 } from "react-native";
 import { useAnnouncements, useCreateAnnouncement, useDeleteAnnouncement } from "@/hooks/useAnnouncements";
+import { UserAvatar } from "@/components/common/UserAvatar";
+import { Badge } from "@/components/common/Badge";
+import { EmptyState } from "@/components/common/EmptyState";
 
 interface Announcement {
   id: string;
@@ -166,47 +169,37 @@ export function RoommateFeedback() {
         {/* 공지사항 리스트 */}
         <View style={styles.announcementList}>
           {isLoading ? (
-            <View style={styles.emptyState}>
-              <Text style={styles.emptyStateText}>공지사항을 불러오는 중...</Text>
-            </View>
+            <EmptyState
+              icon="time-outline"
+              title="공지사항을 불러오는 중..."
+            />
           ) : announcements.length === 0 ? (
-            <View style={styles.emptyState}>
-              <Ionicons name="megaphone-outline" size={48} color={Colors.light.mutedText} />
-              <Text style={styles.emptyStateText}>아직 공지사항이 없어요</Text>
-              <Text style={styles.emptyStateSubtext}>첫 공지사항을 작성해보세요!</Text>
-            </View>
+            <EmptyState
+              icon="megaphone-outline"
+              title="아직 공지사항이 없어요"
+              subtitle="첫 공지사항을 작성해보세요!"
+            />
           ) : (
             <>
               {(showAll ? announcements : announcements.slice(0, 4)).map((item) => (
                 <View key={item.id} style={styles.announcementItem}>
                   <View style={styles.announcementHeader}>
                     <View style={styles.authorInfo}>
-                      <View
-                        style={[
-                          styles.authorAvatar,
-                          item.isImportant && styles.importantAvatar,
-                        ]}
-                      >
-                        <Text style={styles.authorInitial}>
-                          {item.author.charAt(0)}
-                        </Text>
-                        {item.isImportant && (
-                          <View style={styles.importantBadge}>
-                            <Ionicons name="megaphone" size={8} color="white" />
-                          </View>
-                        )}
-                      </View>
+                      <UserAvatar
+                        name={item.author}
+                        size="small"
+                        backgroundColor={item.isImportant ? Colors.light.errorColor : Colors.light.primary}
+                        showBadge={item.isImportant}
+                        badgeColor={Colors.light.warningColor}
+                        badgeIcon={<Ionicons name="megaphone" size={8} color="white" />}
+                      />
                       <View>
                         <Text style={styles.authorName}>{item.author}</Text>
                         <Text style={styles.timestamp}>{item.timestamp}</Text>
                       </View>
                     </View>
                     <View style={styles.announcementActions}>
-                      {item.isImportant && (
-                        <View style={styles.importantTag}>
-                          <Text style={styles.importantTagText}>중요</Text>
-                        </View>
-                      )}
+                      {item.isImportant && <Badge text="중요" variant="error" />}
                       {canDeleteAnnouncement(item.author_id) && (
                         <TouchableOpacity
                           onPress={() => handleDeleteAnnouncement(item.id)}
@@ -388,34 +381,6 @@ const styles = StyleSheet.create({
   deleteButton: {
     padding: 4,
   },
-  authorAvatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: Colors.light.primary,
-    alignItems: "center",
-    justifyContent: "center",
-    position: "relative",
-  },
-  importantAvatar: {
-    backgroundColor: Colors.light.errorColor,
-  },
-  authorInitial: {
-    color: "white",
-    fontSize: 14,
-    fontWeight: "bold",
-  },
-  importantBadge: {
-    position: "absolute",
-    bottom: -2,
-    right: -2,
-    width: 14,
-    height: 14,
-    borderRadius: 7,
-    backgroundColor: Colors.light.warningColor,
-    alignItems: "center",
-    justifyContent: "center",
-  },
   authorName: {
     fontSize: 14,
     fontWeight: "600",
@@ -425,38 +390,10 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: Colors.light.mutedText,
   },
-  importantTag: {
-    backgroundColor: Colors.light.errorColor,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 8,
-  },
-  importantTagText: {
-    color: "white",
-    fontSize: 10,
-    fontWeight: "bold",
-  },
   announcementMessage: {
     fontSize: 14,
     color: Colors.light.text,
     lineHeight: 20,
-  },
-  emptyState: {
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 40,
-    gap: 8,
-  },
-  emptyStateText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: Colors.light.mutedText,
-    textAlign: "center",
-  },
-  emptyStateSubtext: {
-    fontSize: 14,
-    color: Colors.light.mutedText,
-    textAlign: "center",
   },
   showMoreButton: {
     flexDirection: "row",

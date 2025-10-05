@@ -9,11 +9,13 @@ import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
-  Image,
   StyleSheet,
   TouchableOpacity,
   View,
 } from "react-native";
+import { UserAvatar } from "@/components/common/UserAvatar";
+import { Badge } from "@/components/common/Badge";
+import { EmptyState } from "@/components/common/EmptyState";
 
 interface Roommate {
   id: string;
@@ -98,53 +100,6 @@ export function CurrentRoommates({ onAddRoommate }: CurrentRoommatesProps) {
     loadTeamMembers();
   }, [currentTeam?.id]);
 
-  const getStatusColor = (status: Roommate["status"]) => {
-    switch (status) {
-      case "online":
-        return Colors.light.successColor;
-      case "busy":
-        return Colors.light.warningColor;
-      case "offline":
-        return Colors.light.mutedText;
-      default:
-        return Colors.light.mutedText;
-    }
-  };
-
-  const getStatusText = (status: Roommate["status"]) => {
-    switch (status) {
-      case "online":
-        return "접속중";
-      case "busy":
-        return "바쁨";
-      case "offline":
-        return "오프라인";
-      default:
-        return "오프라인";
-    }
-  };
-
-  const getProfileInitials = (name: string) => {
-    return name.charAt(0);
-  };
-
-  const formatJoinedDate = (dateString: string) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffInDays = Math.floor(
-      (now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24)
-    );
-
-    if (diffInDays < 30) {
-      return `${diffInDays}일 전 입주`;
-    } else if (diffInDays < 365) {
-      const months = Math.floor(diffInDays / 30);
-      return `${months}개월 전 입주`;
-    } else {
-      const years = Math.floor(diffInDays / 365);
-      return `${years}년 전 입주`;
-    }
-  };
 
   // 팀 나가기
   const handleLeaveTeam = () => {
@@ -246,9 +201,10 @@ export function CurrentRoommates({ onAddRoommate }: CurrentRoommatesProps) {
         <View style={styles.header}>
           <Text style={styles.cardTitle}>현재 룸메이트</Text>
         </View>
-        <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>팀을 먼저 선택해주세요</Text>
-        </View>
+        <EmptyState
+          icon="people-outline"
+          title="팀을 먼저 선택해주세요"
+        />
       </View>
     );
   }
@@ -280,39 +236,17 @@ export function CurrentRoommates({ onAddRoommate }: CurrentRoommatesProps) {
           return (
             <View key={roommate.id} style={styles.roommateItem}>
               <View style={styles.roommateInfo}>
-                <View style={styles.profileContainer}>
-                  {roommate.profileImage ? (
-                    <Image
-                      source={{ uri: roommate.profileImage }}
-                      style={styles.profileImage}
-                    />
-                  ) : (
-                    <View
-                      style={[
-                        styles.profilePlaceholder,
-                        { backgroundColor: Colors.light.primary },
-                      ]}
-                    >
-                      <Text style={styles.profileInitials}>
-                        {getProfileInitials(roommate.name)}
-                      </Text>
-                    </View>
-                  )}
-                </View>
+                <UserAvatar
+                  name={roommate.name}
+                  profileImage={roommate.profileImage}
+                  size="medium"
+                />
 
                 <View style={styles.roommateDetails}>
                   <View style={styles.nameRow}>
                     <Text style={styles.roommateName}>{roommate.name}</Text>
-                    {roommate.role && (
-                      <View style={styles.roleBadge}>
-                        <Text style={styles.roleText}>{roommate.role}</Text>
-                      </View>
-                    )}
-                    {isCurrentUser && (
-                      <View style={styles.meBadge}>
-                        <Text style={styles.meText}>나</Text>
-                      </View>
-                    )}
+                    {roommate.role && <Badge text={roommate.role} variant="primary" />}
+                    {isCurrentUser && <Badge text="나" variant="success" />}
                   </View>
                   <Text style={styles.roommateStatus}>룸메이트</Text>
                 </View>
@@ -407,37 +341,7 @@ const styles = StyleSheet.create({
   roommateInfo: {
     flexDirection: "row",
     alignItems: "center",
-  },
-  profileContainer: {
-    position: "relative",
-    marginRight: 12,
-  },
-  profileImage: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-  },
-  profilePlaceholder: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  profileInitials: {
-    color: "#fff",
-    fontSize: 18,
-    fontWeight: "bold",
-  },
-  statusIndicator: {
-    position: "absolute",
-    bottom: 2,
-    right: 2,
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    borderWidth: 2,
-    borderColor: Colors.light.cardBackground,
+    gap: 12,
   },
   roommateDetails: {
     flex: 1,
@@ -446,35 +350,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     marginBottom: 4,
+    gap: 8,
   },
   roommateName: {
     fontSize: 16,
     fontWeight: "600",
     color: Colors.light.text,
-    marginRight: 8,
-  },
-  roleBadge: {
-    backgroundColor: Colors.light.accentBlue,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 6,
-  },
-  roleText: {
-    fontSize: 10,
-    fontWeight: "600",
-    color: Colors.light.primary,
-  },
-  meBadge: {
-    backgroundColor: Colors.light.successColor,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 6,
-    marginLeft: 4,
-  },
-  meText: {
-    fontSize: 10,
-    fontWeight: "600",
-    color: "#fff",
   },
   roommateStatus: {
     fontSize: 13,
@@ -530,13 +411,5 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: Colors.light.mutedText,
     textAlign: "center",
-  },
-  emptyContainer: {
-    padding: 20,
-    alignItems: "center",
-  },
-  emptyText: {
-    fontSize: 14,
-    color: Colors.light.mutedText,
   },
 });
