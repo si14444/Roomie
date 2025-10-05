@@ -1,12 +1,19 @@
-import React, { useState, useEffect } from "react";
-import { StyleSheet, TouchableOpacity, View, Image, ActivityIndicator } from "react-native";
 import { Text } from "@/components/Themed";
-import { Ionicons } from "@expo/vector-icons";
 import Colors from "@/constants/Colors";
-import { useTeam } from "@/contexts/TeamContext";
 import { useAuth } from "@/contexts/AuthContext";
-import * as teamService from "@/services/teamService";
+import { useTeam } from "@/contexts/TeamContext";
 import * as authService from "@/services/authService";
+import * as teamService from "@/services/teamService";
+import { Ionicons } from "@expo/vector-icons";
+import { useEffect, useState } from "react";
+import {
+  ActivityIndicator,
+  Alert,
+  Image,
+  StyleSheet,
+  TouchableOpacity,
+  View,
+} from "react-native";
 
 interface Roommate {
   id: string;
@@ -23,7 +30,7 @@ interface CurrentRoommatesProps {
 }
 
 export function CurrentRoommates({ onAddRoommate }: CurrentRoommatesProps) {
-  const { currentTeam } = useTeam();
+  const { currentTeam, leaveTeam } = useTeam();
   const { user } = useAuth();
   const [roommates, setRoommates] = useState<Roommate[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -51,25 +58,27 @@ export function CurrentRoommates({ onAddRoommate }: CurrentRoommatesProps) {
           if (isCurrentUser) {
             return {
               id: member.user_id,
-              name: user?.name || user?.email || 'You',
+              name: user?.name || user?.email || "You",
               email: user?.email,
               profileImage: user?.avatar,
-              status: 'offline' as const,
-              role: member.role === 'admin' ? '방장' : undefined,
+              status: "offline" as const,
+              role: member.role === "admin" ? "방장" : undefined,
               joinedDate: member.joined_at,
             };
           }
 
           // 다른 팀원의 경우 Firestore에서 정보 가져오기
-          const userData = await authService.getUserFromFirestore(member.user_id);
+          const userData = await authService.getUserFromFirestore(
+            member.user_id
+          );
 
           return {
             id: member.user_id,
-            name: userData?.name || userData?.email || '알 수 없음',
+            name: userData?.name || userData?.email || "알 수 없음",
             email: userData?.email,
             profileImage: userData?.avatar,
-            status: 'offline' as const,
-            role: member.role === 'admin' ? '방장' : undefined,
+            status: "offline" as const,
+            role: member.role === "admin" ? "방장" : undefined,
             joinedDate: member.joined_at,
           };
         })
@@ -77,7 +86,9 @@ export function CurrentRoommates({ onAddRoommate }: CurrentRoommatesProps) {
 
       setRoommates(transformedRoommates);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load team members');
+      setError(
+        err instanceof Error ? err.message : "Failed to load team members"
+      );
     } finally {
       setIsLoading(false);
     }
@@ -120,8 +131,10 @@ export function CurrentRoommates({ onAddRoommate }: CurrentRoommatesProps) {
   const formatJoinedDate = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
-    const diffInDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
-    
+    const diffInDays = Math.floor(
+      (now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24)
+    );
+
     if (diffInDays < 30) {
       return `${diffInDays}일 전 입주`;
     } else if (diffInDays < 365) {
@@ -132,6 +145,69 @@ export function CurrentRoommates({ onAddRoommate }: CurrentRoommatesProps) {
       return `${years}년 전 입주`;
     }
   };
+
+  // 팀 나가기
+  const handleLeaveTeam = () => {
+    if (!currentTeam || !user) return;
+
+    Alert.alert("팀 나가기", "정말 이 팀에서 나가시겠습니까?", [
+      { text: "취소", style: "cancel" },
+      {
+        text: "나가기",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            await leaveTeam(currentTeam.id);
+            Alert.alert("완료", "팀에서 나갔습니다.");
+          } catch (error) {
+            Alert.alert("오류", "팀 나가기에 실패했습니다.");
+          }
+        },
+      },
+    ]);
+  };
+
+  // 팀원 내보내기 (방장만 가능)
+  const handleKickMember = (memberId: string, memberName: string) => {
+    if (!currentTeam || !user) return;
+
+    // 방장 권한 확인
+    const isOwner =
+      currentTeam.created_by === user.id || currentTeam.ownerId === user.id;
+    if (!isOwner) {
+      Alert.alert("권한 없음", "방장만 팀원을 내보낼 수 있습니다.");
+      return;
+    }
+
+    // 자기 자신은 내보낼 수 없음
+    if (memberId === user.id) {
+      Alert.alert("오류", "자기 자신은 내보낼 수 없습니다.");
+      return;
+    }
+
+    Alert.alert("팀원 내보내기", `${memberName}님을 팀에서 내보내시겠습니까?`, [
+      { text: "취소", style: "cancel" },
+      {
+        text: "내보내기",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            await teamService.leaveTeam(currentTeam.id, memberId);
+            Alert.alert("완료", `${memberName}님을 팀에서 내보냈습니다.`);
+            loadTeamMembers(); // 목록 새로고침
+          } catch (error) {
+            Alert.alert("오류", "팀원 내보내기에 실패했습니다.");
+          }
+        },
+      },
+    ]);
+  };
+
+  // 방장 여부 확인
+  const isOwner =
+    currentTeam &&
+    user &&
+    (currentTeam.created_by === user.id || currentTeam.ownerId === user.id);
 
   if (isLoading) {
     return (
@@ -181,53 +257,95 @@ export function CurrentRoommates({ onAddRoommate }: CurrentRoommatesProps) {
     <View style={styles.card}>
       <View style={styles.header}>
         <Text style={styles.cardTitle}>현재 룸메이트</Text>
-        <Text style={styles.countBadge}>{roommates.length}명</Text>
+        <View style={styles.headerRight}>
+          <Text style={styles.countBadge}>{roommates.length}명</Text>
+          <TouchableOpacity
+            onPress={handleLeaveTeam}
+            style={styles.leaveButton}
+          >
+            <Ionicons
+              name="exit-outline"
+              size={20}
+              color={Colors.light.errorColor}
+            />
+          </TouchableOpacity>
+        </View>
       </View>
-      
+
       <View style={styles.roommatesContainer}>
-        {roommates.map((roommate) => (
-          <View key={roommate.id} style={styles.roommateItem}>
-            <View style={styles.roommateInfo}>
-              <View style={styles.profileContainer}>
-                {roommate.profileImage ? (
-                  <Image 
-                    source={{ uri: roommate.profileImage }} 
-                    style={styles.profileImage}
-                  />
-                ) : (
-                  <View style={[styles.profilePlaceholder, { backgroundColor: Colors.light.primary }]}>
-                    <Text style={styles.profileInitials}>
-                      {getProfileInitials(roommate.name)}
-                    </Text>
-                  </View>
-                )}
-              </View>
-              
-              <View style={styles.roommateDetails}>
-                <View style={styles.nameRow}>
-                  <Text style={styles.roommateName}>{roommate.name}</Text>
-                  {roommate.role && (
-                    <View style={styles.roleBadge}>
-                      <Text style={styles.roleText}>{roommate.role}</Text>
+        {roommates.map((roommate) => {
+          const isCurrentUser = roommate.id === user?.id;
+          const canKick = isOwner && !isCurrentUser;
+
+          return (
+            <View key={roommate.id} style={styles.roommateItem}>
+              <View style={styles.roommateInfo}>
+                <View style={styles.profileContainer}>
+                  {roommate.profileImage ? (
+                    <Image
+                      source={{ uri: roommate.profileImage }}
+                      style={styles.profileImage}
+                    />
+                  ) : (
+                    <View
+                      style={[
+                        styles.profilePlaceholder,
+                        { backgroundColor: Colors.light.primary },
+                      ]}
+                    >
+                      <Text style={styles.profileInitials}>
+                        {getProfileInitials(roommate.name)}
+                      </Text>
                     </View>
                   )}
                 </View>
-                <Text style={styles.roommateStatus}>
-                  룸메이트
-                </Text>
+
+                <View style={styles.roommateDetails}>
+                  <View style={styles.nameRow}>
+                    <Text style={styles.roommateName}>{roommate.name}</Text>
+                    {roommate.role && (
+                      <View style={styles.roleBadge}>
+                        <Text style={styles.roleText}>{roommate.role}</Text>
+                      </View>
+                    )}
+                    {isCurrentUser && (
+                      <View style={styles.meBadge}>
+                        <Text style={styles.meText}>나</Text>
+                      </View>
+                    )}
+                  </View>
+                  <Text style={styles.roommateStatus}>룸메이트</Text>
+                </View>
+
+                {canKick && (
+                  <TouchableOpacity
+                    onPress={() => handleKickMember(roommate.id, roommate.name)}
+                    style={styles.kickButton}
+                  >
+                    <Ionicons
+                      name="person-remove"
+                      size={20}
+                      color={Colors.light.errorColor}
+                    />
+                  </TouchableOpacity>
+                )}
               </View>
             </View>
-          </View>
-        ))}
-        
+          );
+        })}
+
         {/* 룸메이트 추가 버튼 */}
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.addRoommateButton}
           onPress={onAddRoommate}
           activeOpacity={0.7}
         >
           <View style={styles.addButtonIcon}>
-            <Ionicons name="person-add" size={20} color={Colors.light.primary} />
+            <Ionicons
+              name="person-add"
+              size={20}
+              color={Colors.light.primary}
+            />
           </View>
           <Text style={styles.addButtonText}>룸메이트 초대</Text>
         </TouchableOpacity>
@@ -255,6 +373,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 16,
   },
+  headerRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
   cardTitle: {
     fontSize: 18,
     fontWeight: "bold",
@@ -269,6 +392,9 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: 12,
     overflow: "hidden",
+  },
+  leaveButton: {
+    padding: 4,
   },
   roommatesContainer: {
     gap: 12,
@@ -338,9 +464,25 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: Colors.light.primary,
   },
+  meBadge: {
+    backgroundColor: Colors.light.successColor,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    marginLeft: 4,
+  },
+  meText: {
+    fontSize: 10,
+    fontWeight: "600",
+    color: "#fff",
+  },
   roommateStatus: {
     fontSize: 13,
     color: Colors.light.mutedText,
+  },
+  kickButton: {
+    padding: 8,
+    marginLeft: 8,
   },
   addRoommateButton: {
     backgroundColor: Colors.light.surfaceVariant,
