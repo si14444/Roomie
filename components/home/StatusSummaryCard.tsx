@@ -5,11 +5,15 @@ import { Ionicons } from "@expo/vector-icons";
 import Colors from "@/constants/Colors";
 import { useTeam } from "@/contexts/TeamContext";
 import * as teamService from "@/services/teamService";
+import { useBillsFirebase } from "@/hooks/useBillsFirebase";
 
 export function StatusSummaryCard() {
   const { currentTeam } = useTeam();
   const [roommateCount, setRoommateCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
+
+  // 공과금 데이터 가져오기
+  const { statistics, isLoading: billsLoading } = useBillsFirebase();
 
   useEffect(() => {
     const loadRoommateCount = async () => {
@@ -50,7 +54,13 @@ export function StatusSummaryCard() {
           <View style={styles.summaryIcon}>
             <Ionicons name="card" size={20} color={Colors.light.successColor} />
           </View>
-          <Text style={styles.summaryNumber}>₩245,000</Text>
+          {billsLoading ? (
+            <ActivityIndicator size="small" color={Colors.light.successColor} />
+          ) : (
+            <Text style={styles.summaryNumber}>
+              ₩{statistics.totalAmount.toLocaleString()}
+            </Text>
+          )}
           <Text style={styles.summaryLabel}>이번 달 공과금</Text>
         </View>
       </View>
