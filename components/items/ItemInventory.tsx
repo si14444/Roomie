@@ -3,7 +3,6 @@ import {
   StyleSheet,
   TouchableOpacity,
   Alert,
-  TextInput,
   Modal,
   KeyboardAvoidingView,
   Platform,
@@ -23,13 +22,14 @@ interface ItemInventoryProps {
   onUpdateStatus?: (update: StatusUpdate) => void;
   onAddItem?: (item: InventoryItem) => void;
   onAddNewItemToFirebase?: (itemData: any) => Promise<boolean>; // Firebase 저장 함수
+  onDeleteItem?: (itemId: string) => Promise<boolean>; // Firebase 삭제 함수
 }
 
-export function ItemInventory({ items, isLoading, onUpdateItem, onUpdateStatus, onAddItem, onAddNewItemToFirebase }: ItemInventoryProps) {
+export function ItemInventory({ items, isLoading, onUpdateItem, onUpdateStatus, onAddItem, onAddNewItemToFirebase, onDeleteItem }: ItemInventoryProps) {
   const [selectedItem, setSelectedItem] = useState<Item | null>(null);
   const [showUpdateModal, setShowUpdateModal] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
-  const [newQuantity, setNewQuantity] = useState<number>(0);
+  const [selectedStatus, setSelectedStatus] = useState<InventoryStatus>("보통");
 
   const getStatusColor = (currentQuantity: number, minQuantity: number) => {
     const ratio = currentQuantity / minQuantity;
@@ -57,29 +57,30 @@ export function ItemInventory({ items, isLoading, onUpdateItem, onUpdateStatus, 
     switch (category) {
       case "food":
         return Colors.light.secondary;
-      case "toiletries":
+      case "household":
         return Colors.light.primary;
       case "cleaning":
         return Colors.light.successColor;
-      case "maintenance":
+      case "toiletries":
         return "#9333EA";
-      case "general":
+      case "other":
       default:
         return Colors.light.mutedText;
     }
   };
 
   const getCategoryIcon = (category: string) => {
+    // Firebase Item에는 icon이 없으므로 category로 기본 아이콘 반환
     switch (category) {
       case "food":
         return "nutrition-outline";
-      case "toiletries":
-        return "sparkles-outline";
+      case "household":
+        return "home-outline";
       case "cleaning":
         return "water-outline";
-      case "maintenance":
-        return "construct-outline";
-      case "general":
+      case "toiletries":
+        return "sparkles-outline";
+      case "other":
       default:
         return "cube-outline";
     }
@@ -87,23 +88,32 @@ export function ItemInventory({ items, isLoading, onUpdateItem, onUpdateStatus, 
 
   const handleItemPress = (item: Item) => {
     setSelectedItem(item);
-    setNewQuantity(item.current_quantity);
+    const currentStatus = getStatusText(item.current_quantity, item.min_quantity);
+    setSelectedStatus(currentStatus as InventoryStatus);
     setShowUpdateModal(true);
   };
 
-  const handleUpdateQuantity = () => {
+  const handleUpdateStatus = () => {
     if (!selectedItem) {
       return;
     }
+
+    // 상태를 수량으로 변환
+    const statusToQuantity: Record<InventoryStatus, number> = {
+      '충분': selectedItem.min_quantity * 2,
+      '보통': selectedItem.min_quantity,
+      '부족': Math.max(1, Math.floor(selectedItem.min_quantity / 2))
+    };
+
+    const newQuantity = statusToQuantity[selectedStatus];
 
     // 부모 컴포넌트의 update 함수 호출
     onUpdateItem?.(selectedItem.id, newQuantity);
 
     // 부모 컴포넌트에 상태 변경 알림
-    const status = getStatusText(newQuantity, selectedItem.min_quantity);
     const update: StatusUpdate = {
       itemId: selectedItem.id,
-      newStatus: status as InventoryStatus,
+      newStatus: selectedStatus,
       updatedBy: "현재사용자",
     };
 
@@ -111,7 +121,36 @@ export function ItemInventory({ items, isLoading, onUpdateItem, onUpdateStatus, 
 
     setShowUpdateModal(false);
     setSelectedItem(null);
-    setNewQuantity(0);
+  };
+
+  const handleDeleteItem = () => {
+    if (!selectedItem) {
+      return;
+    }
+
+    Alert.alert(
+      "물품 삭제",
+      `${selectedItem.name}을(를) 삭제하시겠습니까?`,
+      [
+        {
+          text: "취소",
+          style: "cancel"
+        },
+        {
+          text: "삭제",
+          style: "destructive",
+          onPress: async () => {
+            if (onDeleteItem) {
+              const success = await onDeleteItem(selectedItem.id);
+              if (success) {
+                setShowUpdateModal(false);
+                setSelectedItem(null);
+              }
+            }
+          }
+        }
+      ]
+    );
   };
 
   const handleAddItem = async (newItemData: InventoryItem) => {
@@ -222,7 +261,7 @@ export function ItemInventory({ items, isLoading, onUpdateItem, onUpdateStatus, 
                 <View style={styles.itemInfo}>
                   <Text style={styles.itemName}>{item.name}</Text>
                   <Text style={styles.updateText}>
-                    {formatLastUpdated(item.updated_at || item.created_at)} • {item.current_quantity}{item.unit}
+                    {formatLastUpdated(item.updated_at || item.created_at)}
                   </Text>
                   {item.description && (
                     <Text style={styles.descriptionText}>{item.description}</Text>
@@ -243,7 +282,7 @@ export function ItemInventory({ items, isLoading, onUpdateItem, onUpdateStatus, 
         })
       )}
 
-      {/* 상태 업데이트 모달 */}
+      {/* 물품 수정/삭제 모달 */}
       <Modal
         visible={showUpdateModal}
         transparent={true}
@@ -255,56 +294,63 @@ export function ItemInventory({ items, isLoading, onUpdateItem, onUpdateStatus, 
           style={styles.modalOverlay}
         >
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>상태 업데이트</Text>
+            <Text style={styles.modalTitle}>물품 관리</Text>
             {selectedItem && (
               <>
                 <Text style={styles.modalItemName}>{selectedItem.name}</Text>
-                
-                <View style={styles.quantityUpdateContainer}>
-                  <Text style={styles.inputLabel}>현재 수량</Text>
-                  <View style={styles.quantityInputContainer}>
-                    <TouchableOpacity
-                      style={styles.quantityButton}
-                      onPress={() => setNewQuantity(Math.max(0, newQuantity - 1))}
-                    >
-                      <Ionicons name="remove" size={20} color={Colors.light.primary} />
-                    </TouchableOpacity>
-                    <TextInput
-                      style={styles.quantityInput}
-                      value={newQuantity.toString()}
-                      onChangeText={(text) => {
-                        const num = parseInt(text) || 0;
-                        setNewQuantity(Math.max(0, num));
-                      }}
-                      keyboardType="numeric"
-                      textAlign="center"
-                    />
-                    <Text style={styles.unitText}>{selectedItem?.unit || 'ea'}</Text>
-                    <TouchableOpacity
-                      style={styles.quantityButton}
-                      onPress={() => setNewQuantity(newQuantity + 1)}
-                    >
-                      <Ionicons name="add" size={20} color={Colors.light.primary} />
-                    </TouchableOpacity>
+
+                <View style={styles.statusUpdateContainer}>
+                  <Text style={styles.inputLabel}>상태</Text>
+                  <View style={styles.statusGrid}>
+                    {(['충분', '보통', '부족'] as InventoryStatus[]).map((status) => {
+                      const statusColors = {
+                        '충분': Colors.light.successColor,
+                        '보통': Colors.light.warningColor,
+                        '부족': Colors.light.errorColor
+                      };
+                      const color = statusColors[status];
+
+                      return (
+                        <TouchableOpacity
+                          key={status}
+                          style={[
+                            styles.statusButton,
+                            selectedStatus === status && {
+                              backgroundColor: color + "20",
+                              borderColor: color,
+                            },
+                          ]}
+                          onPress={() => setSelectedStatus(status)}
+                        >
+                          <View style={[styles.statusIndicator, { backgroundColor: color }]} />
+                          <Text
+                            style={[
+                              styles.statusButtonText,
+                              selectedStatus === status && { color: color, fontWeight: "600" },
+                            ]}
+                          >
+                            {status}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
                   </View>
-                  <Text style={styles.minQuantityText}>
-                    최소 수량: {selectedItem?.min_quantity}{selectedItem?.unit || 'ea'}
-                  </Text>
                 </View>
 
                 <View style={styles.modalButtons}>
                   <TouchableOpacity
-                    style={[styles.modalButton, styles.cancelButton]}
-                    onPress={() => setShowUpdateModal(false)}
+                    style={[styles.modalButton, styles.deleteButton]}
+                    onPress={handleDeleteItem}
                   >
-                    <Text style={styles.cancelButtonText}>취소</Text>
+                    <Ionicons name="trash-outline" size={18} color="white" />
+                    <Text style={styles.deleteButtonText}>삭제</Text>
                   </TouchableOpacity>
-                  
+
                   <TouchableOpacity
                     style={[styles.modalButton, styles.updateButton]}
-                    onPress={handleUpdateQuantity}
+                    onPress={handleUpdateStatus}
                   >
-                    <Text style={styles.updateButtonText}>수량 업데이트</Text>
+                    <Text style={styles.updateButtonText}>수정</Text>
                   </TouchableOpacity>
                 </View>
               </>
@@ -539,21 +585,43 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     color: "white",
   },
-  quantityUpdateContainer: {
+  statusUpdateContainer: {
     marginBottom: 24,
   },
-  quantityButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: Colors.light.surface,
-    justifyContent: 'center',
-    alignItems: 'center',
+  statusGrid: {
+    gap: 12,
   },
-  minQuantityText: {
-    fontSize: 12,
-    color: Colors.light.mutedText,
-    marginTop: 8,
-    textAlign: 'center',
+  statusButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: Colors.light.surface,
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    gap: 12,
+    borderWidth: 2,
+    borderColor: "transparent",
+  },
+  statusIndicator: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+  },
+  statusButtonText: {
+    flex: 1,
+    fontSize: 16,
+    color: Colors.light.text,
+  },
+  deleteButton: {
+    backgroundColor: Colors.light.errorColor,
+    flexDirection: "row",
+    gap: 6,
+    alignItems: "center",
+    flex: 1,
+  },
+  deleteButtonText: {
+    fontSize: 16,
+    fontWeight: "500",
+    color: "white",
   },
 });

@@ -26,6 +26,7 @@ export default function ItemsScreen() {
     rejectPurchaseRequest,
     markAsPurchased,
     updateItem,
+    deleteItem,
   } = useItemsFirebase();
 
   const [showAddModal, setShowAddModal] = useState(false);
@@ -164,6 +165,7 @@ export default function ItemsScreen() {
           onUpdateStatus={handleStatusUpdate}
           onAddItem={handleAddInventoryItem}
           onAddNewItemToFirebase={addNewItem}
+          onDeleteItem={deleteItem}
         />
       </ScrollView>
 
