@@ -62,7 +62,12 @@ export function useItemsFirebase() {
    */
   const addNewItem = useCallback(
     async (newItem: NewItemData): Promise<boolean> => {
+      console.log('🚀 [Hook] addNewItem 시작');
+      console.log('🚀 [Hook] currentTeam:', currentTeam);
+      console.log('🚀 [Hook] user:', user);
+
       if (!currentTeam?.id || !user?.id) {
+        console.error('❌ [Hook] 로그인 정보 없음');
         Alert.alert('오류', '로그인 정보를 찾을 수 없습니다.');
         return false;
       }
@@ -89,7 +94,7 @@ export function useItemsFirebase() {
       }
 
       try {
-        await createItemMutation.mutateAsync({
+        const itemData = {
           team_id: currentTeam.id,
           name: newItem.name.trim(),
           description: newItem.description?.trim(),
@@ -100,11 +105,16 @@ export function useItemsFirebase() {
           estimated_price: newItem.estimatedPrice,
           preferred_store: newItem.preferredStore?.trim(),
           created_by: user.id,
-        });
+        };
+
+        console.log('📤 [Hook] Mutation 시작:', itemData);
+        await createItemMutation.mutateAsync(itemData);
+        console.log('✅ [Hook] Mutation 성공');
 
         Alert.alert('성공', '아이템이 추가되었습니다.');
         return true;
       } catch (error: any) {
+        console.error('❌ [Hook] Mutation 실패:', error);
         Alert.alert('오류', error.message || '아이템 추가에 실패했습니다.');
         return false;
       }

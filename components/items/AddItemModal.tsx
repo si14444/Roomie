@@ -31,12 +31,12 @@ export function AddItemModal({
 }: AddItemModalProps) {
   const isFormValid = newItem.name.trim();
 
-  const categories: Array<{ key: ItemCategory; label: string; icon: string }> =
+  const categories: Array<{ key: 'food' | 'household' | 'cleaning' | 'toiletries' | 'other'; label: string; icon: string }> =
     [
       { key: "food", label: "식품", icon: "restaurant" },
       { key: "household", label: "생활용품", icon: "home" },
-      { key: "personal", label: "개인용품", icon: "person" },
-      { key: "electronics", label: "전자제품", icon: "phone-portrait" },
+      { key: "cleaning", label: "청소용품", icon: "water" },
+      { key: "toiletries", label: "세면용품", icon: "sparkles" },
       { key: "other", label: "기타", icon: "ellipsis-horizontal" },
     ];
 

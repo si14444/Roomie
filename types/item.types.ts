@@ -15,7 +15,7 @@ export interface Item {
   receiptUrl?: string;
 }
 
-export type ItemCategory = "food" | "household" | "personal" | "electronics" | "other";
+export type ItemCategory = "food" | "household" | "cleaning" | "toiletries" | "other";
 
 export type ItemPriority = "low" | "medium" | "high";
 

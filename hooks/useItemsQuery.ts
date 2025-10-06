@@ -96,7 +96,9 @@ export const useCreateItem = () => {
     mutationFn: (data: Parameters<typeof itemService.createItem>[0]) =>
       itemService.createItem(data),
     onSuccess: (_, variables) => {
+      // 즉시 refetch하여 UI 업데이트
       queryClient.invalidateQueries({ queryKey: ['items', variables.team_id] });
+      queryClient.refetchQueries({ queryKey: ['items', variables.team_id] });
     },
   });
 };
@@ -148,7 +150,9 @@ export const useCreatePurchaseRequest = () => {
     mutationFn: (data: Parameters<typeof itemService.createPurchaseRequest>[0]) =>
       itemService.createPurchaseRequest(data),
     onSuccess: (_, variables) => {
+      // 즉시 refetch하여 UI 업데이트
       queryClient.invalidateQueries({ queryKey: ['purchaseRequests', variables.team_id] });
+      queryClient.refetchQueries({ queryKey: ['purchaseRequests', variables.team_id] });
     },
   });
 };

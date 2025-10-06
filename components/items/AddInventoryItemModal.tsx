@@ -31,8 +31,8 @@ interface AddInventoryItemModalProps {
 const CATEGORY_OPTIONS: { value: ItemCategory; label: string; color: string }[] = [
   { value: "food", label: "음식", color: Colors.light.secondary },
   { value: "household", label: "생필품", color: Colors.light.primary },
-  { value: "personal", label: "개인용품", color: Colors.light.successColor },
-  { value: "electronics", label: "전자제품", color: "#9333EA" },
+  { value: "cleaning", label: "청소용품", color: Colors.light.successColor },
+  { value: "toiletries", label: "세면용품", color: "#9333EA" },
   { value: "other", label: "기타", color: Colors.light.mutedText },
 ];
 

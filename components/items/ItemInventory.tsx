@@ -22,9 +22,10 @@ interface ItemInventoryProps {
   onUpdateItem?: (itemId: string, quantity: number) => void;
   onUpdateStatus?: (update: StatusUpdate) => void;
   onAddItem?: (item: InventoryItem) => void;
+  onAddNewItemToFirebase?: (itemData: any) => Promise<boolean>; // Firebase 저장 함수
 }
 
-export function ItemInventory({ items, isLoading, onUpdateItem, onUpdateStatus, onAddItem }: ItemInventoryProps) {
+export function ItemInventory({ items, isLoading, onUpdateItem, onUpdateStatus, onAddItem, onAddNewItemToFirebase }: ItemInventoryProps) {
   const [selectedItem, setSelectedItem] = useState<Item | null>(null);
   const [showUpdateModal, setShowUpdateModal] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -113,18 +114,37 @@ export function ItemInventory({ items, isLoading, onUpdateItem, onUpdateStatus, 
     setNewQuantity(0);
   };
 
-  const handleAddItem = (newItemData: any) => {
-    // 부모 컴포넌트에 알림 (타입 변환)
-    const inventoryItem: InventoryItem = {
-      id: Date.now().toString(),
-      name: newItemData.name,
-      category: newItemData.category,
-      status: 'sufficient' as InventoryStatus,
-      lastUpdated: new Date(),
-      lastUpdatedBy: "현재사용자",
-      icon: getCategoryIcon(newItemData.category) as any,
-    };
-    onAddItem?.(inventoryItem);
+  const handleAddItem = async (newItemData: InventoryItem) => {
+    console.log('📦 [ItemInventory] handleAddItem 시작:', newItemData);
+
+    if (onAddNewItemToFirebase) {
+      // InventoryItem의 status를 수량으로 변환
+      const statusToQuantity = {
+        '충분': 10,
+        '보통': 5,
+        '부족': 1
+      };
+
+      const currentQuantity = statusToQuantity[newItemData.status] || 5;
+
+      // Firebase에 저장
+      const success = await onAddNewItemToFirebase({
+        name: newItemData.name,
+        description: newItemData.notes || '',
+        category: newItemData.category,
+        currentQuantity: currentQuantity,
+        minQuantity: 3, // 기본 최소 수량
+        unit: '개',
+        estimatedPrice: undefined,
+        preferredStore: undefined,
+      });
+
+      if (success) {
+        setShowAddModal(false);
+        // 부모 컴포넌트에 알림 (UI 피드백용)
+        onAddItem?.(newItemData);
+      }
+    }
   };
 
   const formatLastUpdated = (dateString: string) => {
@@ -202,7 +222,7 @@ export function ItemInventory({ items, isLoading, onUpdateItem, onUpdateStatus, 
                 <View style={styles.itemInfo}>
                   <Text style={styles.itemName}>{item.name}</Text>
                   <Text style={styles.updateText}>
-                    {formatLastUpdated(item.updated_at)} • {item.current_quantity}{item.unit}
+                    {formatLastUpdated(item.updated_at || item.created_at)} • {item.current_quantity}{item.unit}
                   </Text>
                   {item.description && (
                     <Text style={styles.descriptionText}>{item.description}</Text>
