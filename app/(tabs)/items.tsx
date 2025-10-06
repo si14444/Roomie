@@ -56,29 +56,25 @@ export default function ItemsScreen() {
   };
 
   const handleConfirmAddItem = async () => {
-    console.log('🎬 [Screen] handleConfirmAddItem 시작');
-    console.log('🎬 [Screen] newItem:', newItem);
+    console.log('🛒 [Screen] handleConfirmAddItem 시작 - 구매 요청 생성');
+    console.log('🛒 [Screen] newItem:', newItem);
 
     if (!newItem.name.trim()) {
       Alert.alert("오류", "물품명을 입력해주세요.");
       return;
     }
 
-    // 실제 물품 재고에 추가
-    const itemToAdd = {
-      name: newItem.name.trim(),
-      description: newItem.description,
-      category: newItem.category,
-      currentQuantity: 1,
-      minQuantity: 1,
-      unit: '개',
+    // 구매 요청 생성
+    const success = await addPurchaseRequest({
+      itemName: newItem.name.trim(),
+      quantity: 1,
+      urgency: newItem.priority === "high" ? "urgent" : "normal",
+      notes: newItem.description,
       estimatedPrice: newItem.estimatedPrice ? parseFloat(newItem.estimatedPrice) : undefined,
       preferredStore: newItem.store,
-    };
+    });
 
-    console.log('🎬 [Screen] addNewItem 호출:', itemToAdd);
-    const success = await addNewItem(itemToAdd);
-    console.log('🎬 [Screen] addNewItem 결과:', success);
+    console.log('🛒 [Screen] addPurchaseRequest 결과:', success);
 
     if (success) {
       const itemDescription = newItem.description
@@ -86,9 +82,9 @@ export default function ItemsScreen() {
         : newItem.name.trim();
 
       createNotification({
-        title: "물품 등록",
-        message: `${itemDescription}이(가) 물품 목록에 추가되었습니다`,
-        type: "item_update",
+        title: "구매 요청",
+        message: `${itemDescription} 구매 요청이 등록되었습니다`,
+        type: "item_request",
         relatedId: Date.now().toString(),
       });
 
