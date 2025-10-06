@@ -324,3 +324,64 @@ export const checkUserPayment = async (
     throw new Error(error.message || '지불 확인에 실패했습니다.');
   }
 };
+
+/**
+ * 팀의 모든 bill payments 실시간 리스너 구독
+ */
+export const subscribeToTeamBillPayments = (
+  teamId: string,
+  billIds: string[],
+  onUpdate: (payments: Record<string, BillPayment[]>) => void,
+  onError?: (error: Error) => void
+) => {
+  if (billIds.length === 0) {
+    onUpdate({});
+    return () => {};
+  }
+
+  // 모든 bill의 payments를 구독
+  const unsubscribes: Array<() => void> = [];
+  const paymentsMap: Record<string, BillPayment[]> = {};
+
+  billIds.forEach((billId) => {
+    const q = query(
+      collection(db, 'bill_payments'),
+      where('bill_id', '==', billId),
+      orderBy('paid_at', 'desc')
+    );
+
+    const unsubscribe = onSnapshot(
+      q,
+      (querySnapshot) => {
+        const payments: BillPayment[] = querySnapshot.docs.map(doc => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            bill_id: data.bill_id,
+            paid_by: data.paid_by,
+            paid_by_name: data.paid_by_name,
+            amount: data.amount,
+            payment_method: data.payment_method,
+            paid_at: timestampToDate(data.paid_at).toISOString(),
+          };
+        });
+
+        paymentsMap[billId] = payments;
+        onUpdate({ ...paymentsMap });
+      },
+      (error) => {
+        console.error('Bill payments subscription error:', error);
+        if (onError) {
+          onError(new Error(error.message || 'bill payments 실시간 업데이트에 실패했습니다.'));
+        }
+      }
+    );
+
+    unsubscribes.push(unsubscribe);
+  });
+
+  // 모든 구독 해제 함수 반환
+  return () => {
+    unsubscribes.forEach(unsub => unsub());
+  };
+};

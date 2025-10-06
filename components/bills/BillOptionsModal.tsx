@@ -11,6 +11,7 @@ interface BillOptionsModalProps {
   onMarkAsPaid: (billId: number) => void;
   onExtendDueDate: (billId: number) => void;
   onDelete: (billId: number) => void;
+  canDelete?: boolean; // 삭제 권한 여부
 }
 
 export function BillOptionsModal({
@@ -20,6 +21,7 @@ export function BillOptionsModal({
   onMarkAsPaid,
   onExtendDueDate,
   onDelete,
+  canDelete = true, // 기본값 true
 }: BillOptionsModalProps) {
   if (!bill) return null;
 
@@ -89,34 +91,36 @@ export function BillOptionsModal({
               />
             </TouchableOpacity>
 
-            <TouchableOpacity
-              style={[styles.optionButton, styles.dangerButton]}
-              onPress={() => {
-                onDelete(bill.id);
-                onClose();
-              }}
-            >
-              <View style={styles.optionIcon}>
+            {canDelete && (
+              <TouchableOpacity
+                style={[styles.optionButton, styles.dangerButton]}
+                onPress={() => {
+                  onDelete(bill.id);
+                  onClose();
+                }}
+              >
+                <View style={styles.optionIcon}>
+                  <Ionicons
+                    name="trash"
+                    size={24}
+                    color={Colors.light.errorColor}
+                  />
+                </View>
+                <View style={styles.optionTextContainer}>
+                  <Text style={[styles.optionTitle, styles.dangerText]}>
+                    공과금 삭제
+                  </Text>
+                  <Text style={styles.optionDescription}>
+                    이 공과금을 영구 삭제 (작성자/방장만 가능)
+                  </Text>
+                </View>
                 <Ionicons
-                  name="trash"
-                  size={24}
-                  color={Colors.light.errorColor}
+                  name="chevron-forward"
+                  size={16}
+                  color={Colors.light.mutedText}
                 />
-              </View>
-              <View style={styles.optionTextContainer}>
-                <Text style={[styles.optionTitle, styles.dangerText]}>
-                  공과금 삭제
-                </Text>
-                <Text style={styles.optionDescription}>
-                  이 공과금을 영구 삭제
-                </Text>
-              </View>
-              <Ionicons
-                name="chevron-forward"
-                size={16}
-                color={Colors.light.mutedText}
-              />
-            </TouchableOpacity>
+              </TouchableOpacity>
+            )}
           </View>
         </View>
       </View>

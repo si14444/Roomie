@@ -6,6 +6,13 @@ import { useTeam } from "@/contexts/TeamContext";
 import { useAuth } from "@/contexts/AuthContext";
 import * as teamService from "@/services/teamService";
 import * as billService from "@/services/billService";
+import {
+  useBillsQuery,
+  useCreateBill,
+  useUpdateBill,
+  useDeleteBill,
+  useCreateBillPayment,
+} from "./useBillsQuery";
 
 export interface Bill {
   id: string;
@@ -40,17 +47,23 @@ export function useBillsFirebase() {
   const { createNotification } = useNotificationContext();
   const { currentTeam } = useTeam();
   const { user } = useAuth();
-  const [bills, setBills] = useState<Bill[]>([]);
   const [roommates, setRoommates] = useState<string[]>([]);
   const [paymentsMap, setPaymentsMap] = useState<Record<string, billService.BillPayment[]>>({});
-  const [isLoading, setIsLoading] = useState(true);
+  const [currentUserIsLeader, setCurrentUserIsLeader] = useState(false);
+
+  // TanStack Query hooks for Firebase
+  const { data: firebaseBills = [], isLoading } = useBillsQuery(currentTeam?.id);
+  const createBillMutation = useCreateBill();
+  const updateBillMutation = useUpdateBill();
+  const deleteBillMutation = useDeleteBill();
+  const createPaymentMutation = useCreateBillPayment();
 
   const currentUser = user?.name || user?.email || "Unknown User";
 
-  // Load team members
+  // Load team members and check if current user is leader
   useEffect(() => {
     const loadTeamMembers = async () => {
-      if (!currentTeam?.id) return;
+      if (!currentTeam?.id || !user?.id) return;
 
       try {
         const members = await teamService.getTeamMembers(currentTeam.id);
@@ -59,6 +72,12 @@ export function useBillsFirebase() {
         const memberNames = await Promise.all(
           members.map(async (member) => {
             const userData = await getUserFromFirestore(member.user_id);
+
+            // 현재 사용자가 방장인지 확인
+            if (member.user_id === user.id && member.is_leader) {
+              setCurrentUserIsLeader(true);
+            }
+
             return userData?.name || userData?.email || "Unknown";
           })
         );
@@ -67,52 +86,38 @@ export function useBillsFirebase() {
       } catch (error) {
         console.error("Error loading team members:", error);
         setRoommates([]);
+        setCurrentUserIsLeader(false);
       }
     };
 
-    if (currentTeam?.id) {
+    if (currentTeam?.id && user?.id) {
       loadTeamMembers();
     }
-  }, [currentTeam?.id]);
+  }, [currentTeam?.id, user?.id]);
 
-  // Subscribe to bills real-time updates
+  // Subscribe to bill payments real-time updates (TanStack Query 실시간 리스너)
   useEffect(() => {
-    if (!currentTeam?.id) {
-      setIsLoading(false);
+    if (firebaseBills.length === 0) {
+      setPaymentsMap({});
       return;
     }
 
-    const unsubscribe = billService.subscribeToTeamBills(
-      currentTeam.id,
-      async (firebaseBills) => {
-        try {
-          // Load payments for all bills
-          const paymentsData: Record<string, billService.BillPayment[]> = {};
-          await Promise.all(
-            firebaseBills.map(async (bill) => {
-              const payments = await billService.getBillPayments(bill.id);
-              paymentsData[bill.id] = payments;
-            })
-          );
-          setPaymentsMap(paymentsData);
+    const billIds = firebaseBills.map(bill => bill.id);
 
-          // Transform bills to UI format
-          const transformedBills = firebaseBills.map((bill) => mapFirebaseToLocal(bill, paymentsData[bill.id] || []));
-          setBills(transformedBills);
-          setIsLoading(false);
-        } catch (error) {
-          console.error("Error loading bill payments:", error);
-          setIsLoading(false);
-        }
+    const unsubscribe = billService.subscribeToTeamBillPayments(
+      currentTeam?.id || '',
+      billIds,
+      (paymentsData) => {
+        // 실시간 업데이트로 paymentsMap 자동 갱신
+        setPaymentsMap(paymentsData);
       },
       (error) => {
-        console.error("Bills subscription error:", error);
-        setIsLoading(false);
+        console.error('Bill payments subscription error:', error);
       }
     );
 
     return () => unsubscribe();
-  }, [currentTeam?.id, roommates]);
+  }, [firebaseBills, currentTeam?.id]);
 
   const mapFirebaseToLocal = (
     fbBill: billService.Bill,
@@ -127,15 +132,15 @@ export function useBillsFirebase() {
       other: "maintenance",
     };
 
-    // Create payments map
+    // Create payments map - 개인별 지불 현황 Firebase 연동
     const paymentsByMember: { [roommate: string]: boolean } = {};
     roommates.forEach((roommate) => {
       const hasPayment = payments.some((p) => p.paid_by_name === roommate);
       paymentsByMember[roommate] = hasPayment;
     });
 
-    // Determine status
-    const allPaid = Object.values(paymentsByMember).every((paid) => paid);
+    // Determine status - 전부 지불했는지 확인
+    const allPaid = roommates.length > 0 && Object.values(paymentsByMember).every((paid) => paid);
     const isOverdue = new Date(fbBill.due_date) < new Date() && !allPaid;
     const status = allPaid ? "paid" : isOverdue ? "overdue" : "pending";
 
@@ -181,6 +186,11 @@ export function useBillsFirebase() {
         return "home-outline";
     }
   };
+
+  // Transform Firebase bills to local format
+  const bills: Bill[] = useMemo(() => {
+    return firebaseBills.map((fbBill) => mapFirebaseToLocal(fbBill, paymentsMap[fbBill.id] || []));
+  }, [firebaseBills, paymentsMap]);
 
   const calculateSplit = useCallback(
     (
@@ -264,6 +274,18 @@ export function useBillsFirebase() {
         return false;
       }
 
+      // 총액이 숫자인지 확인
+      if (isNaN(Number(newBill.amount.trim()))) {
+        Alert.alert("오류", "총액은 숫자만 입력 가능합니다.");
+        return false;
+      }
+
+      // 계좌번호가 입력되었고, 숫자가 아니면 오류
+      if (newBill.accountNumber.trim() && isNaN(Number(newBill.accountNumber.trim()))) {
+        Alert.alert("오류", "계좌번호는 숫자만 입력 가능합니다.");
+        return false;
+      }
+
       if (!newBill.dueDate.trim()) {
         Alert.alert("오류", "마감일을 입력해주세요.");
         return false;
@@ -293,7 +315,7 @@ export function useBillsFirebase() {
           created_by: user.id,
         };
 
-        const createdBill = await billService.createBill(billData);
+        const createdBill = await createBillMutation.mutateAsync(billData);
 
         createNotification({
           title: "공과금 추가",
@@ -310,7 +332,7 @@ export function useBillsFirebase() {
         return false;
       }
     },
-    [currentTeam?.id, user?.id, createNotification]
+    [currentTeam?.id, user?.id, createNotification, createBillMutation]
   );
 
   const canEditPayment = useCallback(
@@ -345,7 +367,25 @@ export function useBillsFirebase() {
             bill.customSplit,
             roommate
           );
-          await billService.createBillPayment({
+
+          // Optimistic Update: 즉시 로컬 상태 업데이트
+          const optimisticPayment: billService.BillPayment = {
+            id: `temp-${Date.now()}`,
+            bill_id: billId,
+            paid_by: user.id,
+            paid_by_name: user.name || user.email || "사용자",
+            amount: paymentAmount,
+            paid_at: new Date().toISOString(),
+            payment_method: '',
+          };
+
+          setPaymentsMap((prev) => ({
+            ...prev,
+            [billId]: [...(prev[billId] || []), optimisticPayment],
+          }));
+
+          // Firebase에 실제 저장
+          await createPaymentMutation.mutateAsync({
             bill_id: billId,
             paid_by: user.id,
             paid_by_name: user.name || user.email || "사용자",
@@ -374,9 +414,11 @@ export function useBillsFirebase() {
       } catch (error) {
         console.error("Error toggling payment:", error);
         Alert.alert("오류", "결제 상태 변경에 실패했습니다.");
+
+        // 에러 발생 시 Optimistic Update 롤백은 실시간 리스너가 처리
       }
     },
-    [bills, user, createNotification, canEditPayment, calculateSplit]
+    [bills, user, createNotification, canEditPayment, calculateSplit, createPaymentMutation]
   );
 
   const markBillAsPaid = useCallback(
@@ -401,7 +443,7 @@ export function useBillsFirebase() {
             bill.customSplit,
             roommate
           );
-          await billService.createBillPayment({
+          await createPaymentMutation.mutateAsync({
             bill_id: billId,
             paid_by: user.id,
             paid_by_name: roommate,
@@ -416,7 +458,7 @@ export function useBillsFirebase() {
         Alert.alert("오류", "지불 완료 처리에 실패했습니다.");
       }
     },
-    [bills, currentTeam?.id, user?.id, calculateSplit]
+    [bills, currentTeam?.id, user?.id, calculateSplit, createPaymentMutation]
   );
 
   const extendDueDate = useCallback(
@@ -429,8 +471,11 @@ export function useBillsFirebase() {
         const extendedDate = new Date(currentDueDate.getTime() + 7 * 24 * 60 * 60 * 1000);
         const newDueDate = extendedDate.toISOString().split("T")[0];
 
-        await billService.updateBill(billId, {
-          due_date: newDueDate,
+        await updateBillMutation.mutateAsync({
+          billId,
+          updates: {
+            due_date: newDueDate,
+          },
         });
 
         Alert.alert("연장 완료", `마감일이 ${newDueDate}로 연장되었습니다.`);
@@ -439,12 +484,23 @@ export function useBillsFirebase() {
         Alert.alert("오류", "마감일 연장에 실패했습니다.");
       }
     },
-    [bills]
+    [bills, updateBillMutation]
   );
 
   const deleteBill = useCallback(
     async (billId: string) => {
       const bill = bills.find((b) => b.id === billId);
+
+      // 삭제 권한 확인: 작성자 또는 방장만 삭제 가능
+      const isCreator = bill?.createdBy === user?.id;
+      const canDelete = isCreator || currentUserIsLeader;
+
+      if (!canDelete) {
+        Alert.alert("권한 없음", "공과금을 삭제할 권한이 없습니다. 작성자 또는 방장만 삭제할 수 있습니다.", [
+          { text: "확인" }
+        ]);
+        return;
+      }
 
       Alert.alert("공과금 삭제", `"${bill?.name}" 공과금을 삭제하시겠습니까?`, [
         { text: "취소", style: "cancel" },
@@ -453,7 +509,7 @@ export function useBillsFirebase() {
           style: "destructive",
           onPress: async () => {
             try {
-              await billService.deleteBill(billId);
+              await deleteBillMutation.mutateAsync(billId);
               Alert.alert("삭제 완료", "공과금이 삭제되었습니다.");
             } catch (error) {
               console.error("Error deleting bill:", error);
@@ -463,7 +519,7 @@ export function useBillsFirebase() {
         },
       ]);
     },
-    [bills]
+    [bills, deleteBillMutation, user?.id, currentUserIsLeader]
   );
 
   const getPaymentLinkModalData = (bill: Bill): PaymentLinkModalData | null => {
@@ -528,6 +584,15 @@ export function useBillsFirebase() {
     ]);
   };
 
+  // Helper function to check delete permission
+  const canDeleteBill = useCallback(
+    (bill: Bill): boolean => {
+      const isCreator = bill.createdBy === user?.id;
+      return isCreator || currentUserIsLeader;
+    },
+    [user?.id, currentUserIsLeader]
+  );
+
   return {
     bills,
     roommates,
@@ -545,6 +610,7 @@ export function useBillsFirebase() {
     markBillAsPaid,
     extendDueDate,
     deleteBill,
+    canDeleteBill, // 삭제 권한 체크 함수 export
     refreshData: () => {}, // Real-time updates handle this
   };
 }

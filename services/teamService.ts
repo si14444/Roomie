@@ -68,11 +68,12 @@ export const createTeam = async (data: CreateTeamData): Promise<Team> => {
     // 팀 생성
     const teamRef = await addDoc(collection(db, 'teams'), teamData);
 
-    // 생성자를 admin으로 팀 멤버에 추가
+    // 생성자를 admin이자 방장으로 팀 멤버에 추가
     await addDoc(collection(db, 'team_members'), {
       team_id: teamRef.id,
       user_id: currentUser.uid,
       role: 'admin',
+      is_leader: true, // 팀 생성자는 방장
       joined_at: serverTimestamp(),
     });
 
@@ -144,11 +145,12 @@ export const joinTeam = async (teamId: string, userId: string): Promise<void> =>
       throw new Error('이미 이 팀의 멤버입니다.');
     }
 
-    // 팀 멤버로 추가
+    // 팀 멤버로 추가 (일반 멤버는 방장 아님)
     await addDoc(collection(db, 'team_members'), {
       team_id: teamId,
       user_id: userId,
       role: 'member',
+      is_leader: false,
       joined_at: serverTimestamp(),
     });
   } catch (error: any) {
@@ -284,6 +286,7 @@ export interface TeamMemberData {
   team_id: string;
   user_id: string;
   role: 'admin' | 'member';
+  is_leader: boolean; // 방장 여부
   joined_at: string;
 }
 
@@ -300,6 +303,7 @@ export const getTeamMembers = async (teamId: string): Promise<TeamMemberData[]> 
         team_id: data.team_id,
         user_id: data.user_id,
         role: data.role,
+        is_leader: data.is_leader || false, // 기본값 false
         joined_at: timestampToDate(data.joined_at).toISOString(),
       };
     });

@@ -31,6 +31,7 @@ export default function BillsScreen() {
     markBillAsPaid,
     extendDueDate,
     deleteBill,
+    canDeleteBill, // 삭제 권한 체크 함수
   } = useBills();
 
   const [showAddModal, setShowAddModal] = useState(false);
@@ -46,8 +47,8 @@ export default function BillsScreen() {
     icon: "flash-outline",
   });
 
-  const handleAddBill = () => {
-    const success = addNewBill(newBill);
+  const handleAddBill = async () => {
+    const success = await addNewBill(newBill);
     if (success) {
       setNewBill({
         name: "",
@@ -62,6 +63,7 @@ export default function BillsScreen() {
       });
       setShowAddModal(false);
     }
+    // 실패 시 모달 유지 (오류 Alert만 표시)
   };
 
   // 송금 모달 상태
@@ -146,6 +148,7 @@ export default function BillsScreen() {
         onMarkAsPaid={markBillAsPaid}
         onExtendDueDate={extendDueDate}
         onDelete={deleteBill}
+        canDelete={selectedBill ? canDeleteBill(selectedBill) : false}
       />
     </SafeAreaView>
   );
