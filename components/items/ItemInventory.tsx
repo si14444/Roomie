@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import {
   StyleSheet,
   TouchableOpacity,
@@ -7,49 +7,28 @@ import {
   Modal,
   KeyboardAvoidingView,
   Platform,
+  ActivityIndicator,
 } from "react-native";
 import { Text, View } from "@/components/Themed";
 import { Ionicons } from "@expo/vector-icons";
 import Colors from "@/constants/Colors";
 import { InventoryItem, InventoryStatus, StatusUpdate } from "@/types/item.types";
 import { AddInventoryItemModal } from "./AddInventoryItemModal";
-import { itemsService, Item } from "@/lib/api-service";
-import { useTeam } from "@/contexts/TeamContext";
+import { Item } from "@/services/itemService";
 
 interface ItemInventoryProps {
+  items: Item[];
+  isLoading: boolean;
+  onUpdateItem?: (itemId: string, quantity: number) => void;
   onUpdateStatus?: (update: StatusUpdate) => void;
   onAddItem?: (item: InventoryItem) => void;
 }
 
-export function ItemInventory({ onUpdateStatus, onAddItem }: ItemInventoryProps) {
+export function ItemInventory({ items, isLoading, onUpdateItem, onUpdateStatus, onAddItem }: ItemInventoryProps) {
   const [selectedItem, setSelectedItem] = useState<Item | null>(null);
   const [showUpdateModal, setShowUpdateModal] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [newQuantity, setNewQuantity] = useState<number>(0);
-  const [items, setItems] = useState<Item[]>([]);
-  const [loading, setLoading] = useState(true);
-  const { currentTeam } = useTeam();
-
-  useEffect(() => {
-    if (currentTeam?.id) {
-      loadItems();
-    }
-  }, [currentTeam?.id]);
-
-  const loadItems = async () => {
-    if (!currentTeam?.id) return;
-
-    try {
-      setLoading(true);
-      const data = await itemsService.getItems(currentTeam.id);
-      setItems(data);
-    } catch (error) {
-      console.error('Error loading items:', error);
-      Alert.alert('오류', '물품 목록을 불러오는 중 오류가 발생했습니다.');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const getStatusColor = (currentQuantity: number, minQuantity: number) => {
     const ratio = currentQuantity / minQuantity;
@@ -111,88 +90,41 @@ export function ItemInventory({ onUpdateStatus, onAddItem }: ItemInventoryProps)
     setShowUpdateModal(true);
   };
 
-  const handleUpdateQuantity = async () => {
-    if (!selectedItem || !currentTeam?.id) {
+  const handleUpdateQuantity = () => {
+    if (!selectedItem) {
       return;
     }
 
-    try {
-      await itemsService.updateItemQuantity(
-        selectedItem.id,
-        newQuantity,
-        currentTeam.id
-      );
+    // 부모 컴포넌트의 update 함수 호출
+    onUpdateItem?.(selectedItem.id, newQuantity);
 
-      // 로컬 상태 업데이트
-      setItems(prev =>
-        prev.map(item =>
-          item.id === selectedItem.id
-            ? {
-                ...item,
-                current_quantity: newQuantity,
-                updated_at: new Date().toISOString(),
-              }
-            : item
-        )
-      );
+    // 부모 컴포넌트에 상태 변경 알림
+    const status = getStatusText(newQuantity, selectedItem.min_quantity);
+    const update: StatusUpdate = {
+      itemId: selectedItem.id,
+      newStatus: status as InventoryStatus,
+      updatedBy: "현재사용자",
+    };
 
-      // 부모 컴포넌트에 알림
-      const status = getStatusText(newQuantity, selectedItem.min_quantity);
-      const update: StatusUpdate = {
-        itemId: selectedItem.id,
-        newStatus: status as InventoryStatus,
-        updatedBy: "현재사용자",
-      };
+    onUpdateStatus?.(update);
 
-      onUpdateStatus?.(update);
-
-      setShowUpdateModal(false);
-      setSelectedItem(null);
-      setNewQuantity(0);
-      
-      Alert.alert('완료', '물품 수량이 업데이트되었습니다.');
-    } catch (error) {
-      console.error('Error updating quantity:', error);
-      Alert.alert('오류', '수량 업데이트 중 오류가 발생했습니다.');
-    }
+    setShowUpdateModal(false);
+    setSelectedItem(null);
+    setNewQuantity(0);
   };
 
-  const handleAddItem = async (newItemData: any) => {
-    if (!currentTeam?.id) return;
-
-    try {
-      const newItem = await itemsService.createItem({
-        team_id: currentTeam.id,
-        name: newItemData.name,
-        description: newItemData.description,
-        category: newItemData.category,
-        current_quantity: newItemData.quantity || 0,
-        min_quantity: newItemData.minQuantity || 1,
-        unit: newItemData.unit || 'ea',
-        estimated_price: newItemData.estimatedPrice ? parseFloat(newItemData.estimatedPrice) : null,
-        preferred_store: newItemData.store,
-      });
-
-      // 로컬 상태 업데이트
-      setItems(prev => [...prev, newItem]);
-      
-      // 부모 컴포넌트에 알림 (타입 변환)
-      const inventoryItem: InventoryItem = {
-        id: newItem.id,
-        name: newItem.name,
-        category: newItem.category,
-        status: getStatusText(newItem.current_quantity, newItem.min_quantity) as InventoryStatus,
-        lastUpdated: new Date(newItem.updated_at),
-        lastUpdatedBy: "현재사용자",
-        icon: getCategoryIcon(newItem.category) as any,
-      };
-      onAddItem?.(inventoryItem);
-      
-      Alert.alert("완료", `${newItem.name}이(가) 물품 목록에 추가되었습니다!`);
-    } catch (error) {
-      console.error('Error adding item:', error);
-      Alert.alert('오류', '물품 추가 중 오류가 발생했습니다.');
-    }
+  const handleAddItem = (newItemData: any) => {
+    // 부모 컴포넌트에 알림 (타입 변환)
+    const inventoryItem: InventoryItem = {
+      id: Date.now().toString(),
+      name: newItemData.name,
+      category: newItemData.category,
+      status: 'sufficient' as InventoryStatus,
+      lastUpdated: new Date(),
+      lastUpdatedBy: "현재사용자",
+      icon: getCategoryIcon(newItemData.category) as any,
+    };
+    onAddItem?.(inventoryItem);
   };
 
   const formatLastUpdated = (dateString: string) => {
@@ -206,7 +138,7 @@ export function ItemInventory({ onUpdateStatus, onAddItem }: ItemInventoryProps)
     return date.toLocaleDateString();
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
       <View style={styles.container}>
         <View style={styles.headerContainer}>
@@ -218,9 +150,9 @@ export function ItemInventory({ onUpdateStatus, onAddItem }: ItemInventoryProps)
             <Ionicons name="add" size={20} color="white" />
           </TouchableOpacity>
         </View>
-        
+
         <View style={styles.emptyState}>
-          <Ionicons name="hourglass-outline" size={48} color={Colors.light.mutedText} />
+          <ActivityIndicator size="large" color={Colors.light.primary} />
           <Text style={styles.emptyText}>물품 목록을 불러오는 중...</Text>
         </View>
       </View>

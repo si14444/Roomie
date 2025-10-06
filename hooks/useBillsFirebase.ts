@@ -117,7 +117,8 @@ export function useBillsFirebase() {
     );
 
     return () => unsubscribe();
-  }, [firebaseBills, currentTeam?.id]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [firebaseBills.map(b => b.id).join(','), currentTeam?.id]);
 
   const mapFirebaseToLocal = (
     fbBill: billService.Bill,

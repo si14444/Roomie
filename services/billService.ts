@@ -214,10 +214,26 @@ export const updateBill = async (
 };
 
 /**
- * 공과금 삭제
+ * 공과금 삭제 (관련 payments도 함께 삭제)
  */
 export const deleteBill = async (billId: string): Promise<void> => {
   try {
+    // 먼저 해당 bill의 모든 payments 삭제
+    const paymentsQuery = query(
+      collection(db, 'bill_payments'),
+      where('bill_id', '==', billId)
+    );
+
+    const paymentsSnapshot = await getDocs(paymentsQuery);
+
+    // 모든 payments 삭제
+    const deletePromises = paymentsSnapshot.docs.map(paymentDoc =>
+      deleteDoc(doc(db, 'bill_payments', paymentDoc.id))
+    );
+
+    await Promise.all(deletePromises);
+
+    // 그 다음 bill 삭제
     await deleteDoc(doc(db, 'bills', billId));
   } catch (error: any) {
     throw new Error(error.message || '공과금 삭제에 실패했습니다.');
