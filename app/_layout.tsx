@@ -1,5 +1,6 @@
 import { AuthProvider } from "@/contexts/AuthContext";
 import { NotificationProvider } from "@/contexts/NotificationContext";
+import { NotificationPreferencesProvider } from "@/contexts/NotificationPreferencesContext";
 import { TeamProvider } from "@/contexts/TeamContext";
 import AppNavigator from "@/components/navigation/AppNavigator";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
@@ -81,28 +82,30 @@ function RootLayoutNav() {
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
           <TeamProvider>
-            <NotificationProvider>
-              <AppNavigator>
-                <ThemeProvider value={DefaultTheme}>
-                <Stack>
-                  <Stack.Screen
-                    name="(tabs)"
-                    options={{ headerShown: false }}
-                  />
-                  <Stack.Screen name="login" options={{ headerShown: false }} />
-                  <Stack.Screen name="signup" options={{ headerShown: false }} />
-                  <Stack.Screen
-                    name="modal"
-                    options={{ presentation: "modal" }}
-                  />
-                  <Stack.Screen
-                    name="team-selection"
-                    options={{ headerShown: false, gestureEnabled: false }}
-                  />
-                </Stack>
-              </ThemeProvider>
-            </AppNavigator>
-          </NotificationProvider>
+            <NotificationPreferencesProvider>
+              <NotificationProvider>
+                <AppNavigator>
+                  <ThemeProvider value={DefaultTheme}>
+                  <Stack>
+                    <Stack.Screen
+                      name="(tabs)"
+                      options={{ headerShown: false }}
+                    />
+                    <Stack.Screen name="login" options={{ headerShown: false }} />
+                    <Stack.Screen name="signup" options={{ headerShown: false }} />
+                    <Stack.Screen
+                      name="modal"
+                      options={{ presentation: "modal" }}
+                    />
+                    <Stack.Screen
+                      name="team-selection"
+                      options={{ headerShown: false, gestureEnabled: false }}
+                    />
+                  </Stack>
+                </ThemeProvider>
+              </AppNavigator>
+            </NotificationProvider>
+          </NotificationPreferencesProvider>
         </TeamProvider>
       </AuthProvider>
       </QueryClientProvider>

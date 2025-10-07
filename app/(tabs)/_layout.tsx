@@ -7,9 +7,8 @@ import { Tabs } from "expo-router";
 import Colors from "@/constants/Colors";
 import { useNotificationContext } from "@/contexts/NotificationContext";
 import { NotificationsModal } from "@/components/notifications/NotificationsModal";
+import { SettingsModal } from "@/components/settings/SettingsModal";
 import { useTeam } from "@/contexts/TeamContext";
-import { useAuth } from "@/contexts/AuthContext";
-import { Alert } from "react-native";
 
 // You can explore the built-in icon families and icons on the web at https://icons.expo.fyi/
 function TabBarIcon(props: {
@@ -21,7 +20,7 @@ function TabBarIcon(props: {
 
 function HeaderRightButtons() {
   const [showNotifications, setShowNotifications] = useState(false);
-  const { logout } = useAuth();
+  const [showSettings, setShowSettings] = useState(false);
   const {
     notifications,
     unreadCount,
@@ -41,25 +40,12 @@ function HeaderRightButtons() {
     setShowNotifications(false);
   };
 
-  const handleLogout = () => {
-    Alert.alert(
-      '로그아웃',
-      '정말 로그아웃하시겠습니까?',
-      [
-        { text: '취소', style: 'cancel' },
-        { 
-          text: '로그아웃', 
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await logout();
-            } catch (error) {
-              Alert.alert('오류', '로그아웃에 실패했습니다.');
-            }
-          }
-        }
-      ]
-    );
+  const handleSettingsPress = () => {
+    setShowSettings(true);
+  };
+
+  const handleCloseSettings = () => {
+    setShowSettings(false);
   };
 
   return (
@@ -87,9 +73,9 @@ function HeaderRightButtons() {
 
         <TouchableOpacity
           style={{ padding: 8 }}
-          onPress={handleLogout}
+          onPress={handleSettingsPress}
         >
-          <Ionicons name="log-out-outline" size={24} color="#FFFFFF" />
+          <Ionicons name="settings-outline" size={24} color="#FFFFFF" />
         </TouchableOpacity>
       </View>
 
@@ -107,6 +93,11 @@ function HeaderRightButtons() {
         onDeleteNotification={deleteNotification}
         getNotificationIcon={getNotificationIcon}
         getRelativeTime={getRelativeTime}
+      />
+
+      <SettingsModal
+        visible={showSettings}
+        onClose={handleCloseSettings}
       />
     </>
   );

@@ -7,11 +7,13 @@ import {
 } from "@/types/notification.types";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTeam } from "@/contexts/TeamContext";
+import { useNotificationPreferences } from "@/contexts/NotificationPreferencesContext";
 import Colors from "@/constants/Colors";
 
 export function useNotifications() {
   const { user } = useAuth();
   const { currentTeam } = useTeam();
+  const { isNotificationEnabled } = useNotificationPreferences();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -147,6 +149,12 @@ export function useNotifications() {
   const createNotification = async (params: CreateNotificationParams) => {
     if (!user || !currentTeam) {
       console.warn('Cannot create notification: user or team not available');
+      return;
+    }
+
+    // 알림 설정 확인 - 비활성화된 알림은 생성하지 않음
+    if (!isNotificationEnabled(params.type)) {
+      console.log(`Notification type ${params.type} is disabled by user preferences`);
       return;
     }
 
