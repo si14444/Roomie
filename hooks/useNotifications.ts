@@ -8,6 +8,7 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import { useTeam } from "@/contexts/TeamContext";
 import { useNotificationPreferences } from "@/contexts/NotificationPreferencesContext";
+import * as NotificationService from "@/services/notificationService";
 import Colors from "@/constants/Colors";
 
 export function useNotifications() {
@@ -17,10 +18,12 @@ export function useNotifications() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  // 컴포넌트 마운트 시 알림 로드
+  // 컴포넌트 마운트 시 알림 로드 및 권한 요청
   useEffect(() => {
     if (user) {
       loadNotifications();
+      // 알림 권한 요청
+      NotificationService.registerForPushNotifications();
     }
   }, [user]);
 
@@ -45,6 +48,11 @@ export function useNotifications() {
   const unreadCount = useMemo(() => {
     return notifications.filter((n) => !n.is_read).length;
   }, [notifications]);
+
+  // 배지 업데이트
+  useEffect(() => {
+    NotificationService.setBadgeCount(unreadCount);
+  }, [unreadCount]);
 
   // 알림 타입별 아이콘 정보
   const getNotificationIcon = (type: NotificationType): NotificationIcon => {
@@ -174,6 +182,18 @@ export function useNotifications() {
       };
 
       setNotifications((prev) => [newNotification, ...prev]);
+
+      // 로컬 푸시 알림 전송
+      const { title, body } = NotificationService.getNotificationContent(
+        params.type,
+        params.title,
+        params.message
+      );
+      await NotificationService.scheduleLocalNotification(title, body, {
+        notificationId: newNotification.id,
+        type: params.type,
+        ...params.actionData,
+      });
     } catch (error) {
       console.error('Failed to create notification:', error);
       throw error;

@@ -5,7 +5,8 @@
       "Bash(claude mcp:*)",
       "Bash(npx tsc:*)",
       "Bash(npx expo install:*)",
-      "Bash(node:*)"
+      "Bash(node:*)",
+      "Bash(npx:*)"
     ],
     "deny": []
   }

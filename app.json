@@ -14,6 +14,13 @@
       "backgroundColor": "#ffffff"
     },
     "assetBundlePatterns": ["**/*"],
+    "notification": {
+      "icon": "./assets/images/icon.png",
+      "color": "#8B5CF6",
+      "iosDisplayInForeground": true,
+      "androidMode": "default",
+      "androidCollapsedTitle": "#{unread_notifications} 개의 새로운 알림"
+    },
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.si14444.Roomie",
