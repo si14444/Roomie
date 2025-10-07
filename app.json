@@ -76,6 +76,11 @@
         }
       ]
     ],
+    "admob": {
+      "androidAppId": "ca-app-pub-3940256099942544~3347511713",
+      "iosAppId": "ca-app-pub-3940256099942544~1458002511",
+      "userTrackingPermission": "이 앱은 더 나은 광고 경험을 제공하기 위해 데이터를 사용합니다."
+    },
     "experiments": {
       "typedRoutes": true
     },
