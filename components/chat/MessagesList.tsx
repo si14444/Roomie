@@ -46,27 +46,34 @@ export function MessagesList() {
         
         switch (notification.type) {
           case 'routine_completed':
-          case 'task_completed':
+          case 'routine_overdue':
             messageType = "notification";
             sender = "작업 알림";
             break;
           case 'bill_added':
+          case 'bill_payment_due':
           case 'payment_received':
             messageType = "system";
             sender = "결제 시스템";
             break;
-          case 'item_low_stock':
-          case 'purchase_request':
+          case 'item_request':
+          case 'item_purchased':
+          case 'item_update':
             messageType = "request";
             sender = "재고 관리";
             break;
-          case 'team_announcement':
+          case 'announcement':
             messageType = "message";
             sender = "팀 공지";
             break;
-          case 'feedback_request':
+          case 'poll_created':
+          case 'poll_ended':
             messageType = "request";
-            sender = "피드백 요청";
+            sender = "투표";
+            break;
+          case 'chat_message':
+            messageType = "message";
+            sender = "채팅";
             break;
           default:
             messageType = "notification";

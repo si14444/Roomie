@@ -1,8 +1,7 @@
 import { initializeApp } from 'firebase/app';
-import { initializeAuth, getReactNativePersistence } from 'firebase/auth';
+import { initializeAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const firebaseConfig = {
   apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
@@ -22,10 +21,8 @@ console.log('🔧 [Firebase Config] API Key 존재:', !!firebaseConfig.apiKey);
 const app = initializeApp(firebaseConfig);
 console.log('✅ [Firebase Config] Firebase 앱 초기화 완료');
 
-// Initialize Firebase Auth with AsyncStorage persistence
-export const auth = initializeAuth(app, {
-  persistence: getReactNativePersistence(AsyncStorage)
-});
+// Initialize Firebase Auth
+export const auth = initializeAuth(app);
 console.log('✅ [Firebase Config] Firebase Auth 초기화 완료');
 
 export const db = getFirestore(app);

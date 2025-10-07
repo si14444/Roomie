@@ -1,5 +1,5 @@
 import Colors from "@/constants/Colors";
-import type { Bill } from "@/hooks/useBills";
+import type { Bill } from "@/hooks/useBillsFirebase";
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import { Modal, StyleSheet, Text, TouchableOpacity, View } from "react-native";
@@ -8,9 +8,9 @@ interface BillOptionsModalProps {
   visible: boolean;
   bill: Bill | null;
   onClose: () => void;
-  onMarkAsPaid: (billId: number) => void;
-  onExtendDueDate: (billId: number) => void;
-  onDelete: (billId: number) => void;
+  onMarkAsPaid: (billId: string) => void;
+  onExtendDueDate: (billId: string) => void;
+  onDelete: (billId: string) => void;
   canDelete?: boolean; // 삭제 권한 여부
 }
 

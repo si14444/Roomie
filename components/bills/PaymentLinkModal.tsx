@@ -1,5 +1,5 @@
 import Colors from "@/constants/Colors";
-import type { PaymentLinkModalData } from "@/hooks/useBills";
+import type { PaymentLinkModalData } from "@/hooks/useBillsFirebase";
 import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
 import { Alert, Modal, StyleSheet, Text, TouchableOpacity, View } from "react-native";

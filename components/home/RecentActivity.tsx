@@ -59,7 +59,7 @@ export function RecentActivity() {
         return {
           id: notification.id,
           text: notification.message,
-          time: getRelativeTime(notification.createdAt),
+          time: getRelativeTime(notification.created_at || notification.createdAt || ''),
           icon: iconInfo.icon,
           iconColor: iconInfo.color,
         };

@@ -3,13 +3,13 @@ import Colors from "@/constants/Colors";
 import { Ionicons } from "@expo/vector-icons";
 import { StyleSheet, TouchableOpacity } from "react-native";
 import { RoommatePaymentItem } from "./RoommatePaymentItem";
-import type { Bill } from "@/hooks/useBills";
+import type { Bill } from "@/hooks/useBillsFirebase";
 
 interface BillCardProps {
   bill: Bill;
   roommates: string[];
   calculateSplit: (amount: number, splitType: "equal" | "custom", customSplit?: { [roommate: string]: number }, roommate?: string) => number;
-  onTogglePayment: (billId: number, roommate: string) => void;
+  onTogglePayment: (billId: string, roommate: string) => void;
   onPressPaymentLink: (bill: Bill) => void;
   onShowBillOptions: (bill: Bill) => void;
   canEditPayment: (roommate: string) => boolean;

@@ -163,6 +163,17 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: Colors.light.mutedText,
   },
+  quantityText: {
+    fontSize: 14,
+    color: Colors.light.text,
+    marginTop: 2,
+  },
+  notesText: {
+    fontSize: 13,
+    color: Colors.light.mutedText,
+    marginTop: 4,
+    fontStyle: "italic",
+  },
   requestActions: {
     flexDirection: "row",
     gap: 8,

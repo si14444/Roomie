@@ -47,65 +47,51 @@ export function TodayTasks({ onAddTask, onTaskPress }: TodayTasksProps) {
       const todayRoutines = routines.filter(routine => {
         // Check if routine is active and should show today
         if (!routine.is_active) return false;
-        
+
         // For recurring routines, check if today matches the schedule
         if (routine.frequency === 'daily') {
           return true; // Daily routines show every day
-        } else if (routine.frequency === 'weekly') {
+        } else if (routine.frequency === 'weekly' && routine.frequency_details?.days) {
           // Weekly routines show on assigned days
           const dayOfWeek = today.getDay(); // 0 = Sunday, 1 = Monday, etc.
-          const assignedDay = routine.assigned_day;
-          if (assignedDay === 'sunday' && dayOfWeek === 0) return true;
-          if (assignedDay === 'monday' && dayOfWeek === 1) return true;
-          if (assignedDay === 'tuesday' && dayOfWeek === 2) return true;
-          if (assignedDay === 'wednesday' && dayOfWeek === 3) return true;
-          if (assignedDay === 'thursday' && dayOfWeek === 4) return true;
-          if (assignedDay === 'friday' && dayOfWeek === 5) return true;
-          if (assignedDay === 'saturday' && dayOfWeek === 6) return true;
+          const daysMap: Record<number, string> = {
+            0: 'sunday',
+            1: 'monday',
+            2: 'tuesday',
+            3: 'wednesday',
+            4: 'thursday',
+            5: 'friday',
+            6: 'saturday'
+          };
+          const todayName = daysMap[dayOfWeek];
+          return routine.frequency_details.days?.includes(todayName);
         }
-        
+
         return false;
       });
       
       // Transform routines to tasks
       const transformedTasks: Task[] = todayRoutines.map(routine => {
-        // Check if this routine was completed today
-        const completedToday = routine.completions?.some(completion => {
-          const completionDate = new Date(completion.completed_at).toISOString().split('T')[0];
-          return completionDate === todayStr;
-        }) || false;
-        
-        // Determine status
-        let status: "pending" | "completed" | "overdue" = "pending";
-        if (completedToday) {
-          status = "completed";
-        } else {
-          // Check if it's overdue (past assigned time)
-          const now = new Date();
-          if (routine.assigned_time) {
-            const [hour, minute] = routine.assigned_time.split(':').map(Number);
-            const assignedTime = new Date(today);
-            assignedTime.setHours(hour, minute, 0, 0);
-            
-            if (now > assignedTime) {
-              status = "overdue";
-            }
-          }
-        }
-        
-        // Format time
+        // For now, assume tasks are pending (completion tracking will be added later)
+        const status: "pending" | "completed" | "overdue" = "pending";
+
+        // Format time from frequency_details if available
         let timeText = "시간 미정";
-        if (routine.assigned_time) {
-          const [hour, minute] = routine.assigned_time.split(':').map(Number);
+        if (routine.frequency_details?.time) {
+          const time = routine.frequency_details.time;
+          const [hour, minute] = time.split(':').map(Number);
           const period = hour >= 12 ? "오후" : "오전";
           const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
           timeText = `${period} ${displayHour}시${minute > 0 ? ` ${minute}분` : ''}`;
         }
-        
+
+        // Get assignee name from profile
+        const assigneeName = routine.assigned_profile?.full_name || "미배정";
+
         return {
           id: routine.id,
           task: routine.title,
-          assignee: routine.assigned_user_name || "미배정",
+          assignee: assigneeName,
           status,
           time: timeText,
           originalRoutine: routine

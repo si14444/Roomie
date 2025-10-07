@@ -190,7 +190,7 @@ export function NotificationsModal({
                           {notification.title}
                         </Text>
                         <Text style={styles.notificationTime}>
-                          {getRelativeTime(notification.createdAt)}
+                          {getRelativeTime(notification.created_at || notification.createdAt || '')}
                         </Text>
                       </View>
                       <Text
