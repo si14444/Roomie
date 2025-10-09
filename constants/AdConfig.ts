@@ -92,7 +92,7 @@ export const AdFrequency = {
    * 프로덕션 모드: 사용자 경험을 위한 적절한 조건
    */
   interstitial: {
-    minActions: __DEV__ ? 1 : 5, // 개발: 1회, 프로덕션: 5회
+    minActions: __DEV__ ? 1 : 10, // 개발: 1회, 프로덕션: 10회
     minInterval: __DEV__ ? 10000 : 180000, // 개발: 10초, 프로덕션: 3분
   },
 
