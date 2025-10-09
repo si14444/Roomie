@@ -13,7 +13,9 @@
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
-    "assetBundlePatterns": ["**/*"],
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "notification": {
       "icon": "./assets/images/icon.png",
       "color": "#8B5CF6",
@@ -71,16 +73,23 @@
         {
           "nativeAppKey": "5fdc09b5ccda187fc82936305ec8308c",
           "useKakaoAccountLogin": true,
-          "android": { "authCodeHandlerActivity": true },
-          "ios": { "handleKakaoOpenUrl": true }
+          "android": {
+            "authCodeHandlerActivity": true
+          },
+          "ios": {
+            "handleKakaoOpenUrl": true
+          }
+        }
+      ],
+      [
+        "react-native-google-mobile-ads",
+        {
+          "androidAppId": "ca-app-pub-4535163023491412~6227000255",
+          "iosAppId": "ca-app-pub-4535163023491412~7367981095",
+          "userTrackingPermission": "이 앱은 더 나은 광고 경험을 제공하기 위해 데이터를 사용합니다."
         }
       ]
     ],
-    "admob": {
-      "androidAppId": "ca-app-pub-3940256099942544~3347511713",
-      "iosAppId": "ca-app-pub-3940256099942544~1458002511",
-      "userTrackingPermission": "이 앱은 더 나은 광고 경험을 제공하기 위해 데이터를 사용합니다."
-    },
     "experiments": {
       "typedRoutes": true
     },

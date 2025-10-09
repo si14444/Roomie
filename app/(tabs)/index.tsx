@@ -22,6 +22,7 @@ import { BottomSheetModal } from "@/components/common/BottomSheetModal";
 import { CurrentRoommates } from "@/components/home/CurrentRoommates";
 import { RoommateFeedback } from "@/components/home/RoommateFeedback";
 import { StatusSummaryCard } from "@/components/home/StatusSummaryCard";
+import { AdBanner } from "@/components/ads/AdBanner";
 
 export default function HomeScreen() {
   const { isAuthenticated } = useAuth();
@@ -66,6 +67,9 @@ export default function HomeScreen() {
         <RoommateFeedback />
         <CurrentRoommates onAddRoommate={handleInvite} />
       </ScrollView>
+
+      {/* 하단 배너 광고 */}
+      <AdBanner position="bottom" />
 
       {/* 초대 모달 */}
       <BottomSheetModal

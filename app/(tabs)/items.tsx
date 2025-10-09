@@ -11,6 +11,7 @@ import { ItemQuickActions } from "@/components/items/ItemQuickActions";
 import { PurchaseRequests } from "@/components/items/PurchaseRequests";
 import { ItemInventory } from "@/components/items/ItemInventory";
 import { AddItemModal } from "@/components/items/AddItemModal";
+import { AdBanner } from "@/components/ads/AdBanner";
 
 export default function ItemsScreen() {
   const { createNotification } = useNotificationContext();
@@ -168,6 +169,9 @@ export default function ItemsScreen() {
           onDeleteItem={deleteItem}
         />
       </ScrollView>
+
+      {/* 하단 배너 광고 */}
+      <AdBanner position="bottom" />
 
       <AddItemModal
         visible={showAddModal}

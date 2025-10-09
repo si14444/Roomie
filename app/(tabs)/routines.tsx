@@ -14,6 +14,7 @@ import { RoutineDeleteModal } from "@/components/routines/RoutineDeleteModal";
 import { RoutineOptionsModal } from "@/components/routines/RoutineOptionsModal";
 import { RoutinesSummary } from "@/components/routines/RoutinesSummary";
 import { useRoutinesFirebase as useRoutines } from "@/hooks/useRoutinesFirebase";
+import { AdBanner } from "@/components/ads/AdBanner";
 
 interface Routine {
   id: string;
@@ -133,6 +134,9 @@ export default function RoutinesScreen() {
           </View>
         </View>
       </ScrollView>
+
+      {/* 하단 배너 광고 */}
+      <AdBanner position="bottom" />
 
       <AddRoutineModal
         visible={showAddModal}

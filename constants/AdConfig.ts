@@ -54,44 +54,32 @@ export const AdConfig = {
   /**
    * 배너 광고 단위 ID
    * 사용 위치: 홈, 공과금, 물품, 루틴 화면 하단
+   * .env에 실제 광고 ID가 있으면 사용, 없으면 테스트 ID 사용
    */
-  banner: __DEV__
-    ? Platform.select({
-        android: TestAdUnitIds.android.banner,
-        ios: TestAdUnitIds.ios.banner,
-      })
-    : Platform.select({
-        android: process.env.EXPO_PUBLIC_ADMOB_ANDROID_BANNER,
-        ios: process.env.EXPO_PUBLIC_ADMOB_IOS_BANNER,
-      }),
+  banner: Platform.select({
+    android: process.env.EXPO_PUBLIC_ADMOB_ANDROID_BANNER || TestAdUnitIds.android.banner,
+    ios: process.env.EXPO_PUBLIC_ADMOB_IOS_BANNER || TestAdUnitIds.ios.banner,
+  }),
 
   /**
    * 전면 광고 단위 ID
    * 사용 위치: 공과금 추가, 물품 요청, 루틴 완료 후
+   * .env에 실제 광고 ID가 있으면 사용, 없으면 테스트 ID 사용
    */
-  interstitial: __DEV__
-    ? Platform.select({
-        android: TestAdUnitIds.android.interstitial,
-        ios: TestAdUnitIds.ios.interstitial,
-      })
-    : Platform.select({
-        android: process.env.EXPO_PUBLIC_ADMOB_ANDROID_INTERSTITIAL,
-        ios: process.env.EXPO_PUBLIC_ADMOB_IOS_INTERSTITIAL,
-      }),
+  interstitial: Platform.select({
+    android: process.env.EXPO_PUBLIC_ADMOB_ANDROID_INTERSTITIAL || TestAdUnitIds.android.interstitial,
+    ios: process.env.EXPO_PUBLIC_ADMOB_IOS_INTERSTITIAL || TestAdUnitIds.ios.interstitial,
+  }),
 
   /**
    * 보상형 광고 단위 ID
    * 사용 위치: 프리미엄 기능 잠금 해제
+   * .env에 실제 광고 ID가 있으면 사용, 없으면 테스트 ID 사용
    */
-  rewarded: __DEV__
-    ? Platform.select({
-        android: TestAdUnitIds.android.rewarded,
-        ios: TestAdUnitIds.ios.rewarded,
-      })
-    : Platform.select({
-        android: process.env.EXPO_PUBLIC_ADMOB_ANDROID_REWARDED,
-        ios: process.env.EXPO_PUBLIC_ADMOB_IOS_REWARDED,
-      }),
+  rewarded: Platform.select({
+    android: process.env.EXPO_PUBLIC_ADMOB_ANDROID_REWARDED || TestAdUnitIds.android.rewarded,
+    ios: process.env.EXPO_PUBLIC_ADMOB_IOS_REWARDED || TestAdUnitIds.ios.rewarded,
+  }),
 };
 
 /**

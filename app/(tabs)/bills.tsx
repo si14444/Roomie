@@ -15,6 +15,7 @@ import { SummaryCard } from "@/components/bills/SummaryCard";
 // Import custom hook
 import type { Bill } from "@/hooks/useBillsFirebase";
 import { PaymentLinkModalData, useBillsFirebase as useBills } from "@/hooks/useBillsFirebase";
+import { AdBanner } from "@/components/ads/AdBanner";
 
 export default function BillsScreen() {
   const {
@@ -125,6 +126,9 @@ export default function BillsScreen() {
 
         {/* <RoommateStats roommateStats={statistics.roommateStats} /> */}
       </ScrollView>
+
+      {/* 하단 배너 광고 */}
+      <AdBanner position="bottom" />
 
       <AddBillModal
         visible={showAddModal}
