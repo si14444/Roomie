@@ -37,34 +37,74 @@
 
 ---
 
-## ⏳ 다음 단계 (Phase 2-4)
+## ✅ 완료된 작업 (Phase 2: 전면 광고)
 
-### Phase 2: 전면 광고 (Interstitial Ads)
-**예상 기간**: 1-2주
+### 1. useInterstitialAd 훅 생성
+**파일**: `hooks/useInterstitialAd.ts`
 
-**구현할 컴포넌트**:
-```typescript
-// components/ads/AdInterstitial.tsx
-export function useInterstitialAd() {
-  // 광고 로드 및 표시 로직
-  // 액션 카운터 관리
-  // 최소 간격 체크
-}
-```
-
-**적용할 타이밍**:
-- ✅ 공과금 추가 완료 후
-- ✅ 물품 구매 요청 완료 후
-- ✅ 루틴 완료 후 (3개 이상)
-- ✅ 투표 참여 후
-- ✅ 피드백 제출 후
+**특징**:
+- InterstitialAd 로드 및 표시 관리
+- 액션 카운터 추적 (AsyncStorage)
+- 최소 간격 체크 (3분)
+- 조건부 광고 표시 로직
+- 자동 재로드
 
 **설정**:
 - 최소 액션 수: 5회
-- 최소 간격: 3분
+- 최소 간격: 3분 (180,000ms)
 - AsyncStorage로 상태 관리
 
-**예상 수익 증가**: 월 $90-180 (10-20만원)
+### 2. 전면 광고 적용 타이밍
+
+#### ✅ 공과금 추가 완료 후 (`app/(tabs)/bills.tsx`)
+- `handleAddBill` 함수에서 성공 시 전면 광고 표시
+
+#### ✅ 물품 구매 요청 완료 후 (`app/(tabs)/items.tsx`)
+- `handleConfirmAddItem` 함수에서 성공 시 전면 광고 표시
+
+#### ✅ 루틴 완료 후 (`app/(tabs)/routines.tsx`)
+- `handleCompleteRoutine` 함수에서 완료 시 전면 광고 표시
+
+### 3. 동작 방식
+1. 사용자가 액션 수행 (공과금 추가, 물품 요청, 루틴 완료)
+2. `incrementAction()` 호출로 카운터 증가
+3. `showAd()` 호출로 조건 확인:
+   - 액션 카운트 ≥ 5회
+   - 마지막 광고 후 3분 이상 경과
+4. 조건 충족 시 전면 광고 표시
+5. 광고 종료 시 카운터 초기화 및 다음 광고 로드
+
+**예상 수익 증가**: DAU 300명 기준 월 $90-180 (10-20만원)
+
+---
+
+## ⏳ 다음 단계 (Phase 3-4)
+
+### Phase 3: 보상형 광고 (Rewarded Ads)
+**예상 기간**: 2-3주
+
+**구현할 컴포넌트**:
+```typescript
+// hooks/useRewardedAd.ts
+export function useRewardedAd()
+
+// components/premium/PremiumFeatureButton.tsx
+// 프리미엄 기능 잠금 해제 UI
+```
+
+**프리미엄 기능 아이디어**:
+1. 📊 고급 통계 (차트, 월별 분석) - 24시간
+2. 📅 과거 데이터 조회 (3개월+) - 1회성
+3. 🎨 테마 변경 (다크모드) - 24시간
+4. 📤 데이터 내보내기 (Excel, PDF) - 1회성
+5. 🔔 알림 우선순위 - 7일
+
+**적용할 위치**:
+- ❌ 설정 화면에 프리미엄 기능 섹션
+- ❌ 통계 화면에 고급 기능 잠금
+- ❌ 테마 변경 옵션
+
+**예상 수익 증가**: 월 $120-240 (13-25만원)
 
 ---
 

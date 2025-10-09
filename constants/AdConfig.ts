@@ -88,10 +88,12 @@ export const AdConfig = {
 export const AdFrequency = {
   /**
    * 전면 광고 설정
+   * 개발 모드: 테스트하기 쉽게 조건 완화
+   * 프로덕션 모드: 사용자 경험을 위한 적절한 조건
    */
   interstitial: {
-    minActions: 5, // 최소 액션 수 (공과금 추가, 물품 요청 등)
-    minInterval: 180000, // 최소 간격 (밀리초) - 3분
+    minActions: __DEV__ ? 1 : 5, // 개발: 1회, 프로덕션: 5회
+    minInterval: __DEV__ ? 10000 : 180000, // 개발: 10초, 프로덕션: 3분
   },
 
   /**

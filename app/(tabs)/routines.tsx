@@ -15,6 +15,7 @@ import { RoutineOptionsModal } from "@/components/routines/RoutineOptionsModal";
 import { RoutinesSummary } from "@/components/routines/RoutinesSummary";
 import { useRoutinesFirebase as useRoutines } from "@/hooks/useRoutinesFirebase";
 import { AdBanner } from "@/components/ads/AdBanner";
+import { useInterstitialAd } from "@/hooks/useInterstitialAd";
 
 interface Routine {
   id: string;
@@ -49,6 +50,9 @@ export default function RoutinesScreen() {
     showAssigneeOptions,
   } = useRoutines();
 
+  // 전면 광고 훅
+  const { incrementAction, showAd } = useInterstitialAd();
+
   const openAddModal = () => {
     setShowAddModal(true);
   };
@@ -63,6 +67,15 @@ export default function RoutinesScreen() {
     frequency: "daily" | "weekly" | "monthly";
   }) => {
     addNewRoutine(routine);
+  };
+
+  // 루틴 완료 핸들러 (전면 광고 포함)
+  const handleCompleteRoutine = async (routineId: string) => {
+    await completeRoutine(routineId);
+
+    // 액션 카운트 증가 및 전면 광고 표시
+    await incrementAction();
+    await showAd();
   };
 
   const handleShowRoutineOptions = (routine: Routine) => {
@@ -124,7 +137,7 @@ export default function RoutinesScreen() {
                 <RoutineCard
                   key={routine.id}
                   routine={routine}
-                  onComplete={completeRoutine}
+                  onComplete={handleCompleteRoutine}
                   onPostpone={postponeRoutine}
                   onOptions={handleShowRoutineOptions}
                   onChangeAssignee={showAssigneeOptions}

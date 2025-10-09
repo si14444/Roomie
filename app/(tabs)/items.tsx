@@ -12,6 +12,7 @@ import { PurchaseRequests } from "@/components/items/PurchaseRequests";
 import { ItemInventory } from "@/components/items/ItemInventory";
 import { AddItemModal } from "@/components/items/AddItemModal";
 import { AdBanner } from "@/components/ads/AdBanner";
+import { useInterstitialAd } from "@/hooks/useInterstitialAd";
 
 export default function ItemsScreen() {
   const { createNotification } = useNotificationContext();
@@ -29,6 +30,9 @@ export default function ItemsScreen() {
     updateItem,
     deleteItem,
   } = useItemsFirebase();
+
+  // 전면 광고 훅
+  const { incrementAction, showAd } = useInterstitialAd();
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [newItem, setNewItem] = useState<NewItemInput>({
@@ -91,6 +95,10 @@ export default function ItemsScreen() {
       });
 
       handleModalClose();
+
+      // 액션 카운트 증가 및 전면 광고 표시
+      await incrementAction();
+      await showAd();
     }
   };
 

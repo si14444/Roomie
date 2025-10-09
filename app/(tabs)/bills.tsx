@@ -16,6 +16,7 @@ import { SummaryCard } from "@/components/bills/SummaryCard";
 import type { Bill } from "@/hooks/useBillsFirebase";
 import { PaymentLinkModalData, useBillsFirebase as useBills } from "@/hooks/useBillsFirebase";
 import { AdBanner } from "@/components/ads/AdBanner";
+import { useInterstitialAd } from "@/hooks/useInterstitialAd";
 
 export default function BillsScreen() {
   const {
@@ -34,6 +35,9 @@ export default function BillsScreen() {
     deleteBill,
     canDeleteBill, // 삭제 권한 체크 함수
   } = useBills();
+
+  // 전면 광고 훅
+  const { incrementAction, showAd } = useInterstitialAd();
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [newBill, setNewBill] = useState<NewBill>({
@@ -63,6 +67,10 @@ export default function BillsScreen() {
         icon: "flash-outline",
       });
       setShowAddModal(false);
+
+      // 액션 카운트 증가 및 전면 광고 표시
+      await incrementAction();
+      await showAd();
     }
     // 실패 시 모달 유지 (오류 Alert만 표시)
   };
