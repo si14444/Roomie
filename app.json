@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Roomie",
+    "name": "루미",
     "slug": "Roomie",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -13,9 +13,7 @@
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
-    "assetBundlePatterns": [
-      "**/*"
-    ],
+    "assetBundlePatterns": ["**/*"],
     "notification": {
       "icon": "./assets/images/icon.png",
       "color": "#8B5CF6",
