@@ -6,7 +6,8 @@
       "Bash(npx tsc:*)",
       "Bash(npx expo install:*)",
       "Bash(node:*)",
-      "Bash(npx:*)"
+      "Bash(npx:*)",
+      "Bash(npm uninstall:*)"
     ],
     "deny": []
   }

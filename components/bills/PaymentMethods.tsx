@@ -5,10 +5,6 @@ import { Ionicons } from "@expo/vector-icons";
 import Colors from "@/constants/Colors";
 
 export function PaymentMethods() {
-  const handleKakaoPay = () => {
-    Alert.alert("카카오페이", "카카오페이 송금 링크가 생성되었습니다!");
-  };
-
   const handleToss = () => {
     Alert.alert("토스", "토스 송금 링크가 생성되었습니다!");
   };
@@ -24,15 +20,6 @@ export function PaymentMethods() {
     <View style={styles.paymentMethods}>
       <Text style={styles.sectionTitle}>간편 송금</Text>
       <View style={styles.methodButtons}>
-        <TouchableOpacity
-          style={[styles.methodButton, styles.kakaoButton]}
-          onPress={handleKakaoPay}
-        >
-          <Ionicons name="chatbubble" size={20} color="#FFFFFF" />
-          <Text style={[styles.methodButtonText, { color: "#FFFFFF" }]}>
-            카카오페이
-          </Text>
-        </TouchableOpacity>
         <TouchableOpacity
           style={[styles.methodButton, styles.tossButton]}
           onPress={handleToss}
@@ -75,9 +62,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "center",
     gap: 6,
-  },
-  kakaoButton: {
-    backgroundColor: Colors.light.primary,
   },
   tossButton: {
     backgroundColor: Colors.light.primary,

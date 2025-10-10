@@ -11,7 +11,6 @@ import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-// import { initializeKakaoSDK } from "@react-native-kakao/core";
 
 // Create a client
 const queryClient = new QueryClient({
@@ -41,21 +40,6 @@ export default function RootLayout() {
     SpaceMono: require("../assets/fonts/SpaceMono-Regular.ttf"),
     ...FontAwesome.font,
   });
-
-  // 카카오 SDK 초기화 주석처리
-  /*
-  useEffect(() => {
-    const initKakao = async () => {
-      try {
-        await initializeKakaoSDK("5fdc09b5ccda187fc82936305ec8308c");
-      } catch (error) {
-        console.error("Failed to initialize Kakao SDK:", error);
-      }
-    };
-
-    initKakao();
-  }, []);
-  */
 
   // Expo Router uses Error Boundaries to catch errors in the navigation tree.
   useEffect(() => {

@@ -57,30 +57,6 @@
     },
     "plugins": [
       "expo-router",
-      "expo-build-properties",
-      [
-        "expo-build-properties",
-        {
-          "android": {
-            "extraMavenRepos": [
-              "https://devrepo.kakao.com/nexus/content/groups/public/"
-            ]
-          }
-        }
-      ],
-      [
-        "@react-native-kakao/core",
-        {
-          "nativeAppKey": "5fdc09b5ccda187fc82936305ec8308c",
-          "useKakaoAccountLogin": true,
-          "android": {
-            "authCodeHandlerActivity": true
-          },
-          "ios": {
-            "handleKakaoOpenUrl": true
-          }
-        }
-      ],
       [
         "react-native-google-mobile-ads",
         {

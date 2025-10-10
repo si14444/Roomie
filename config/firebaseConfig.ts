@@ -1,8 +1,7 @@
 import { initializeApp, getApps } from 'firebase/app';
-import { initializeAuth, getReactNativePersistence, getAuth, Auth } from 'firebase/auth';
+import { initializeAuth, getAuth, Auth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const firebaseConfig = {
   apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
@@ -29,31 +28,28 @@ if (getApps().length === 0) {
   if (__DEV__) console.log('✅ [Firebase Config] 기존 Firebase 앱 재사용');
 }
 
-// Initialize Firebase Auth with AsyncStorage persistence
-// 이렇게 하면 앱을 종료해도 로그인 상태가 유지됩니다
-const getAuthInstance = (): Auth => {
-  try {
-    return initializeAuth(app, {
-      persistence: getReactNativePersistence(AsyncStorage)
-    });
-  } catch (error: any) {
-    // 이미 초기화되어 있으면 기존 인스턴스 사용
-    if (error.code === 'auth/already-initialized') {
-      return getAuth(app);
+// Initialize Firebase Auth
+// Firebase는 자체적으로 세션을 관리하여 앱 재시작 시에도 로그인 상태가 유지됩니다
+let auth: Auth;
+try {
+  // 첫 번째 초기화 시도
+  auth = initializeAuth(app);
+  if (__DEV__) {
+    console.log('✅ [Firebase Config] Firebase Auth 초기화 완료');
+  }
+} catch (error: any) {
+  // 이미 초기화되어 있으면 기존 인스턴스 사용
+  if (error.code === 'auth/already-initialized') {
+    auth = getAuth(app);
+    if (__DEV__) {
+      console.log('✅ [Firebase Config] Firebase Auth 기존 인스턴스 재사용');
     }
+  } else {
     throw error;
   }
-};
-
-export const auth = getAuthInstance();
-
-if (__DEV__) {
-  if (auth.currentUser) {
-    console.log('✅ [Firebase Config] Firebase Auth 초기화 완료 (기존 로그인 세션 복원됨)');
-  } else {
-    console.log('✅ [Firebase Config] Firebase Auth 초기화 완료 (AsyncStorage persistence 활성화)');
-  }
 }
+
+export { auth };
 
 export const db = getFirestore(app);
 export const storage = getStorage(app);
