@@ -14,18 +14,19 @@ const firebaseConfig = {
   measurementId: process.env.EXPO_PUBLIC_FIREBASE_MEASUREMENT_ID
 };
 
-console.log('🔧 [Firebase Config] 초기화 시작');
-console.log('🔧 [Firebase Config] Project ID:', firebaseConfig.projectId);
-console.log('🔧 [Firebase Config] API Key 존재:', !!firebaseConfig.apiKey);
+if (__DEV__) {
+  console.log('🔧 [Firebase Config] 초기화 시작');
+  console.log('🔧 [Firebase Config] Project ID:', firebaseConfig.projectId);
+}
 
 // Initialize Firebase (재사용 가능하도록)
 let app;
 if (getApps().length === 0) {
   app = initializeApp(firebaseConfig);
-  console.log('✅ [Firebase Config] Firebase 앱 초기화 완료');
+  if (__DEV__) console.log('✅ [Firebase Config] Firebase 앱 초기화 완료');
 } else {
   app = getApps()[0];
-  console.log('✅ [Firebase Config] 기존 Firebase 앱 재사용');
+  if (__DEV__) console.log('✅ [Firebase Config] 기존 Firebase 앱 재사용');
 }
 
 // Initialize Firebase Auth with AsyncStorage persistence
@@ -46,16 +47,19 @@ const getAuthInstance = (): Auth => {
 
 export const auth = getAuthInstance();
 
-if (auth.currentUser) {
-  console.log('✅ [Firebase Config] Firebase Auth 초기화 완료 (기존 로그인 세션 복원됨)');
-} else {
-  console.log('✅ [Firebase Config] Firebase Auth 초기화 완료 (AsyncStorage persistence 활성화)');
+if (__DEV__) {
+  if (auth.currentUser) {
+    console.log('✅ [Firebase Config] Firebase Auth 초기화 완료 (기존 로그인 세션 복원됨)');
+  } else {
+    console.log('✅ [Firebase Config] Firebase Auth 초기화 완료 (AsyncStorage persistence 활성화)');
+  }
 }
 
 export const db = getFirestore(app);
-console.log('✅ [Firebase Config] Firestore 초기화 완료');
-
 export const storage = getStorage(app);
-console.log('✅ [Firebase Config] Storage 초기화 완료');
+
+if (__DEV__) {
+  console.log('✅ [Firebase Config] Firestore, Storage 초기화 완료');
+}
 
 export default app;

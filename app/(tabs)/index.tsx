@@ -1,6 +1,8 @@
+import { BottomSheetModal } from "@/components/common/BottomSheetModal";
 import Colors from "@/constants/Colors";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTeam } from "@/contexts/TeamContext";
+import { Ionicons } from "@expo/vector-icons";
 import * as Clipboard from "expo-clipboard";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
@@ -15,20 +17,20 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Ionicons } from "@expo/vector-icons";
-import { BottomSheetModal } from "@/components/common/BottomSheetModal";
 
 // Import home components
+import { AdBanner } from "@/components/ads/AdBanner";
 import { CurrentRoommates } from "@/components/home/CurrentRoommates";
 import { RoommateFeedback } from "@/components/home/RoommateFeedback";
 import { StatusSummaryCard } from "@/components/home/StatusSummaryCard";
-import { AdBanner } from "@/components/ads/AdBanner";
+import { SettingsModal } from "@/components/settings/SettingsModal";
 
 export default function HomeScreen() {
   const { isAuthenticated } = useAuth();
   const { currentTeam } = useTeam();
   const router = useRouter();
   const [inviteModalVisible, setInviteModalVisible] = useState(false);
+  const [settingsModalVisible, setSettingsModalVisible] = useState(false);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -87,7 +89,9 @@ export default function HomeScreen() {
           <View style={styles.inviteCodeBox}>
             <Ionicons name="key" size={20} color={Colors.light.primary} />
             <Text style={styles.inviteCodeText}>
-              {currentTeam?.invite_code || currentTeam?.inviteCode || "코드 없음"}
+              {currentTeam?.invite_code ||
+                currentTeam?.inviteCode ||
+                "코드 없음"}
             </Text>
           </View>
         </View>
@@ -108,6 +112,12 @@ export default function HomeScreen() {
           <Text style={styles.closeButtonText}>닫기</Text>
         </TouchableOpacity>
       </BottomSheetModal>
+
+      {/* 설정 모달 */}
+      <SettingsModal
+        visible={settingsModalVisible}
+        onClose={() => setSettingsModalVisible(false)}
+      />
     </SafeAreaView>
   );
 }
@@ -116,6 +126,25 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.light.background,
+  },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 20,
+    paddingTop: 60,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.light.borderColor,
+    backgroundColor: Colors.light.background,
+  },
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: "700",
+    color: Colors.light.primary,
+  },
+  settingsButton: {
+    padding: 4,
   },
   content: {
     flex: 1,

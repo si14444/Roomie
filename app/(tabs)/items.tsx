@@ -62,9 +62,6 @@ export default function ItemsScreen() {
   };
 
   const handleConfirmAddItem = async () => {
-    console.log('🛒 [Screen] handleConfirmAddItem 시작 - 구매 요청 생성');
-    console.log('🛒 [Screen] newItem:', newItem);
-
     if (!newItem.name.trim()) {
       Alert.alert("오류", "물품명을 입력해주세요.");
       return;
@@ -79,8 +76,6 @@ export default function ItemsScreen() {
       estimatedPrice: newItem.estimatedPrice ? parseFloat(newItem.estimatedPrice) : undefined,
       preferredStore: newItem.store,
     });
-
-    console.log('🛒 [Screen] addPurchaseRequest 결과:', success);
 
     if (success) {
       const itemDescription = newItem.description

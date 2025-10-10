@@ -50,10 +50,10 @@ export function AdBanner({ position = 'bottom' }: AdBannerProps) {
         }}
         onAdLoaded={() => {
           setAdLoaded(true);
-          console.log('[AdBanner] Ad loaded successfully');
+          if (__DEV__) console.log('[AdBanner] Ad loaded successfully');
         }}
         onAdFailedToLoad={(error) => {
-          console.error('[AdBanner] Failed to load:', error);
+          if (__DEV__) console.error('[AdBanner] Failed to load:', error);
           setAdError(true);
         }}
       />

@@ -6,15 +6,23 @@ import { Ionicons } from '@expo/vector-icons';
 import Colors from '@/constants/Colors';
 import { useAuth } from '@/contexts/AuthContext';
 import { NotificationSettingsScreen } from './NotificationSettingsScreen';
+import { PolicyView } from './PolicyView';
+import Constants from 'expo-constants';
 
 interface SettingsModalProps {
   visible: boolean;
   onClose: () => void;
 }
 
+type PolicyModalType = 'privacy' | 'terms' | null;
+
 export function SettingsModal({ visible, onClose }: SettingsModalProps) {
-  const { logout } = useAuth();
+  const { user, logout } = useAuth();
   const [showNotificationSettings, setShowNotificationSettings] = useState(false);
+  const [policyModalVisible, setPolicyModalVisible] = useState(false);
+  const [policyType, setPolicyType] = useState<PolicyModalType>(null);
+
+  const appVersion = Constants.expoConfig?.version || '1.0.0';
 
   const handleLogout = () => {
     Alert.alert(
@@ -36,6 +44,34 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
         }
       ]
     );
+  };
+
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      '계정 삭제',
+      '계정을 삭제하면 모든 데이터가 영구적으로 삭제됩니다.\n\n정말 삭제하시겠습니까?',
+      [
+        { text: '취소', style: 'cancel' },
+        {
+          text: '삭제',
+          style: 'destructive',
+          onPress: () => {
+            // TODO: 계정 삭제 기능 구현
+            Alert.alert('안내', '계정 삭제 기능은 곧 제공될 예정입니다.');
+          },
+        },
+      ]
+    );
+  };
+
+  const handleOpenPolicy = (type: 'privacy' | 'terms') => {
+    setPolicyType(type);
+    setPolicyModalVisible(true);
+  };
+
+  const handleClosePolicy = () => {
+    setPolicyModalVisible(false);
+    setPolicyType(null);
   };
 
   const handleClose = () => {
@@ -76,8 +112,22 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
         </View>
 
         <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+          {/* 프로필 섹션 */}
+          <View style={styles.section}>
+            <View style={styles.profileCard}>
+              <View style={styles.avatarContainer}>
+                <Ionicons name="person-circle" size={60} color={Colors.light.primary} />
+              </View>
+              <View style={styles.profileInfo}>
+                <Text style={styles.profileName}>{user?.name || '사용자'}</Text>
+                <Text style={styles.profileEmail}>{user?.email || ''}</Text>
+              </View>
+            </View>
+          </View>
+
           {/* 알림 설정 */}
           <View style={styles.section}>
+            <Text style={styles.sectionTitle}>알림</Text>
             <TouchableOpacity
               style={styles.menuItem}
               onPress={() => setShowNotificationSettings(true)}
@@ -93,8 +143,55 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
             </TouchableOpacity>
           </View>
 
+          {/* 법적 정보 */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>법적 정보</Text>
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => handleOpenPolicy('privacy')}
+            >
+              <View style={styles.menuIconContainer}>
+                <Ionicons name="shield-checkmark-outline" size={24} color={Colors.light.primary} />
+              </View>
+              <View style={styles.menuInfo}>
+                <Text style={styles.menuLabel}>개인정보 처리방침</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={Colors.light.mutedText} />
+            </TouchableOpacity>
+
+            <View style={{ height: 8 }} />
+
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => handleOpenPolicy('terms')}
+            >
+              <View style={styles.menuIconContainer}>
+                <Ionicons name="document-text-outline" size={24} color={Colors.light.primary} />
+              </View>
+              <View style={styles.menuInfo}>
+                <Text style={styles.menuLabel}>서비스 이용약관</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={Colors.light.mutedText} />
+            </TouchableOpacity>
+          </View>
+
+          {/* 앱 정보 */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>앱 정보</Text>
+            <View style={styles.menuItem}>
+              <View style={styles.menuIconContainer}>
+                <Ionicons name="information-circle-outline" size={24} color={Colors.light.primary} />
+              </View>
+              <View style={styles.menuInfo}>
+                <Text style={styles.menuLabel}>버전</Text>
+              </View>
+              <Text style={styles.versionText}>{appVersion}</Text>
+            </View>
+          </View>
+
           {/* 계정 섹션 */}
           <View style={styles.section}>
+            <Text style={styles.sectionTitle}>계정</Text>
             <TouchableOpacity
               style={styles.menuItem}
               onPress={handleLogout}
@@ -106,9 +203,44 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
                 <Text style={[styles.menuLabel, { color: Colors.light.errorColor }]}>로그아웃</Text>
               </View>
             </TouchableOpacity>
+
+            <View style={{ height: 8 }} />
+
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={handleDeleteAccount}
+            >
+              <View style={[styles.menuIconContainer, { backgroundColor: Colors.light.errorColor + '20' }]}>
+                <Ionicons name="trash-outline" size={24} color={Colors.light.errorColor} />
+              </View>
+              <View style={styles.menuInfo}>
+                <Text style={[styles.menuLabel, { color: Colors.light.errorColor }]}>계정 삭제</Text>
+              </View>
+            </TouchableOpacity>
           </View>
         </ScrollView>
       </SafeAreaView>
+
+      {/* 정책 뷰 모달 */}
+      <Modal
+        visible={policyModalVisible}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={handleClosePolicy}
+      >
+        <SafeAreaView style={styles.container} edges={['top']}>
+          <View style={styles.header}>
+            <TouchableOpacity onPress={handleClosePolicy} style={styles.closeButton}>
+              <Ionicons name="close" size={28} color={Colors.light.text} />
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>
+              {policyType === 'privacy' ? '개인정보 처리방침' : '서비스 이용약관'}
+            </Text>
+            <View style={{ width: 28 }} />
+          </View>
+          {policyType && <PolicyView type={policyType} />}
+        </SafeAreaView>
+      </Modal>
     </Modal>
   );
 }
@@ -169,6 +301,43 @@ const styles = StyleSheet.create({
   },
   menuDescription: {
     fontSize: 13,
+    color: Colors.light.mutedText,
+  },
+  profileCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.light.cardBackground,
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: Colors.light.borderColor,
+  },
+  avatarContainer: {
+    marginRight: 16,
+  },
+  profileInfo: {
+    flex: 1,
+  },
+  profileName: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: Colors.light.text,
+    marginBottom: 4,
+  },
+  profileEmail: {
+    fontSize: 14,
+    color: Colors.light.mutedText,
+  },
+  sectionTitle: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: Colors.light.mutedText,
+    marginBottom: 12,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  versionText: {
+    fontSize: 14,
     color: Colors.light.mutedText,
   },
 });

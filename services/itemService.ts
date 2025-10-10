@@ -99,16 +99,10 @@ const timestampToDate = (timestamp: any): Date => {
  */
 export const createItem = async (data: CreateItemData): Promise<Item> => {
   try {
-    console.log('🔥 [Firebase] createItem 시작:', data);
-
     // Firebase Auth 상태 확인
     const currentUser = auth.currentUser;
-    console.log('🔐 [Firebase Auth] 현재 사용자:', currentUser);
-    console.log('🔐 [Firebase Auth] UID:', currentUser?.uid);
-    console.log('🔐 [Firebase Auth] Email:', currentUser?.email);
 
     if (!currentUser) {
-      console.error('❌ [Firebase Auth] 인증되지 않은 사용자!');
       throw new Error('Firebase 인증이 필요합니다. 로그인해주세요.');
     }
 
@@ -127,12 +121,7 @@ export const createItem = async (data: CreateItemData): Promise<Item> => {
       updated_at: serverTimestamp(),
     };
 
-    console.log('🔥 [Firebase] Firestore에 저장할 데이터:', itemData);
-    console.log('🔥 [Firebase] db 객체:', db);
-    console.log('🔥 [Firebase] collection 경로: items');
-
     const docRef = await addDoc(collection(db, 'items'), itemData);
-    console.log('✅ [Firebase] 저장 성공! 문서 ID:', docRef.id);
 
     return {
       id: docRef.id,
@@ -149,10 +138,11 @@ export const createItem = async (data: CreateItemData): Promise<Item> => {
       created_at: new Date().toISOString(),
     };
   } catch (error: any) {
-    console.error('❌ [Firebase] 저장 실패:', error);
-    console.error('❌ [Firebase] 에러 코드:', error.code);
-    console.error('❌ [Firebase] 에러 메시지:', error.message);
-    console.error('❌ [Firebase] 전체 에러:', JSON.stringify(error, null, 2));
+    if (__DEV__) {
+      console.error('❌ [Firebase] 저장 실패:', error);
+      console.error('❌ [Firebase] 에러 코드:', error.code);
+      console.error('❌ [Firebase] 에러 메시지:', error.message);
+    }
     throw new Error(error.message || '아이템 생성에 실패했습니다.');
   }
 };

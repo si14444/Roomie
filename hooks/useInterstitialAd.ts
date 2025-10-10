@@ -33,7 +33,7 @@ export function useInterstitialAd() {
   // 광고 초기화
   useEffect(() => {
     if (!AdEnabled.interstitial || !AdConfig.interstitial) {
-      console.log('[useInterstitialAd] Interstitial ads are disabled');
+      if (__DEV__) console.log('[useInterstitialAd] Interstitial ads are disabled');
       return;
     }
 
@@ -45,13 +45,12 @@ export function useInterstitialAd() {
 
     // 광고 로드 완료
     const unsubscribeLoaded = ad.addAdEventListener(AdEventType.LOADED, () => {
-      console.log('[useInterstitialAd] Ad loaded successfully');
+      if (__DEV__) console.log('[useInterstitialAd] Ad loaded');
       setLoaded(true);
     });
 
     // 광고 표시 완료
     const unsubscribeClosed = ad.addAdEventListener(AdEventType.CLOSED, () => {
-      console.log('[useInterstitialAd] Ad closed, resetting counters');
       setLoaded(false);
       setActionCount(0);
       setLastAdTime(Date.now());
@@ -65,7 +64,7 @@ export function useInterstitialAd() {
     const unsubscribeError = ad.addAdEventListener(
       AdEventType.ERROR,
       (error) => {
-        console.error('[useInterstitialAd] Ad failed to load:', error);
+        if (__DEV__) console.error('[useInterstitialAd] Ad failed to load:', error);
         setLoaded(false);
       }
     );
@@ -89,10 +88,9 @@ export function useInterstitialAd() {
         const { actionCount: count, lastAdTime: lastTime }: AdData = JSON.parse(data);
         setActionCount(count || 0);
         setLastAdTime(lastTime || 0);
-        console.log('[useInterstitialAd] Loaded data:', { count, lastTime });
       }
     } catch (error) {
-      console.error('[useInterstitialAd] Failed to load data:', error);
+      if (__DEV__) console.error('[useInterstitialAd] Failed to load data:', error);
     }
   };
 
@@ -104,9 +102,8 @@ export function useInterstitialAd() {
         lastAdTime: lastTime,
       };
       await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-      console.log('[useInterstitialAd] Saved data:', data);
     } catch (error) {
-      console.error('[useInterstitialAd] Failed to save data:', error);
+      if (__DEV__) console.error('[useInterstitialAd] Failed to save data:', error);
     }
   };
 
@@ -115,7 +112,6 @@ export function useInterstitialAd() {
     const newCount = actionCount + 1;
     setActionCount(newCount);
     await saveAdData(newCount, lastAdTime);
-    console.log('[useInterstitialAd] Action incremented:', newCount);
   }, [actionCount, lastAdTime]);
 
   // 광고 표시 조건 확인
@@ -128,13 +124,15 @@ export function useInterstitialAd() {
     const meetsActionRequirement = actionCount >= AdFrequency.interstitial.minActions;
     const meetsTimeRequirement = timeSinceLast >= AdFrequency.interstitial.minInterval;
 
-    console.log('[useInterstitialAd] Should show ad check:', {
-      loaded,
-      actionCount,
-      timeSinceLast: Math.floor(timeSinceLast / 1000) + 's',
-      meetsActionRequirement,
-      meetsTimeRequirement,
-    });
+    if (__DEV__) {
+      console.log('[useInterstitialAd] Should show ad check:', {
+        loaded,
+        actionCount,
+        timeSinceLast: Math.floor(timeSinceLast / 1000) + 's',
+        meetsActionRequirement,
+        meetsTimeRequirement,
+      });
+    }
 
     return meetsActionRequirement && meetsTimeRequirement;
   }, [loaded, actionCount, lastAdTime]);
@@ -142,21 +140,21 @@ export function useInterstitialAd() {
   // 광고 표시
   const showAd = useCallback(async (): Promise<boolean> => {
     if (!interstitial) {
-      console.log('[useInterstitialAd] Interstitial ad not initialized');
+      if (__DEV__) console.log('[useInterstitialAd] Interstitial ad not initialized');
       return false;
     }
 
     if (!shouldShowAd()) {
-      console.log('[useInterstitialAd] Conditions not met for showing ad');
+      if (__DEV__) console.log('[useInterstitialAd] Conditions not met for showing ad');
       return false;
     }
 
     try {
-      console.log('[useInterstitialAd] Showing interstitial ad');
+      if (__DEV__) console.log('[useInterstitialAd] Showing interstitial ad');
       await interstitial.show();
       return true;
     } catch (error) {
-      console.error('[useInterstitialAd] Failed to show ad:', error);
+      if (__DEV__) console.error('[useInterstitialAd] Failed to show ad:', error);
       setLoaded(false);
 
       // 다시 로드 시도
