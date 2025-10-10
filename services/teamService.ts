@@ -314,3 +314,94 @@ export const getTeamMembers = async (teamId: string): Promise<TeamMemberData[]> 
     throw new Error(error.message || '팀 멤버 조회에 실패했습니다.');
   }
 };
+
+/**
+ * 팀원들의 푸시 토큰 가져오기 (현재 사용자 제외, 알림 설정 확인)
+ */
+export const getTeamMembersPushTokens = async (
+  teamId: string,
+  excludeUserId?: string,
+  notificationType?: string
+): Promise<string[]> => {
+  try {
+    // 팀 멤버 목록 가져오기
+    const members = await getTeamMembers(teamId);
+
+    // 현재 사용자 제외
+    const otherMembers = excludeUserId
+      ? members.filter((member) => member.user_id !== excludeUserId)
+      : members;
+
+    // 각 멤버의 사용자 정보에서 푸시 토큰 가져오기
+    const pushTokens: string[] = [];
+
+    for (const member of otherMembers) {
+      try {
+        const userDoc = await getDoc(doc(db, 'users', member.user_id));
+        if (userDoc.exists()) {
+          const userData = userDoc.data();
+
+          // 푸시 토큰이 있는지 확인
+          if (!userData.pushToken) {
+            continue;
+          }
+
+          // 알림 설정 확인 (알림 타입이 지정된 경우)
+          if (notificationType) {
+            const preferences = userData.notificationPreferences;
+
+            // 기본값: 알림 설정이 없으면 알림 받음
+            if (!preferences) {
+              pushTokens.push(userData.pushToken);
+              continue;
+            }
+
+            // 전체 알림이 꺼져있으면 제외
+            if (!preferences.enabled) {
+              continue;
+            }
+
+            // 카테고리 매핑
+            const categoryMap: Record<string, string> = {
+              routine_completed: 'routines',
+              routine_overdue: 'routines',
+              bill_added: 'bills',
+              bill_payment_due: 'bills',
+              payment_received: 'bills',
+              item_request: 'items',
+              item_purchased: 'items',
+              item_update: 'items',
+              poll_created: 'polls',
+              poll_ended: 'polls',
+              chat_message: 'chat',
+              announcement: 'system',
+              system: 'system',
+            };
+
+            const category = categoryMap[notificationType];
+
+            // 카테고리가 꺼져있으면 제외
+            if (category && preferences[category] === false) {
+              continue;
+            }
+
+            // 개별 알림 타입이 꺼져있으면 제외
+            if (preferences[notificationType] === false) {
+              continue;
+            }
+          }
+
+          // 모든 조건을 통과하면 푸시 토큰 추가
+          pushTokens.push(userData.pushToken);
+        }
+      } catch (error) {
+        console.error(`Failed to get push token for user ${member.user_id}:`, error);
+      }
+    }
+
+    return pushTokens;
+  } catch (error: any) {
+    console.error('Failed to get team members push tokens:', error);
+    return [];
+  }
+};

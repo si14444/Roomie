@@ -7,14 +7,38 @@ import {
   sendPasswordResetEmail,
   AuthError,
 } from 'firebase/auth';
-import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, setDoc, getDoc, serverTimestamp, updateDoc } from 'firebase/firestore';
 import { auth, db } from '@/config/firebaseConfig';
+
+export interface NotificationPreferences {
+  enabled: boolean;
+  routines: boolean;
+  bills: boolean;
+  items: boolean;
+  chat: boolean;
+  polls: boolean;
+  system: boolean;
+  routine_completed: boolean;
+  routine_overdue: boolean;
+  bill_added: boolean;
+  bill_payment_due: boolean;
+  payment_received: boolean;
+  item_request: boolean;
+  item_purchased: boolean;
+  item_update: boolean;
+  poll_created: boolean;
+  poll_ended: boolean;
+  chat_message: boolean;
+  announcement: boolean;
+}
 
 export interface User {
   id: string;
   email: string;
   name: string;
   avatar?: string;
+  pushToken?: string; // Expo 푸시 토큰
+  notificationPreferences?: NotificationPreferences;
 }
 
 export interface SignupData {
@@ -41,6 +65,8 @@ export const getUserFromFirestore = async (uid: string): Promise<User | null> =>
         email: data.email,
         name: data.name,
         avatar: data.avatar,
+        pushToken: data.pushToken,
+        notificationPreferences: data.notificationPreferences,
       };
     }
     return null;
@@ -200,4 +226,63 @@ export const onAuthStateChanged = (callback: (user: User | null) => void) => {
     const user = firebaseUser ? await mapFirebaseUser(firebaseUser) : null;
     callback(user);
   });
+};
+
+/**
+ * 사용자의 푸시 토큰 저장
+ */
+export const savePushToken = async (userId: string, pushToken: string): Promise<void> => {
+  try {
+    await updateDoc(doc(db, 'users', userId), {
+      pushToken,
+      updated_at: serverTimestamp(),
+    });
+
+    if (__DEV__) {
+      console.log('✅ [Auth] Push token saved to Firestore:', pushToken);
+    }
+  } catch (error) {
+    console.error('Failed to save push token:', error);
+    throw new Error('푸시 토큰 저장에 실패했습니다.');
+  }
+};
+
+/**
+ * 사용자의 푸시 토큰 삭제 (로그아웃 시)
+ */
+export const removePushToken = async (userId: string): Promise<void> => {
+  try {
+    await updateDoc(doc(db, 'users', userId), {
+      pushToken: null,
+      updated_at: serverTimestamp(),
+    });
+
+    if (__DEV__) {
+      console.log('✅ [Auth] Push token removed from Firestore');
+    }
+  } catch (error) {
+    console.error('Failed to remove push token:', error);
+  }
+};
+
+/**
+ * 사용자의 알림 설정 저장
+ */
+export const saveNotificationPreferences = async (
+  userId: string,
+  preferences: NotificationPreferences
+): Promise<void> => {
+  try {
+    await updateDoc(doc(db, 'users', userId), {
+      notificationPreferences: preferences,
+      updated_at: serverTimestamp(),
+    });
+
+    if (__DEV__) {
+      console.log('✅ [Auth] Notification preferences saved to Firestore');
+    }
+  } catch (error) {
+    console.error('Failed to save notification preferences:', error);
+    throw new Error('알림 설정 저장에 실패했습니다.');
+  }
 };

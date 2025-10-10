@@ -1,12 +1,14 @@
 import React, { createContext, ReactNode, useContext, useState, useEffect } from "react";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as authService from '@/services/authService';
+import * as notificationService from '@/services/notificationService';
 
 interface User {
   id: string;
   email: string;
   name: string;
   avatar?: string;
+  pushToken?: string;
 }
 
 interface AuthContextProps {
@@ -39,12 +41,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (firebaseUser) {
         setIsAuthenticated(true);
         setUser(firebaseUser);
+
         // AsyncStorage에 저장
         await AsyncStorage.setItem(STORAGE_KEYS.IS_AUTHENTICATED, 'true');
         await AsyncStorage.setItem(STORAGE_KEYS.USER_DATA, JSON.stringify(firebaseUser));
+
+        // 푸시 알림 토큰 등록
+        try {
+          const pushToken = await notificationService.registerForPushNotifications();
+          if (pushToken && pushToken !== 'local-notifications-enabled') {
+            // Expo 푸시 토큰을 받았으면 Firestore에 저장
+            await authService.savePushToken(firebaseUser.id, pushToken);
+          }
+        } catch (error) {
+          console.error('Failed to register push notifications:', error);
+        }
       } else {
         setIsAuthenticated(false);
         setUser(null);
+
         // AsyncStorage에서 제거
         await AsyncStorage.removeItem(STORAGE_KEYS.IS_AUTHENTICATED);
         await AsyncStorage.removeItem(STORAGE_KEYS.USER_DATA);
@@ -80,6 +95,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = async () => {
     try {
       setIsLoading(true);
+
+      // 로그아웃 전에 푸시 토큰 삭제
+      if (user?.id) {
+        await authService.removePushToken(user.id);
+      }
+
       await authService.logout();
       // Firebase onAuthStateChanged가 상태를 자동으로 업데이트합니다
     } catch (error) {

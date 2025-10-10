@@ -1,6 +1,8 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { NotificationType } from '@/types/notification.types';
+import { saveNotificationPreferences as saveToFirestore } from '@/services/authService';
+import { auth } from '@/config/firebaseConfig';
 
 export interface NotificationPreferences {
   // 전체 알림 on/off
@@ -94,11 +96,31 @@ export function NotificationPreferencesProvider({ children }: { children: React.
     const newPreferences = { ...preferences, [key]: value };
     setPreferences(newPreferences);
     await savePreferences(newPreferences);
+
+    // Firestore에도 동기화
+    const currentUser = auth.currentUser;
+    if (currentUser) {
+      try {
+        await saveToFirestore(currentUser.uid, newPreferences);
+      } catch (error) {
+        console.error('Failed to sync notification preferences to Firestore:', error);
+      }
+    }
   };
 
   const resetPreferences = async () => {
     setPreferences(defaultPreferences);
     await savePreferences(defaultPreferences);
+
+    // Firestore에도 동기화
+    const currentUser = auth.currentUser;
+    if (currentUser) {
+      try {
+        await saveToFirestore(currentUser.uid, defaultPreferences);
+      } catch (error) {
+        console.error('Failed to sync notification preferences to Firestore:', error);
+      }
+    }
   };
 
   // 특정 알림 타입이 활성화되어 있는지 확인

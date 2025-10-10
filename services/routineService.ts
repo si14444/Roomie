@@ -11,8 +11,11 @@ import {
   deleteDoc,
   doc,
   updateDoc,
+  getDoc,
 } from 'firebase/firestore';
 import { db } from '@/config/firebaseConfig';
+import { getTeamMembersPushTokens } from './teamService';
+import { sendPushNotifications } from './notificationService';
 
 export interface Routine {
   id: string;
@@ -259,7 +262,7 @@ export const createRoutineCompletion = async (
 
     const docRef = await addDoc(collection(db, 'routine_completions'), completionData);
 
-    return {
+    const completion: RoutineCompletion = {
       id: docRef.id,
       routine_id: data.routine_id,
       completed_by: data.completed_by,
@@ -267,6 +270,29 @@ export const createRoutineCompletion = async (
       completed_at: new Date().toISOString(),
       notes: data.notes,
     };
+
+    // 루틴 정보 가져오기 및 팀원들에게 푸시 알림 전송 (비동기로 처리, 에러 무시)
+    getDoc(doc(db, 'routines', data.routine_id))
+      .then(async (routineDoc) => {
+        if (routineDoc.exists()) {
+          const routine = routineDoc.data();
+          const pushTokens = await getTeamMembersPushTokens(routine.team_id, data.completed_by, 'routine_completed');
+
+          if (pushTokens.length > 0) {
+            sendPushNotifications(
+              pushTokens,
+              '✅ 루틴 완료',
+              `${data.completed_by_name}님이 "${routine.title}" 루틴을 완료했습니다`,
+              { type: 'routine_completed', completionId: docRef.id, routineId: data.routine_id }
+            );
+          }
+        }
+      })
+      .catch((error) => {
+        console.error('Failed to send push notification:', error);
+      });
+
+    return completion;
   } catch (error: any) {
     throw new Error(error.message || '루틴 완료 기록 생성에 실패했습니다.');
   }

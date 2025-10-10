@@ -13,6 +13,8 @@ import {
   updateDoc,
 } from 'firebase/firestore';
 import { db } from '@/config/firebaseConfig';
+import { getTeamMembersPushTokens } from './teamService';
+import { sendPushNotifications } from './notificationService';
 
 export interface Bill {
   id: string;
@@ -93,7 +95,7 @@ export const createBill = async (data: CreateBillData): Promise<Bill> => {
 
     const docRef = await addDoc(collection(db, 'bills'), billData);
 
-    return {
+    const bill: Bill = {
       id: docRef.id,
       team_id: data.team_id,
       title: data.title,
@@ -106,6 +108,24 @@ export const createBill = async (data: CreateBillData): Promise<Bill> => {
       created_by: data.created_by,
       created_at: new Date().toISOString(),
     };
+
+    // 팀원들에게 푸시 알림 전송 (비동기로 처리, 에러 무시)
+    getTeamMembersPushTokens(data.team_id, data.created_by, 'bill_added')
+      .then((pushTokens) => {
+        if (pushTokens.length > 0) {
+          sendPushNotifications(
+            pushTokens,
+            '💰 새로운 공과금',
+            `${data.title} - ${data.total_amount.toLocaleString()}원`,
+            { type: 'bill_added', billId: docRef.id }
+          );
+        }
+      })
+      .catch((error) => {
+        console.error('Failed to send push notification:', error);
+      });
+
+    return bill;
   } catch (error: any) {
     throw new Error(error.message || '공과금 생성에 실패했습니다.');
   }

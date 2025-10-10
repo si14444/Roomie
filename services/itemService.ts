@@ -13,6 +13,8 @@ import {
   updateDoc,
 } from 'firebase/firestore';
 import { db, auth } from '@/config/firebaseConfig';
+import { getTeamMembersPushTokens } from './teamService';
+import { sendPushNotifications } from './notificationService';
 
 export interface Item {
   id: string;
@@ -291,7 +293,7 @@ export const createPurchaseRequest = async (
 
     const docRef = await addDoc(collection(db, 'purchase_requests'), requestData);
 
-    return {
+    const request: PurchaseRequest = {
       id: docRef.id,
       team_id: data.team_id,
       item_id: data.item_id,
@@ -306,6 +308,25 @@ export const createPurchaseRequest = async (
       preferred_store: data.preferred_store,
       created_at: new Date().toISOString(),
     };
+
+    // 팀원들에게 푸시 알림 전송 (비동기로 처리, 에러 무시)
+    getTeamMembersPushTokens(data.team_id, data.requested_by, 'item_request')
+      .then((pushTokens) => {
+        if (pushTokens.length > 0) {
+          const urgencyEmoji = data.urgency === 'urgent' ? '🔥 ' : '';
+          sendPushNotifications(
+            pushTokens,
+            `📦 ${urgencyEmoji}새로운 구매 요청`,
+            `${data.item_name} ${data.quantity}개`,
+            { type: 'item_request', requestId: docRef.id }
+          );
+        }
+      })
+      .catch((error) => {
+        console.error('Failed to send push notification:', error);
+      });
+
+    return request;
   } catch (error: any) {
     throw new Error(error.message || '구매 요청 생성에 실패했습니다.');
   }
