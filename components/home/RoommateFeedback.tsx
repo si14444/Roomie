@@ -91,9 +91,14 @@ export function RoommateFeedback() {
       });
 
       // 팀 전체에 알림 생성
+      const importantEmoji = isImportant ? '📢 [중요] ' : '📣 ';
+      const messagePreview = newMessage.trim().length > 50
+        ? `${newMessage.trim().substring(0, 50)}...`
+        : newMessage.trim();
+
       await createNotification({
-        title: "새 공지사항",
-        message: `${announcement.author_name}님이 새 공지사항을 등록했습니다: ${newMessage.trim().substring(0, 50)}${newMessage.trim().length > 50 ? '...' : ''}`,
+        title: `${importantEmoji}새 공지사항`,
+        message: `${announcement.author_name}님: ${messagePreview}`,
         type: "announcement",
         relatedId: announcement.id,
       });

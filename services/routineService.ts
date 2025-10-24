@@ -279,10 +279,17 @@ export const createRoutineCompletion = async (
           const pushTokens = await getTeamMembersPushTokens(routine.team_id, data.completed_by, 'routine_completed');
 
           if (pushTokens.length > 0) {
+            // 상세한 알림 메시지 - 시간 정보 포함
+            const completedTime = new Date().toLocaleTimeString('ko-KR', {
+              hour: '2-digit',
+              minute: '2-digit'
+            });
+            const notesInfo = data.notes ? ` (메모: ${data.notes})` : '';
+
             sendPushNotifications(
               pushTokens,
-              '✅ 루틴 완료',
-              `${data.completed_by_name}님이 "${routine.title}" 루틴을 완료했습니다`,
+              `✅ ${routine.title} 루틴 완료`,
+              `${data.completed_by_name}님이 ${completedTime}에 완료했습니다${notesInfo}`,
               { type: 'routine_completed', completionId: docRef.id, routineId: data.routine_id }
             );
           }

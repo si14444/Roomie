@@ -67,24 +67,28 @@ export default function ItemsScreen() {
       return;
     }
 
+    const urgency = newItem.priority === "high" ? "urgent" : "normal";
+    const estimatedPrice = newItem.estimatedPrice ? parseFloat(newItem.estimatedPrice) : undefined;
+
     // 구매 요청 생성
     const success = await addPurchaseRequest({
       itemName: newItem.name.trim(),
       quantity: 1,
-      urgency: newItem.priority === "high" ? "urgent" : "normal",
+      urgency,
       notes: newItem.description,
-      estimatedPrice: newItem.estimatedPrice ? parseFloat(newItem.estimatedPrice) : undefined,
+      estimatedPrice,
       preferredStore: newItem.store,
     });
 
     if (success) {
-      const itemDescription = newItem.description
-        ? `${newItem.name.trim()} - ${newItem.description}`
-        : newItem.name.trim();
+      // 상세한 알림 메시지 생성
+      const urgencyEmoji = urgency === "urgent" ? "🔥 " : "";
+      const priceInfo = estimatedPrice ? ` (약 ${estimatedPrice.toLocaleString()}원)` : '';
+      const storeInfo = newItem.store ? ` - ${newItem.store}` : '';
 
       createNotification({
-        title: "구매 요청",
-        message: `${itemDescription} 구매 요청이 등록되었습니다`,
+        title: `📦 ${urgencyEmoji}새로운 구매 요청`,
+        message: `${newItem.name.trim()} 1개${priceInfo}${storeInfo}`,
         type: "item_request",
         relatedId: Date.now().toString(),
       });
@@ -99,6 +103,9 @@ export default function ItemsScreen() {
 
 
   const handleAcceptRequest = async (requestId: string) => {
+    // 구매 요청 정보 찾기
+    const request = purchaseRequests.find(r => r.id === requestId);
+
     Alert.alert("구매 요청 수락", "이 물품을 구매하시겠습니까?", [
       { text: "취소", style: "cancel" },
       {
@@ -106,10 +113,16 @@ export default function ItemsScreen() {
         onPress: async () => {
           const success = await markAsPurchased(requestId);
 
-          if (success) {
+          if (success && request) {
+            const itemName = request.item_name || '물품';
+            const quantity = request.quantity;
+            const price = request.estimated_price
+              ? ` (약 ${request.estimated_price.toLocaleString()}원)`
+              : '';
+
             createNotification({
-              title: "물품 구매 완료",
-              message: "요청하신 물품이 구매되었습니다",
+              title: "🛒 물품 구매 완료",
+              message: `${itemName} ${quantity}개${price}가 구매되었습니다`,
               type: "item_purchased",
               relatedId: requestId,
             });
@@ -128,11 +141,21 @@ export default function ItemsScreen() {
   };
 
   const handleStatusUpdate = (update: StatusUpdate) => {
-    // 상태 업데이트 시 알림 생성
-    const message = `상태가 ${update.newStatus}(으)로 변경되었습니다`;
+    // 상태 업데이트 시 알림 생성 - 물품 이름과 상세 정보 포함
+    const item = items.find(i => i.id === update.itemId);
+    if (!item) return;
+
+    const statusDetails = {
+      '충분': `재고가 충분합니다 (${item.current_quantity}${item.unit})`,
+      '보통': `재고가 보통입니다 (${item.current_quantity}${item.unit})`,
+      '부족': `재고가 부족합니다 (${item.current_quantity}${item.unit}, 최소 ${item.min_quantity}${item.unit} 필요)`
+    };
+
+    const message = statusDetails[update.newStatus as keyof typeof statusDetails] ||
+                   `상태가 ${update.newStatus}(으)로 변경되었습니다`;
 
     createNotification({
-      title: "물품 상태 변경",
+      title: `📦 ${item.name} 상태 변경`,
       message: message,
       type: "item_update",
       relatedId: update.itemId,

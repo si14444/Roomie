@@ -398,9 +398,14 @@ export function useBillsFirebase() {
             .every(([, paid]) => paid);
 
           if (allOthersPaid) {
+            // 상세한 지불 완료 알림 - 금액 정보 포함
+            const totalAmount = bill.amount || 0;
+            const numPeople = Object.keys(bill.payments).length;
+            const perPerson = numPeople > 0 ? Math.round(totalAmount / numPeople) : 0;
+
             createNotification({
-              title: "지불 완료",
-              message: `${bill.name} 공과금 정산이 완료되었습니다`,
+              title: "✅ 공과금 정산 완료",
+              message: `${bill.name} - 총 ${totalAmount.toLocaleString()}원 (1인당 ${perPerson.toLocaleString()}원)`,
               type: "payment_received",
               relatedId: billId,
             });

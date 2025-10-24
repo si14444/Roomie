@@ -113,10 +113,17 @@ export const createBill = async (data: CreateBillData): Promise<Bill> => {
     getTeamMembersPushTokens(data.team_id, data.created_by, 'bill_added')
       .then((pushTokens) => {
         if (pushTokens.length > 0) {
+          // 상세한 알림 메시지 - 마감일 정보 포함
+          const dueDate = new Date(data.due_date).toLocaleDateString('ko-KR', {
+            month: 'long',
+            day: 'numeric'
+          });
+          const recurringInfo = data.is_recurring ? ' (반복)' : '';
+
           sendPushNotifications(
             pushTokens,
-            '💰 새로운 공과금',
-            `${data.title} - ${data.total_amount.toLocaleString()}원`,
+            `💰 새로운 공과금${recurringInfo}`,
+            `${data.title} - ${data.total_amount.toLocaleString()}원 (마감: ${dueDate})`,
             { type: 'bill_added', billId: docRef.id }
           );
         }
