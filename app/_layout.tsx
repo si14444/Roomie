@@ -11,6 +11,7 @@ import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import mobileAds from 'react-native-google-mobile-ads';
 
 // Create a client
 const queryClient = new QueryClient({
@@ -51,6 +52,22 @@ export default function RootLayout() {
       SplashScreen.hideAsync();
     }
   }, [loaded]);
+
+  // Initialize AdMob
+  useEffect(() => {
+    mobileAds()
+      .initialize()
+      .then(adapterStatuses => {
+        if (__DEV__) {
+          console.log('[AdMob] Initialization complete:', adapterStatuses);
+        }
+      })
+      .catch(error => {
+        if (__DEV__) {
+          console.error('[AdMob] Initialization failed:', error);
+        }
+      });
+  }, []);
 
   if (!loaded) {
     return null;

@@ -3,11 +3,14 @@ import { getApps, initializeApp } from "firebase/app";
 import {
   Auth,
   getAuth,
-  getReactNativePersistence,
   initializeAuth,
 } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
+
+// React Native Persistence for Firebase Auth
+// @ts-ignore - Firebase web SDK에서 React Native persistence를 위한 임시 타입 무시
+import { getReactNativePersistence } from "firebase/auth/react-native";
 
 const firebaseConfig = {
   apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
