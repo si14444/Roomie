@@ -8,9 +8,12 @@ import {
 import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 
-// React Native Persistence for Firebase Auth
-// @ts-ignore - Firebase web SDK에서 React Native persistence를 위한 임시 타입 무시
-import { getReactNativePersistence } from "firebase/auth/react-native";
+// Import getReactNativePersistence with type assertion
+// This is available in firebase/auth but may have incomplete TypeScript definitions
+import type { Persistence } from "firebase/auth";
+const { getReactNativePersistence } = require("firebase/auth") as {
+  getReactNativePersistence: (storage: any) => Persistence;
+};
 
 const firebaseConfig = {
   apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,

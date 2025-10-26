@@ -97,28 +97,38 @@ export function useBillsFirebase() {
 
   // Subscribe to bill payments real-time updates (TanStack Query 실시간 리스너)
   useEffect(() => {
-    if (firebaseBills.length === 0) {
+    // teamId가 없으면 구독 설정 안 함
+    if (!currentTeam?.id) {
       setPaymentsMap({});
       return;
     }
 
+    // bills가 없어도 구독 설정 (나중에 bills가 로드되면 자동으로 업데이트됨)
     const billIds = firebaseBills.map(bill => bill.id);
 
+    // billIds가 비어있어도 구독 설정 (빈 맵 반환)
     const unsubscribe = billService.subscribeToTeamBillPayments(
-      currentTeam?.id || '',
+      currentTeam.id,
       billIds,
       (paymentsData) => {
         // 실시간 업데이트로 paymentsMap 자동 갱신
         setPaymentsMap(paymentsData);
+        if (__DEV__) {
+          console.log('📊 [Bills] Payments map updated:', Object.keys(paymentsData).length, 'bills');
+        }
       },
       (error) => {
         console.error('Bill payments subscription error:', error);
       }
     );
 
-    return () => unsubscribe();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [firebaseBills.map(b => b.id).join(','), currentTeam?.id]);
+    return () => {
+      if (__DEV__) {
+        console.log('🔌 [Bills] Unsubscribing from payments');
+      }
+      unsubscribe();
+    };
+  }, [firebaseBills.length, currentTeam?.id]);
 
   const mapFirebaseToLocal = (
     fbBill: billService.Bill,
@@ -190,8 +200,21 @@ export function useBillsFirebase() {
 
   // Transform Firebase bills to local format
   const bills: Bill[] = useMemo(() => {
-    return firebaseBills.map((fbBill) => mapFirebaseToLocal(fbBill, paymentsMap[fbBill.id] || []));
-  }, [firebaseBills, paymentsMap]);
+    if (__DEV__) {
+      console.log('🔄 [Bills] Recalculating bills with payments:', {
+        billsCount: firebaseBills.length,
+        paymentsMapKeys: Object.keys(paymentsMap).length,
+        roommatesCount: roommates.length
+      });
+    }
+    return firebaseBills.map((fbBill) => {
+      const payments = paymentsMap[fbBill.id] || [];
+      if (__DEV__ && payments.length > 0) {
+        console.log(`  💰 Bill "${fbBill.title}" has ${payments.length} payments`);
+      }
+      return mapFirebaseToLocal(fbBill, payments);
+    });
+  }, [firebaseBills, paymentsMap, roommates]);
 
   const calculateSplit = useCallback(
     (
