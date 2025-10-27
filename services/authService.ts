@@ -6,8 +6,11 @@ import {
   User as FirebaseUser,
   sendPasswordResetEmail,
   AuthError,
+  deleteUser,
+  reauthenticateWithCredential,
+  EmailAuthProvider,
 } from 'firebase/auth';
-import { doc, setDoc, getDoc, serverTimestamp, updateDoc } from 'firebase/firestore';
+import { doc, setDoc, getDoc, serverTimestamp, updateDoc, deleteDoc, collection, query, where, getDocs, writeBatch } from 'firebase/firestore';
 import { auth, db } from '@/config/firebaseConfig';
 
 export interface NotificationPreferences {
@@ -284,5 +287,139 @@ export const saveNotificationPreferences = async (
   } catch (error) {
     console.error('Failed to save notification preferences:', error);
     throw new Error('알림 설정 저장에 실패했습니다.');
+  }
+};
+
+/**
+ * 계정 삭제 - Firebase Auth 및 Firestore 데이터 모두 삭제
+ */
+export const deleteAccount = async (password: string): Promise<void> => {
+  try {
+    const currentUser = auth.currentUser;
+    if (!currentUser || !currentUser.email) {
+      throw new Error('로그인이 필요합니다.');
+    }
+
+    const userId = currentUser.uid;
+
+    if (__DEV__) {
+      console.log('🗑️ [Auth] Starting account deletion for user:', userId);
+    }
+
+    // 1. 재인증 (보안을 위해 필수)
+    const credential = EmailAuthProvider.credential(currentUser.email, password);
+    await reauthenticateWithCredential(currentUser, credential);
+
+    if (__DEV__) {
+      console.log('✅ [Auth] Reauthentication successful');
+    }
+
+    // 2. Firestore 데이터 삭제 (배치 작업 사용)
+    const batch = writeBatch(db);
+
+    // 2-1. 사용자가 속한 팀에서 team_members 삭제
+    const teamMembersQuery = query(
+      collection(db, 'team_members'),
+      where('user_id', '==', userId)
+    );
+    const teamMembersSnapshot = await getDocs(teamMembersQuery);
+
+    const teamIds: string[] = [];
+    teamMembersSnapshot.forEach((doc) => {
+      teamIds.push(doc.data().team_id);
+      batch.delete(doc.ref);
+    });
+
+    if (__DEV__) {
+      console.log(`🗑️ [Auth] Deleting ${teamMembersSnapshot.size} team memberships`);
+    }
+
+    // 2-2. 사용자가 생성한 팀 삭제 (created_by가 userId인 팀)
+    const teamsQuery = query(
+      collection(db, 'teams'),
+      where('created_by', '==', userId)
+    );
+    const teamsSnapshot = await getDocs(teamsQuery);
+
+    for (const teamDoc of teamsSnapshot.docs) {
+      const teamId = teamDoc.id;
+
+      // 팀의 모든 멤버 삭제
+      const membersQuery = query(
+        collection(db, 'team_members'),
+        where('team_id', '==', teamId)
+      );
+      const membersSnapshot = await getDocs(membersQuery);
+      membersSnapshot.forEach((doc) => {
+        batch.delete(doc.ref);
+      });
+
+      // 팀 삭제
+      batch.delete(teamDoc.ref);
+    }
+
+    if (__DEV__) {
+      console.log(`🗑️ [Auth] Deleting ${teamsSnapshot.size} teams created by user`);
+    }
+
+    // 2-3. 사용자가 생성한 Bills, Routines, Items, Purchase Requests 삭제
+    const collectionsToDelete = [
+      'bills',
+      'bill_payments',
+      'routines',
+      'routine_completions',
+      'items',
+      'purchase_requests'
+    ];
+
+    for (const collectionName of collectionsToDelete) {
+      const q = query(
+        collection(db, collectionName),
+        where('created_by', '==', userId)
+      );
+      const snapshot = await getDocs(q);
+
+      snapshot.forEach((doc) => {
+        batch.delete(doc.ref);
+      });
+
+      if (__DEV__ && snapshot.size > 0) {
+        console.log(`🗑️ [Auth] Deleting ${snapshot.size} documents from ${collectionName}`);
+      }
+    }
+
+    // 2-4. 사용자 문서 삭제
+    batch.delete(doc(db, 'users', userId));
+
+    if (__DEV__) {
+      console.log('🗑️ [Auth] Deleting user document');
+    }
+
+    // 배치 커밋
+    await batch.commit();
+
+    if (__DEV__) {
+      console.log('✅ [Auth] All Firestore data deleted');
+    }
+
+    // 3. Firebase Auth 계정 삭제
+    await deleteUser(currentUser);
+
+    if (__DEV__) {
+      console.log('✅ [Auth] Firebase Auth account deleted');
+    }
+  } catch (error: any) {
+    console.error('Failed to delete account:', error);
+
+    // 에러 메시지 한글화
+    if (error.code === 'auth/wrong-password') {
+      throw new Error('비밀번호가 올바르지 않습니다.');
+    } else if (error.code === 'auth/requires-recent-login') {
+      throw new Error('보안을 위해 다시 로그인한 후 시도해주세요.');
+    } else if (error.code === 'auth/user-mismatch') {
+      throw new Error('사용자 정보가 일치하지 않습니다.');
+    } else {
+      throw new Error(error.message || '계정 삭제에 실패했습니다.');
+    }
   }
 };

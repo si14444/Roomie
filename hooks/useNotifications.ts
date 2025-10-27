@@ -18,25 +18,40 @@ export function useNotifications() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  // 컴포넌트 마운트 시 알림 로드 및 권한 요청
+  // 컴포넌트 마운트 시 알림 실시간 구독 및 권한 요청
   useEffect(() => {
-    if (user) {
-      loadNotifications();
-      // 알림 권한 요청
-      NotificationService.registerForPushNotifications();
+    if (!user) {
+      setNotifications([]);
+      return;
     }
-  }, [user]);
 
-  // 알림 로드 함수
+    // 알림 권한 요청
+    NotificationService.registerForPushNotifications();
+
+    // Firestore 실시간 구독 설정
+    const unsubscribe = NotificationService.subscribeToUserNotifications(
+      user.id,
+      currentTeam?.id,
+      (updatedNotifications) => {
+        setNotifications(updatedNotifications);
+        setIsLoading(false);
+      }
+    );
+
+    return () => unsubscribe();
+  }, [user?.id, currentTeam?.id]);
+
+  // 알림 로드 함수 (레거시 - 이제 구독으로 대체됨)
   const loadNotifications = async () => {
     if (!user) return;
 
     setIsLoading(true);
     try {
-      // TODO: 새로운 백엔드 API 연동 필요
-      // const userNotifications = await api.getNotifications(user.id);
-      // setNotifications(userNotifications);
-      setNotifications([]);
+      const userNotifications = await NotificationService.getUserNotifications(
+        user.id,
+        currentTeam?.id
+      );
+      setNotifications(userNotifications);
     } catch (error) {
       console.error('Failed to load notifications:', error);
     } finally {
@@ -167,21 +182,16 @@ export function useNotifications() {
     }
 
     try {
-      // TODO: 새로운 백엔드 API 연동 필요
-      const newNotification: Notification = {
-        id: Date.now().toString(),
-        team_id: currentTeam.id,
-        user_id: user.id,
-        title: params.title,
-        message: params.message,
-        type: params.type,
-        related_id: params.relatedId,
-        action_data: params.actionData,
-        is_read: false,
-        created_at: new Date().toISOString(),
-      };
+      // Firestore에 알림 저장
+      const notificationId = await NotificationService.createNotification(
+        user.id,
+        currentTeam.id,
+        params
+      );
 
-      setNotifications((prev) => [newNotification, ...prev]);
+      if (!notificationId) {
+        throw new Error('Failed to create notification in Firestore');
+      }
 
       // 로컬 푸시 알림 전송
       const { title, body } = NotificationService.getNotificationContent(
@@ -190,10 +200,12 @@ export function useNotifications() {
         params.message
       );
       await NotificationService.scheduleLocalNotification(title, body, {
-        notificationId: newNotification.id,
+        notificationId,
         type: params.type,
         ...params.actionData,
       });
+
+      // 실시간 구독으로 자동 업데이트되므로 별도 setState 불필요
     } catch (error) {
       console.error('Failed to create notification:', error);
       throw error;
@@ -203,14 +215,8 @@ export function useNotifications() {
   // 알림을 읽음으로 표시
   const markAsRead = async (notificationId: string) => {
     try {
-      // TODO: 새로운 백엔드 API 연동 필요
-      setNotifications((prev) =>
-        prev.map((notification) =>
-          notification.id === notificationId
-            ? { ...notification, is_read: true }
-            : notification
-        )
-      );
+      await NotificationService.markNotificationAsRead(notificationId);
+      // 실시간 구독으로 자동 업데이트됨
     } catch (error) {
       console.error('Failed to mark notification as read:', error);
     }
@@ -221,25 +227,33 @@ export function useNotifications() {
     if (!user) return;
 
     try {
-      // TODO: 새로운 백엔드 API 연동 필요
-      setNotifications((prev) =>
-        prev.map((notification) => ({ ...notification, is_read: true }))
-      );
+      await NotificationService.markAllNotificationsAsRead(user.id, currentTeam?.id);
+      // 실시간 구독으로 자동 업데이트됨
     } catch (error) {
       console.error('Failed to mark all notifications as read:', error);
     }
   };
 
   // 알림 삭제
-  const deleteNotification = (notificationId: string) => {
-    setNotifications((prev) =>
-      prev.filter((notification) => notification.id !== notificationId)
-    );
+  const deleteNotification = async (notificationId: string) => {
+    try {
+      await NotificationService.deleteNotification(notificationId);
+      // 실시간 구독으로 자동 업데이트됨
+    } catch (error) {
+      console.error('Failed to delete notification:', error);
+    }
   };
 
   // 모든 알림 삭제
-  const clearAllNotifications = () => {
-    setNotifications([]);
+  const clearAllNotifications = async () => {
+    if (!user) return;
+
+    try {
+      await NotificationService.deleteAllNotifications(user.id, currentTeam?.id);
+      // 실시간 구독으로 자동 업데이트됨
+    } catch (error) {
+      console.error('Failed to clear all notifications:', error);
+    }
   };
 
   // 읽은 알림만 삭제
@@ -247,8 +261,8 @@ export function useNotifications() {
     if (!user) return;
 
     try {
-      // TODO: 새로운 백엔드 API 연동 필요
-      setNotifications((prev) => prev.filter((notification) => !notification.is_read));
+      await NotificationService.deleteReadNotifications(user.id, currentTeam?.id);
+      // 실시간 구독으로 자동 업데이트됨
     } catch (error) {
       console.error('Failed to clear read notifications:', error);
     }

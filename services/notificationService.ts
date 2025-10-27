@@ -1,6 +1,6 @@
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
-import { NotificationType } from '@/types/notification.types';
+import { NotificationType, Notification, CreateNotificationParams } from '@/types/notification.types';
 
 // 알림 표시 방식 설정
 Notifications.setNotificationHandler({
@@ -277,4 +277,361 @@ export async function sendPushNotifications(
   } catch (error) {
     console.error('Failed to send push notifications:', error);
   }
+}
+
+// ============================================
+// Firestore 알림 관리
+// ============================================
+
+/**
+ * Firestore에 알림 생성
+ */
+export async function createNotification(
+  userId: string,
+  teamId: string,
+  params: CreateNotificationParams
+): Promise<string | null> {
+  try {
+    const { collection, addDoc, serverTimestamp } = await import('firebase/firestore');
+    const { db } = await import('@/config/firebaseConfig');
+
+    const notificationData = {
+      user_id: userId,
+      team_id: teamId,
+      title: params.title,
+      message: params.message,
+      type: params.type,
+      related_id: params.relatedId || null,
+      action_data: params.actionData || null,
+      is_read: false,
+      created_at: serverTimestamp(),
+    };
+
+    const docRef = await addDoc(collection(db, 'notifications'), notificationData);
+
+    if (__DEV__) {
+      console.log('✅ [Notification] Created:', docRef.id);
+    }
+
+    return docRef.id;
+  } catch (error) {
+    console.error('Failed to create notification:', error);
+    return null;
+  }
+}
+
+/**
+ * 사용자의 알림 목록 가져오기
+ */
+export async function getUserNotifications(
+  userId: string,
+  teamId?: string
+): Promise<Notification[]> {
+  try {
+    const { collection, query, where, getDocs, Timestamp } = await import('firebase/firestore');
+    const { db } = await import('@/config/firebaseConfig');
+
+    // 단순 쿼리 (인덱스 불필요 - 정렬은 클라이언트에서)
+    const q = query(
+      collection(db, 'notifications'),
+      where('user_id', '==', userId)
+    );
+
+    const querySnapshot = await getDocs(q);
+    const notifications: Notification[] = [];
+
+    querySnapshot.forEach((doc) => {
+      const data = doc.data();
+
+      // 팀 필터링 (클라이언트 사이드)
+      if (teamId && data.team_id !== teamId) {
+        return;
+      }
+
+      notifications.push({
+        id: doc.id,
+        title: data.title,
+        message: data.message,
+        type: data.type as NotificationType,
+        is_read: data.is_read || false,
+        created_at: data.created_at instanceof Timestamp
+          ? data.created_at.toDate().toISOString()
+          : new Date().toISOString(),
+        related_id: data.related_id,
+        action_data: data.action_data,
+        team_id: data.team_id,
+        user_id: data.user_id,
+      });
+    });
+
+    // 클라이언트 사이드 정렬 (최신순)
+    notifications.sort((a, b) =>
+      new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    );
+
+    if (__DEV__) {
+      console.log(`✅ [Notification] Loaded ${notifications.length} notifications for user ${userId}`);
+    }
+
+    return notifications;
+  } catch (error) {
+    console.error('Failed to get user notifications:', error);
+    return [];
+  }
+}
+
+/**
+ * 알림을 읽음 처리
+ */
+export async function markNotificationAsRead(notificationId: string): Promise<boolean> {
+  try {
+    const { doc, updateDoc } = await import('firebase/firestore');
+    const { db } = await import('@/config/firebaseConfig');
+
+    await updateDoc(doc(db, 'notifications', notificationId), {
+      is_read: true,
+    });
+
+    if (__DEV__) {
+      console.log('✅ [Notification] Marked as read:', notificationId);
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Failed to mark notification as read:', error);
+    return false;
+  }
+}
+
+/**
+ * 모든 알림을 읽음 처리
+ */
+export async function markAllNotificationsAsRead(
+  userId: string,
+  teamId?: string
+): Promise<boolean> {
+  try {
+    const { collection, query, where, getDocs, writeBatch } = await import('firebase/firestore');
+    const { db } = await import('@/config/firebaseConfig');
+
+    // 단순 쿼리
+    const q = query(
+      collection(db, 'notifications'),
+      where('user_id', '==', userId),
+      where('is_read', '==', false)
+    );
+
+    const querySnapshot = await getDocs(q);
+    const batch = writeBatch(db);
+
+    querySnapshot.forEach((docSnapshot) => {
+      const data = docSnapshot.data();
+
+      // 팀 필터링 (클라이언트 사이드)
+      if (teamId && data.team_id !== teamId) {
+        return;
+      }
+
+      batch.update(docSnapshot.ref, { is_read: true });
+    });
+
+    await batch.commit();
+
+    if (__DEV__) {
+      console.log(`✅ [Notification] Marked ${querySnapshot.size} notifications as read`);
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Failed to mark all notifications as read:', error);
+    return false;
+  }
+}
+
+/**
+ * 알림 삭제
+ */
+export async function deleteNotification(notificationId: string): Promise<boolean> {
+  try {
+    const { doc, deleteDoc } = await import('firebase/firestore');
+    const { db } = await import('@/config/firebaseConfig');
+
+    await deleteDoc(doc(db, 'notifications', notificationId));
+
+    if (__DEV__) {
+      console.log('✅ [Notification] Deleted:', notificationId);
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Failed to delete notification:', error);
+    return false;
+  }
+}
+
+/**
+ * 읽은 알림 모두 삭제
+ */
+export async function deleteReadNotifications(
+  userId: string,
+  teamId?: string
+): Promise<boolean> {
+  try {
+    const { collection, query, where, getDocs, writeBatch } = await import('firebase/firestore');
+    const { db } = await import('@/config/firebaseConfig');
+
+    // 단순 쿼리
+    const q = query(
+      collection(db, 'notifications'),
+      where('user_id', '==', userId),
+      where('is_read', '==', true)
+    );
+
+    const querySnapshot = await getDocs(q);
+    const batch = writeBatch(db);
+
+    querySnapshot.forEach((docSnapshot) => {
+      const data = docSnapshot.data();
+
+      // 팀 필터링 (클라이언트 사이드)
+      if (teamId && data.team_id !== teamId) {
+        return;
+      }
+
+      batch.delete(docSnapshot.ref);
+    });
+
+    await batch.commit();
+
+    if (__DEV__) {
+      console.log(`✅ [Notification] Deleted ${querySnapshot.size} read notifications`);
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Failed to delete read notifications:', error);
+    return false;
+  }
+}
+
+/**
+ * 모든 알림 삭제
+ */
+export async function deleteAllNotifications(
+  userId: string,
+  teamId?: string
+): Promise<boolean> {
+  try {
+    const { collection, query, where, getDocs, writeBatch } = await import('firebase/firestore');
+    const { db } = await import('@/config/firebaseConfig');
+
+    // 단순 쿼리
+    const q = query(
+      collection(db, 'notifications'),
+      where('user_id', '==', userId)
+    );
+
+    const querySnapshot = await getDocs(q);
+    const batch = writeBatch(db);
+
+    querySnapshot.forEach((docSnapshot) => {
+      const data = docSnapshot.data();
+
+      // 팀 필터링 (클라이언트 사이드)
+      if (teamId && data.team_id !== teamId) {
+        return;
+      }
+
+      batch.delete(docSnapshot.ref);
+    });
+
+    await batch.commit();
+
+    if (__DEV__) {
+      console.log(`✅ [Notification] Deleted ${querySnapshot.size} notifications`);
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Failed to delete all notifications:', error);
+    return false;
+  }
+}
+
+/**
+ * 알림 실시간 구독
+ */
+export function subscribeToUserNotifications(
+  userId: string,
+  teamId: string | undefined,
+  callback: (notifications: Notification[]) => void
+): () => void {
+  const setupSubscription = async () => {
+    try {
+      const { collection, query, where, onSnapshot, Timestamp } = await import('firebase/firestore');
+      const { db } = await import('@/config/firebaseConfig');
+
+      // 단순 쿼리 (인덱스 불필요 - 정렬은 클라이언트에서)
+      const q = query(
+        collection(db, 'notifications'),
+        where('user_id', '==', userId)
+      );
+
+      const unsubscribe = onSnapshot(q, (querySnapshot) => {
+        const notifications: Notification[] = [];
+
+        querySnapshot.forEach((doc) => {
+          const data = doc.data();
+
+          // 팀 필터링 (클라이언트 사이드)
+          if (teamId && data.team_id !== teamId) {
+            return;
+          }
+
+          notifications.push({
+            id: doc.id,
+            title: data.title,
+            message: data.message,
+            type: data.type as NotificationType,
+            is_read: data.is_read || false,
+            created_at: data.created_at instanceof Timestamp
+              ? data.created_at.toDate().toISOString()
+              : new Date().toISOString(),
+            related_id: data.related_id,
+            action_data: data.action_data,
+            team_id: data.team_id,
+            user_id: data.user_id,
+          });
+        });
+
+        // 클라이언트 사이드 정렬 (최신순)
+        notifications.sort((a, b) =>
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        );
+
+        callback(notifications);
+
+        if (__DEV__) {
+          console.log(`🔄 [Notification] Subscription updated: ${notifications.length} notifications`);
+        }
+      });
+
+      return unsubscribe;
+    } catch (error) {
+      console.error('Failed to setup notification subscription:', error);
+      return () => {};
+    }
+  };
+
+  let unsubscribe: (() => void) | null = null;
+
+  setupSubscription().then((unsub) => {
+    unsubscribe = unsub;
+  });
+
+  return () => {
+    if (unsubscribe) {
+      unsubscribe();
+    }
+  };
 }

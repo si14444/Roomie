@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { StyleSheet, ScrollView, TouchableOpacity, Modal, Alert } from 'react-native';
+import { StyleSheet, ScrollView, TouchableOpacity, Modal, Alert, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Text, View } from '@/components/Themed';
 import { Ionicons } from '@expo/vector-icons';
@@ -8,6 +8,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { NotificationSettingsScreen } from './NotificationSettingsScreen';
 import { PolicyView } from './PolicyView';
 import Constants from 'expo-constants';
+import { deleteAccount } from '@/services/authService';
 
 interface SettingsModalProps {
   visible: boolean;
@@ -49,15 +50,43 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
   const handleDeleteAccount = () => {
     Alert.alert(
       '계정 삭제',
-      '계정을 삭제하면 모든 데이터가 영구적으로 삭제됩니다.\n\n정말 삭제하시겠습니까?',
+      '계정을 삭제하면 모든 데이터가 영구적으로 삭제됩니다.\n\n• 팀 멤버십 및 생성한 팀\n• 공과금, 루틴, 물품 기록\n• 채팅 및 알림 기록\n\n이 작업은 되돌릴 수 없습니다.',
       [
         { text: '취소', style: 'cancel' },
         {
-          text: '삭제',
+          text: '계속',
           style: 'destructive',
           onPress: () => {
-            // TODO: 계정 삭제 기능 구현
-            Alert.alert('안내', '계정 삭제 기능은 곧 제공될 예정입니다.');
+            // 비밀번호 입력 프롬프트
+            Alert.prompt(
+              '비밀번호 확인',
+              '계정 삭제를 위해 비밀번호를 입력해주세요.',
+              [
+                { text: '취소', style: 'cancel' },
+                {
+                  text: '삭제',
+                  style: 'destructive',
+                  onPress: async (password) => {
+                    if (!password || password.trim().length === 0) {
+                      Alert.alert('오류', '비밀번호를 입력해주세요.');
+                      return;
+                    }
+
+                    try {
+                      await deleteAccount(password);
+                      Alert.alert(
+                        '계정 삭제 완료',
+                        '계정이 성공적으로 삭제되었습니다.',
+                        [{ text: '확인', onPress: () => onClose() }]
+                      );
+                    } catch (error: any) {
+                      Alert.alert('오류', error.message || '계정 삭제에 실패했습니다.');
+                    }
+                  },
+                },
+              ],
+              'secure-text'
+            );
           },
         },
       ]
